@@ -145,8 +145,11 @@ Thin and consumer-driven, same discipline as the driver: new keys only when a re
 | `decomposerAgent` | string | `milestone-feeder:decomposer` | Override the breakdown agent (default-filled). |
 | `issueAuthorAgent` | string | `milestone-feeder:issue-author` | Override the authoring agent (default-filled). |
 | `issueSizeGuidance` | string | *(none)* | Optional natural-language sizing rule (e.g. "≤1 PR, ≤1 new screen"). |
+| `sourceGlobs` | string[] | `["skills/**","agents/**","hooks/**"]` | **Self-protection only** — the paths the feeder's own `no-source-edit` hook guards in the feeder's *own* repo. Distinct from the consumer's shared `sourceGlobs`. The hook resolves it `feeder.json` → driver config → fail-open (see below). |
 
-Shared keys (`sourceGlobs`, `uiSurfaceGlobs`, `integrationBranch`) are **read from the driver config, not duplicated.**
+Consumer-facing shared keys (`uiSurfaceGlobs`, `integrationBranch`, and the *consumer's* `sourceGlobs`) are **read from the driver config, not duplicated** — resolved `.milestone-config/driver.json` → root `milestone-driver.json`.
+
+The `sourceGlobs` key above is **self-protection only**: the `no-source-edit` hook, which guards the feeder's *own* repo, resolves the paths to guard **`feeder.json` first, then falls back to the resolved driver config (`.milestone-config/driver.json` → root `milestone-driver.json`), then fail-open** if neither carries it. This own-repo self-edit guard is semantically distinct from the consumer's shared `sourceGlobs` that the feeder reads from the driver config when decomposing a target repo.
 
 ### `.milestone-config/` migration note
 
