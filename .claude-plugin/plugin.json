@@ -1,6 +1,6 @@
 {
   "name": "milestone-feeder",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Turns a feature brief into a GitHub milestone + small, well-formed issues that milestone-driver can build with no human clarification: it decomposes the brief into independently-buildable issues, authors each issue's full spec (acceptance criteria covering empty/error/disabled states, recorded consistent design, declared dependency edges, and UI/logic + risk classification), encodes the Wave order in the milestone description, and self-checks every issue against the driver's own triage reviewers before any GitHub write — previewing a plan by default and creating issues only on --apply. Reads code, never writes it. Stack-agnostic via a thin per-repo profile.",
   "author": {
     "name": "Ken Mulford",
