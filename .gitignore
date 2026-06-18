@@ -21,3 +21,8 @@ desktop.ini
 
 # milestone-driver parallel-mode worktree fleet scratch dir (per-clone)
 .milestone-driver-worktrees/
+
+# milestone-feeder decompose preview plan-scratch (per-run, e.g.
+# .milestone-feeder/plan-<slug>.md) — reviewed and discarded, never committed.
+# NOTE: does not match .milestone-config/ (the committed feeder/driver profiles).
+/.milestone-feeder/

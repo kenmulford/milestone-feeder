@@ -4,7 +4,7 @@ A Claude Code plugin that turns a feature brief into a **GitHub milestone + smal
 
 Its quality bar is concrete — every issue it emits passes the driver's own triage clean (`GAPS: none`), because the feeder reuses the driver's actual reviewer agents as a pre-creation self-check.
 
-Status: **spec-stage, implementation starting.** The full design is in [SPEC.md](SPEC.md). Part of the [dev-tools](../dev-tools) suite.
+Status: **v0.1.0 (preview slice) shipped; v0.2.0 (self-check, `--apply`, refine) in progress.** The full design is in [SPEC.md](SPEC.md); the as-built design reference is in [docs/architecture.md](docs/architecture.md), and adopting the feeder is documented in [docs/consumer-setup.md](docs/consumer-setup.md). Part of the dev-tools suite.
 
 ## At a glance
 
