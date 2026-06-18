@@ -112,6 +112,16 @@ wins. The consumer's shared `sourceGlobs` here is the path set the feeder uses
 when authoring issues for a target repo — distinct from the self-protection
 `sourceGlobs` of resolution chain 1.
 
+**`nonNegotiables` — the self-check gate's additional reviewer input.** Beyond the
+three shared keys above, the self-check gate (decompose Step 6) also reads
+`nonNegotiables` from the driver profile, resolved down the **same chain**
+(`.milestone-config/driver.json` → root `milestone-driver.json` → absent →
+**omitted**, never invented). It is **not** a fourth shared key — it is the
+additional reviewer-profile input the gate passes through to the driver's
+`triage-reviewer`: the framework / platform / version constraints the reviewer
+checks each issue against. Absent → the reviewer simply has no version/platform
+constraints to check.
+
 ### `.milestone-config/` migration note
 
 Adopting `.milestone-config/` suite-wide means the driver resolves its profile
