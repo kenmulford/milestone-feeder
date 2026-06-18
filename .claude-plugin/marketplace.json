@@ -1,0 +1,21 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "milestone-feeder",
+  "owner": {
+    "name": "Ken Mulford",
+    "email": "ken@kenmulford.com"
+  },
+  "metadata": {
+    "description": "Brief-to-milestone feeder for Claude Code — the predecessor of milestone-driver"
+  },
+  "allowCrossMarketplaceDependenciesOn": ["claude-plugins-official"],
+  "plugins": [
+    {
+      "name": "milestone-feeder",
+      "source": "./",
+      "description": "Decompose a feature brief into a GitHub milestone of small, well-formed issues that pass milestone-driver's triage clean — preview by default, create on --apply. Authors no code.",
+      "category": "development",
+      "tags": ["github", "milestones", "issues", "decomposition", "planning", "triage", "automation"]
+    }
+  ]
+}

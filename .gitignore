@@ -1,0 +1,23 @@
+# OS cruft
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+*~
+
+# Logs and scratch
+*.log
+/tmp/
+/scratch/
+
+# milestone-driver per-clone runtime markers (preflight notice, Trello notice,
+# tests-green stamp, triage cache) — never commit the driver's clone-local state
+# into this repo. NOTE: does not match .milestone-config/ (the committed profile).
+.milestone-driver-*
+
+# milestone-driver parallel-mode worktree fleet scratch dir (per-clone)
+.milestone-driver-worktrees/
