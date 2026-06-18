@@ -1,19 +1,21 @@
 ---
 name: decompose
-description: This skill should be used when the user invokes "/milestone-feeder:decompose <brief>", or asks to "decompose a brief into a milestone", "break a feature into issues". Turns a feature brief into a GitHub milestone + small, well-formed issues, vetting every generated issue through the driver's reviewers (self-check gate) before emit. PREVIEW ONLY in this version — writes a reviewable plan file; creates nothing on GitHub. Authors no code; opens no PRs.
+description: This skill should be used when the user invokes "/milestone-feeder:decompose <brief>", or asks to "decompose a brief into a milestone", "break a feature into issues". Turns a feature brief into a GitHub milestone + small, well-formed issues, vetting every generated issue through the driver's reviewers (self-check gate) before emit. Preview is the DEFAULT — writes a reviewable plan file and creates nothing on GitHub; `--apply` creates the milestone + issues + labels. Authors no code; opens no PRs.
 ---
 
 # decompose — brief → milestone + issues
 
 Read config + substrate, ingest a brief, separate product gaps from design decisions, dispatch the decomposer once and the issue-author per candidate, assemble the dependency graph, render the milestone description, run the self-check gate against the generated issues, and write a reviewable plan file. The driver's predecessor: it specifies what the driver then builds.
 
-This skill is the orchestrator of the feeder's preview pipeline (`SPEC.md` §6, Steps 0–6; emit at Step 7). It makes *design and implementation* calls when the substrate or a stated repo convention supplies the answer, and it parks *product* calls — decisions about what to build or user-facing behavior with no conventional default — to a report instead of guessing them (`SPEC.md` §2 park boundary). Before emitting, it runs the **self-check gate** (Step 6, `SPEC.md` §5): it dispatches the driver's own reviewers against each generated issue and gates on the returned `GAPS` block — making the feeder's quality bar identical to the driver's entry gate. It runs every dispatched agent read-only, against provided text, and lands its entire output in local files. **Authors no code, opens no PRs, never touches branches, never invents product scope — product gaps are parked to a report, never guessed. Preview only: no GitHub writes (the `--apply` GitHub-write path remains deferred to v0.2.0, #10).**
+This skill is the orchestrator of the feeder's preview pipeline (`SPEC.md` §6, Steps 0–6; emit at Step 7). It makes *design and implementation* calls when the substrate or a stated repo convention supplies the answer, and it parks *product* calls — decisions about what to build or user-facing behavior with no conventional default — to a report instead of guessing them (`SPEC.md` §2 park boundary). Before emitting, it runs the **self-check gate** (Step 6, `SPEC.md` §5): it dispatches the driver's own reviewers against each generated issue and gates on the returned `GAPS` block — making the feeder's quality bar identical to the driver's entry gate. It runs every dispatched agent read-only, against provided text, and lands its preview output in local files. **Preview is the default and writes NO GitHub state; `--apply` is the only path that writes GitHub state — it creates the milestone + issues + labels and (for a GitHub-epic brief) one comment on the epic. The writes are performed by the skill itself via `gh`, never by a dispatched agent (every dispatched agent stays read-only). Authors no code, opens no PRs, never touches branches, never invents product scope — product gaps are parked to a report, never guessed.**
 
 ## Announce first
 
-Say this to the user before doing any work:
+Say this to the user before doing any work — pick the line that matches the recognized mode (Modes table):
 
-> Standing by while I decompose the brief into a milestone + issues. This is a preview — I'll write a reviewable plan file and create nothing on GitHub.
+> **Preview (default):** Standing by while I decompose the brief into a milestone + issues. This is a preview — I'll write a reviewable plan file and create nothing on GitHub.
+
+> **Apply (`--apply`):** Standing by while I decompose the brief, run the self-check gate, and then create the milestone + issues + labels on GitHub. I'll write the plan file as a local record first, then apply only the gate-surviving issues.
 
 ## Modes
 
@@ -22,9 +24,9 @@ Flags are **recognized by token match, not argument-parsed.** Claude Code does n
 | Trigger | Mode | Behavior |
 |---|---|---|
 | `/milestone-feeder:decompose <brief>` | **Preview** (default) | Full procedure, Steps 0–7, including the self-check gate (Step 6); stops at a reviewable plan file. **No GitHub writes.** |
-| `… --apply` | **Apply** *(deferred → v0.2.0)* | Recognized as a token, but **not implemented in this version.** When `--apply` is present, run the preview pipeline unchanged — self-check gate and all — and note in the plan file that apply is deferred to v0.2.0 (issue #10). This version performs **no GitHub writes on any path** — `--apply` does not change that. |
+| `… --apply` | **Apply** | Runs the full pipeline (Steps 0–6, including the self-check gate) **then** creates the GitHub artifacts — ensure labels, create-or-adopt the milestone, create each gate-surviving issue, rewrite slug→`#n` references, patch the milestone description with the Wave order, and file the needs-product-input report. **Recognized by token match** (`--apply` appears in the invocation) **or the natural-language equivalent** ("apply it", "create them on GitHub") — both route to the apply path (Step 7); absent either signal, preview runs (the locked default). |
 
-The self-check gate (`SPEC.md` §5, Step 6 of the procedure) is **in scope and active** in this version — it gates every generated issue before emit (it performs no GitHub writes itself, so it runs in preview too). Only the `--apply` GitHub-write path (`SPEC.md` §6, Step 7) remains **out of scope** in this version — it ships in milestone **v0.2.0** (issue #10). That is a forward reference, not a gap: the preview pipeline is complete and self-contained, gates its output through the self-check, and emits a plan file whose self-check status line records the actual gate outcome.
+Both the self-check gate (`SPEC.md` §5, Step 6) and the `--apply` GitHub-write path (`SPEC.md` §6, Step 7) are **in scope and active** in this version. The self-check gate gates every generated issue before emit on **both** paths (it performs no GitHub writes itself, so it runs in preview too). The `--apply` path then turns the gate-surviving issue set into real GitHub artifacts (milestone + issues + labels + epic comment). Preview remains the default and writes no GitHub state; nothing in this skill is deferred to a later milestone.
 
 ## Procedure
 
@@ -76,7 +78,7 @@ The brief arrives in one of three forms. **Detect** which:
 }
 ```
 
-Record `epicIssueNumber` when the brief was an epic issue — it is carried forward for the **deferred** apply report (`SPEC.md` §10 lean: epic comment on apply, v0.2.0). In preview it is recorded only; **no comment is posted** on the epic issue.
+Record `epicIssueNumber` when the brief was an epic issue — it is carried forward for the apply path's needs-product-input report (`SPEC.md` §10 lean: epic comment on apply). On **preview** it is recorded only; **no comment is posted** on the epic issue. On **`--apply`** it routes the report to a comment on that epic issue (Step 7 §7-apply.e).
 
 ### Step 2 — Product-gap check (the park boundary)
 
@@ -87,7 +89,7 @@ Separate the two classes of decision the brief implies (`SPEC.md` §2, §6 Step 
 | **Product decision** | No conventional default — what to build, or user-facing behavior the substrate / a stated convention does not answer | Record to `productGaps[]`. **Never guessed.** |
 | **Design / implementation decision** | The substrate or a stated repo convention supplies the answer | Resolved — proceed; cite the grounding (`.project/<doc>.md#<section>` or a sibling `file:line`). |
 
-If a product gap is severe enough that the candidate set **cannot even be formed** without it (the brief's core scope is undecided), **STOP**: emit the "needs product input" report (Step 7 format) and end the run — do not dispatch the decomposer against an undecided scope. Otherwise carry `productGaps[]` forward: the pipeline proceeds with the decidable work, and the gaps surface in the plan + report at Step 7.
+If a product gap is severe enough that the candidate set **cannot even be formed** without it (the brief's core scope is undecided), **STOP**: emit the "needs product input" report (Step 7 format) and end the run — do not dispatch the decomposer against an undecided scope. **Route the report by the same rule as §7-apply.e:** if `--apply` is present AND the brief was an epic issue (`epicIssueNumber` present from Step 1), post the report as a comment on that epic issue (`gh issue comment <epicIssueNumber> --body "<report>"`, the §7-apply.e routing); otherwise write the local file (`.milestone-feeder/needs-product-input-<slug>.md`) — the preview default. (No issues exist on a Step 2 STOP, so only the report is routed; nothing else is created.) Otherwise carry `productGaps[]` forward: the pipeline proceeds with the decidable work, and the gaps surface in the plan + report at Step 7.
 
 ### Step 3 — Dispatch the decomposer (once)
 
@@ -169,7 +171,7 @@ Render the **milestone description** to the `SPEC.md` §4 Wave template, substit
 - Wave 3: #E (depends on #D)
 ```
 
-This is the human-readable description and the exact ordering source the driver's `solve-milestone` and `triage` consume (`SPEC.md` §4). In preview the identifiers are local slugs; `--apply` (v0.2.0) is what rewrites them to real GitHub numbers — not this version.
+This is the human-readable description and the exact ordering source the driver's `solve-milestone` and `triage` consume (`SPEC.md` §4). In preview the identifiers are local slugs; `--apply` rewrites them to real GitHub numbers in the second pass (Step 7 §7-apply.d) once the issues exist.
 
 ### Step 6 — Self-check gate (the keystone)
 
@@ -266,16 +268,23 @@ A parked issue is **not emitted** in the milestone (§6.6 handles it and its dep
 
 After §6.6, the surviving issue set has either all-PASS (or all-Advisory-only) verdicts, or the run is `SKIPPED` (`selfCheck:false`). Carry the gate outcome forward to the Step 7 status line.
 
-### Step 7 — Emit (preview)
+### Step 7 — Emit: preview (default) or apply (`--apply`)
 
-> **`--apply` GitHub creation deferred.** The self-check gate (Step 6 above) is active and has already gated the candidate set by the time this step runs. Only the `--apply` GitHub-write path (`SPEC.md` §6 step 7 — milestone + issue + label creation) remains **out of scope in this version**; it ships in v0.2.0 (issue #10). This version emits the preview directly; the plan file's self-check status line records the **actual gate outcome** (PASS / PARKED / INTERNAL / SKIPPED), so a reader knows the gate ran and what it found.
+By the time this step runs, the self-check gate (Step 6) has already produced the **surviving issue set** — the gate-clean (PASS / Advisory-only), **non-parked, non-dropped** issues from §6.6. Parked (product-gap / needs-human-direction) and dropped-dependent issues are **never created**; they go to the report (parked) or are simply omitted (dropped). This step has two paths:
+
+| Signal | Path |
+|---|---|
+| `--apply` token **absent** (and no natural-language "apply" / "create on GitHub" equivalent) | **Preview (default)** — §7-preview below. Writes the plan file (+ report). **No GitHub writes.** |
+| `--apply` token present, **or** the natural-language equivalent | **Apply** — §7-apply below. Runs the preview emit first (the plan file is the local audit record), **then** performs the GitHub writes in §7-apply's fixed order. |
+
+#### §7-preview — Preview (default): write the plan file
 
 Write a reviewable **plan file** to a gitignored per-run scratch path: `.milestone-feeder/plan-<slug>.md`, where `<slug>` is a short kebab-case slug of the milestone goal. `.milestone-feeder*` **should be gitignored** (per-clone runtime scratch, like the driver's `.milestone-driver-*`); if the repo's `.gitignore` does not yet carry that pattern, the skill writes the file there **regardless** — the path is per-run scratch the user reviews and discards, never committed by this skill.
 
-**Plan-file format:**
+**Plan-file format.** The header tag and the closing footer are **conditional on the path** — `<PREVIEW | APPLIED>` resolves to `PREVIEW` on a preview run and `APPLIED` on an `--apply` run (§7-apply runs this same emit first as its local audit record, so the artifact must not claim it wrote no GitHub state when it did). Preview → `(PREVIEW)` header + the "re-run with `--apply`" footer; apply → `(APPLIED)` header + the "created/adopted on GitHub" footer (both shown below):
 
 ```markdown
-# Milestone plan (PREVIEW) — <milestone goal, one line>
+# Milestone plan (<PREVIEW | APPLIED>) — <milestone goal, one line>
 
 Self-check: <the Step 6 outcome — one of:
   PASS — all <N> issues GAPS: none (milestone-driver reviewers)
@@ -310,7 +319,9 @@ Source brief: <inline | file:<path> | epic #<n>>
 <pointer: "see .milestone-feeder/needs-product-input-<slug>.md" when productGaps is non-empty OR the self-check parked any issue as needs-human-direction; "none" otherwise>
 
 ---
-To create these on GitHub, re-run with `--apply` (deferred to v0.2.0 — #10). This preview wrote no GitHub state.
+<the footer, conditional on the path:
+  PREVIEW run → "To create these on GitHub, re-run with `--apply` — it ensures the labels, creates-or-adopts the milestone, opens each gate-surviving issue, rewrites the slug references to real issue numbers, and patches the milestone description with the Wave order. This preview wrote no GitHub state."
+  APPLY run  → "Created/adopted milestone #<n> + <k> issue(s) + the 4 labels on GitHub; slug references rewritten to real issue numbers and the milestone description patched with the Wave order. Needs-product-input report routed to <epic #<n> comment | local file .milestone-feeder/needs-product-input-<slug>.md | none>.">
 ```
 
 If `productGaps[]` is **non-empty** OR the self-check parked any issue as **needs-human-direction** (§6.5), also write a **"needs product input" report** to `.milestone-feeder/needs-product-input-<slug>.md`. The report carries a **Kind** column so the human can tell a product decision (no conventional default — decide and record it) from a non-converging self-check Blocker (the candidate's design is likely wrong — redirect it):
@@ -327,7 +338,115 @@ These items blocked the milestone and were NOT guessed. Resolve each, then re-ru
 | … | … | … | … | … |
 ```
 
-**No GitHub writes occur on any path.** The plan file and the report are local scratch; nothing is posted to an issue, no milestone is created, no labels are applied, no comment is added to the epic. Apply (v0.2.0) is the only path that writes GitHub state, and it is not implemented here.
+**On the preview path, no GitHub writes occur.** The plan file and the report are local scratch; nothing is posted to an issue, no milestone is created, no labels are applied, no comment is added to the epic. `--apply` (§7-apply) is the only path that writes GitHub state.
+
+#### §7-apply — Apply (`--apply`): create the GitHub artifacts
+
+After §7-preview has written the plan file (the local audit record) and the self-check gate (Step 6) has produced the **surviving issue set** (gate-clean / Advisory-only, non-parked, non-dropped — §6.6), perform the GitHub writes in **this fixed order**. Only the surviving issues are created; **parked and dropped issues are NEVER created** (the report still records the parked ones; dropped dependents are omitted). All `gh` invocations below are run **by the skill itself**, not by any dispatched agent — the agent-read-only invariant holds. The commands are shell-neutral (`gh` is cross-platform); where a read-modify-write needs a variable, both a bash and a PowerShell 7+ form are noted, consistent with the rest of the suite (`milestone-driver/skills/solve-milestone/trello-sync.md:115-126`).
+
+##### a. Ensure labels idempotently (BEFORE applying any)
+
+For each label in the taxonomy (`SPEC.md` §4; the same four the feeder's `setup` provisions), run `gh label create … --force` **first**, so the labels exist before any `gh issue create --label` references them. `--force` upserts (creates if absent, updates color/description if present) — re-runs produce no duplicates. This is the canonical block re-used verbatim from `skills/setup/SKILL.md:104-113` (not re-invented):
+
+```
+gh label create "ui"          --color 5319E7 --description "UI-surface issue (design review applies)" --force
+gh label create "logic"       --color 0E8A16 --description "Logic / non-UI issue" --force
+gh label create "risk:light"  --color C2E0C6 --description "Reduced-ceremony build profile (driver override)" --force
+gh label create "risk:heavy"  --color B60205 --description "Full-ceremony build profile (driver override)" --force
+```
+
+These are identical on bash and PowerShell 7+ — run them as a flat list (no shell loop), portable across both platforms.
+
+##### b. Create-or-adopt the milestone (by EXACT title)
+
+Resolve the milestone by **exact title** against all existing milestones (mirrors the driver's resolve idiom, `milestone-driver/skills/solve-milestone/SKILL.md:54`, which interpolates the title literally — `select(.title=="<name>")`; this file hardens that by reading the title from the environment via `env.t`). Pass the title via an **environment variable**, **never string-interpolated into the jq filter literal** — `gh api` has no `--arg` flag (that belongs to standalone `jq`), and a title containing a `"` would otherwise break an inlined filter and yield a spurious no-match (→ duplicate-milestone create). `gh`'s embedded jq reads `env.t` from the process environment, which is the portable quote-safe approach:
+
+```
+# bash — title read from the environment (quote-safe; no --arg, which gh api does not support)
+t="<milestone-title>" gh api "repos/{owner}/{repo}/milestones?state=all&per_page=100" --paginate \
+  --jq '.[] | select(.title==env.t) | {number, state}'
+```
+
+PowerShell 7+ is the same form — set `$env:t = "<milestone-title>"` first, then `gh api … --jq '.[] | select(.title==env.t) | {number, state}'` — keep the title in the environment, not inlined into the filter.
+
+| Result | Action |
+|---|---|
+| **No title match** | **Create:** `gh api --method POST "repos/{owner}/{repo}/milestones" -f title="<milestone-title>" -f description="<placeholder>"`. Capture the returned `.number`. The description is rewritten with the real Wave order in §7-apply.d (the slug→`#n` numbers do not exist yet). |
+| **Exactly one title match, `state: open`** | **Adopt:** record its `.number`. Re-use it; never delete it or its issues. |
+| **Exactly one title match, `state: closed`** | **Adopt + reopen:** `gh api --method PATCH "repos/{owner}/{repo}/milestones/<number>" -f state=open`, then record its `.number`. **Never delete** the existing milestone or any of its issues. |
+| **Multiple title matches** (GitHub permits same-title milestones) | **Adopt the FIRST returned**, reopen it if closed, and log a notice — `decompose: multiple milestones titled "<milestone-title>" — adopted first returned (#<n>)` — mirroring the driver's recorded ambiguity rule (`milestone-driver/skills/solve-milestone/trello-sync.md:93-96`). Never delete the others. |
+
+##### c. Create each surviving issue; build the slug→`#n` map
+
+On **CREATE** (no prior milestone), create every surviving issue. On **ADOPT** (milestone already had issues), first list the milestone's existing OPEN issues so a re-apply does not duplicate existing issues — match each surviving candidate against them **by exact title** (the `gh` list-and-match idiom, `milestone-driver/skills/solve-milestone/SKILL.md:65`; conceptually the driver's adopt-by-name pattern, `…/trello-sync.md:90`):
+
+```
+gh issue list --milestone "<milestone-title>" --state open --json number,title
+```
+
+For each surviving candidate, in Wave order:
+
+| On adopt, title match? | Action |
+|---|---|
+| **Yes** — an open issue with the same title already exists | **Reuse** its number — do NOT create a duplicate. Map `slug → #<existing-n>`. Its body is **left as-is** (see body policy below). |
+| **No** (or this is the create path) | **Create:** `gh issue create --title "<title>" --body "<§4 ISSUE_BODY>" --milestone "<milestone-title>" --label <ui\|logic> --label <risk:light\|risk:heavy>`. Capture the returned number. Map `slug → #<new-n>`. |
+
+Apply the candidate's `LABELS` from Step 4 — the `ui`/`logic` label and the `risk:*` label when the feeder is confident (`SPEC.md` §4 line 89). Accumulate the full **slug→`#n` map** across every surviving issue (created or reused). The `--body` here still carries the **local slug** dependency references; they are rewritten in the second pass (d) once the full map exists.
+
+**Adopted-issue body policy.** Adopted (title-matched) issues are **NOT** body-rewritten — their bodies are preserved as-is. A prior `--apply` already resolved their slug→`#n` references, and any manual human edits to them are respected. **ONLY newly-CREATED issues** receive the slug→`#n` body rewrite in pass (d). This non-clobber behavior is intentional, not a gap.
+
+**Re-apply title-match constraint (known limitation).** De-dup on re-apply relies on **stable, exact, OPEN titles**: it matches the candidate's current title against the milestone's open issues. If a candidate's title was edited on GitHub between runs, or a prior issue was **closed** (the list is `--state open`), the match misses and a **new** issue may be created. Titles must stay stable for idempotent re-apply — this is a stated constraint, not a silent bug.
+
+##### d. Second pass — rewrite slug→`#n` (the load-bearing two-pass mechanic)
+
+Two passes are required: issue numbers do not exist until (c) creates them, and `gh issue create --milestone` cannot set the Wave-encoded milestone description. With the **complete** slug→`#n` map from (c):
+
+**Substring-safe rewrite rule (load-bearing).** The decomposer rolls tags `#A`, `#B`, … `#Z`, then doubles to `#AA`, `#AB`, … past 26 (`agents/decomposer.md`). A naive string replace of `#A`→`#42` would corrupt `#AB` into `#42B`, and could also hit `#A` inside a word. So every slug→`#n` rewrite (issue bodies AND the milestone description) MUST:
+  1. **Replace in descending slug-length order** (longest slug first — all `#<double-letter>` tags before any `#<single-letter>`), so a longer tag is consumed before a shorter prefix of it can match.
+  2. **Match each `#<tag>` only at a token boundary** — the tag must be followed by a non-tag character (whitespace, punctuation, end-of-string), not by another tag-letter, and not be a substring inside a longer tag or a word. `#A` therefore never matches inside `#AB`.
+Apply this rule to **every** slug occurrence, wherever it appears (see below) — it is the mechanic that keeps the rewrite correct.
+
+1. **Each newly-CREATED issue (adopted issues are skipped — see §7-apply.c body policy):** rewrite **every slug occurrence in the issue's FULL body** to its mapped `#n` — `## Summary`, `## Design` prose, and `## Dependencies` (including the reason text after a dependency, e.g. "Depends on #A — references SyncStatusViewModel, introduced by #A" → both `#A` rewritten; see `agents/issue-author.md`) — using the substring-safe rule above, then `gh issue edit <n> --body "<rewritten ISSUE_BODY>"`. (A created issue whose full body contains no slug reference needs no edit.) Rewriting only `## Dependencies` would leave sibling-slug references in Summary/Design/reason text dangling — GitHub would auto-link them to whatever real issue happens to hold that number.
+2. **The milestone description:** rewrite **every slug occurrence** in the Step 5 Wave order from local slugs to real numbers (same substring-safe rule) and PATCH it (read-modify-write — the same PATCH-a-milestone-description shape as `milestone-driver/skills/solve-milestone/trello-sync.md:115-126`, but adapted to **REPLACE** the description here, where that source **appends** a back-link; do not sync the two to be identical):
+
+```
+# bash
+gh api --method PATCH "repos/{owner}/{repo}/milestones/<number>" \
+  -f description="<Wave description with slugs rewritten to #n>"
+```
+
+```powershell
+# PowerShell 7+ — equivalent (assign the multi-line description to a variable first,
+# then pass it; avoid the `=@` adjacency so gh's -f reads it as a literal string,
+# not as @file). -f/--raw-field always takes the value literally; @file applies only to -F.
+$desc = @"
+<Wave description with slugs rewritten to #n>
+"@
+gh api --method PATCH "repos/{owner}/{repo}/milestones/<number>" -f "description=$desc"
+```
+
+After (d), every `#n` on GitHub is a real issue number and the milestone description encodes the Wave order in real numbers — exactly the ordering source the driver's `solve-milestone` / `triage` read (`SPEC.md` §4, line 61).
+
+##### e. File the needs-product-input report
+
+If `productGaps[]` is non-empty OR the self-check parked any issue as needs-human-direction (the same condition §7-preview uses), file the report — but route it by brief form:
+
+| Brief form (from Step 1) | Where the report goes |
+|---|---|
+| **GitHub epic issue** (`epicIssueNumber` present) | Post the report (the §7-preview report body) as a **comment on the epic issue:** `gh issue comment <epicIssueNumber> --body "<report>"`. |
+| **File path / inline text** (no `epicIssueNumber`) | Write the **local file** (`.milestone-feeder/needs-product-input-<slug>.md`, as preview does) and **PRINT a notice** that the report is local (no epic issue to comment on). |
+
+##### Partial-failure path (resume on re-apply)
+
+An `--apply` run is **not "done"** until the milestone description AND every created-issue body carry real `#n` numbers. A failure can land in pass (c) (an issue create) or pass (d) (a body edit or the milestone-description PATCH); the table below maps each to its action. **Pass (d) is IDEMPOTENT** — re-applying the slug→`#n` rewrite to an already-numeric body or description is a no-op (the substring-safe rule finds no slug to rewrite), and the PATCH overwrites — so a re-run can always safely re-execute pass (d) against the captured (or re-derivable, from the now-complete title→`#n` map) slug→`#n` map, **even when pass (c) created nothing** because every issue was already adopted by title.
+
+| Failure point | Immediate action | Resume on re-run with `--apply` |
+|---|---|---|
+| **Pass (c)** — a `gh issue create` fails mid-loop | **Abort pass (d)** — the slug→`#n` map is incomplete; rewriting against it would write dangling references. **Report** what was created + the captured partial map + which candidate failed. | The adopt + match-by-title path (b → c) reuses the already-created issues by title (no duplicates — "re-apply must not duplicate existing issues"), creates the remaining candidates, then runs pass (d) against the now-complete map. |
+| **Pass (d), milestone-description PATCH** fails — after all issues were created | **Report** that issues exist but the milestone description still shows local slugs; the description is unresolved. | Re-run re-executes pass (d): it rebuilds the slug→`#n` map from the adopted issues (match-by-title) and re-PATCHes the description (PATCH overwrites — idempotent). |
+| **Pass (d), a `gh issue edit` (body rewrite)** fails — after all issues were created | **Report** which created issue still carries local slugs in its body. | Re-run re-executes pass (d): re-applying the rewrite to already-numeric bodies is a no-op, and the still-slugged body is rewritten and edited. Adopted (pre-existing) issue bodies are left as-is per the §7-apply.c body policy. |
+
+In all cases the failure path is **defined, not silent**, and re-running `--apply` always re-attempts pass (d) until the milestone description and all created-issue bodies carry real numbers — the resume re-uses the match-by-title de-dup (least-code).
 
 ## Output style
 
@@ -335,8 +454,8 @@ Be concise — report status and outcomes flatly, no wall-of-text. Present steps
 
 ## Non-negotiables
 
-- **Preview only — performs NO GitHub writes; `--apply` is deferred to v0.2.0.** No milestone is created, no issue is opened, no label is applied, no comment is posted on any path. The entire output lands in local scratch files (the plan + the needs-product-input report). The `--apply` token is recognized but not implemented this version (issue #10).
-- **Authors no code, opens no PRs, never touches branches.** The feeder reads code to ground decisions; it never edits a source file, creates a branch, or opens a PR. Every dispatched agent is read-only and runs against provided text.
+- **Preview is the default and writes NO GitHub state; `--apply` is the ONLY path that writes GitHub state.** On preview, no milestone is created, no issue is opened, no label is applied, no comment is posted — the entire output lands in local scratch files (the plan + the needs-product-input report). On `--apply`, the skill creates the milestone (create-or-adopt by title, reopen-if-closed, never deletes), opens each gate-surviving issue, ensures the labels, and (for a GitHub-epic brief) posts one comment on the epic. Only the gate-surviving issues are created; parked / dropped issues are never created.
+- **Authors no code, opens no PRs, never touches branches.** Creating issues / a milestone / labels / one epic comment is NOT code, a PR, or a branch. The feeder reads code to ground decisions; it never edits a source file, creates a branch, or opens a PR. Every dispatched agent is read-only and runs against provided text — the `--apply` GitHub writes are performed by the skill itself via `gh`, not by any dispatched agent, so the agent-read-only invariant still holds.
 - **Parks product gaps — never invents scope.** A decision with no conventional default is recorded to `productGaps[]` and surfaced in the needs-product-input report — never guessed to make an issue buildable. Design / implementation calls the substrate or a stated convention answers are resolved and cited; calls with no conventional default are parked.
 - **Substrate is read best-effort, never fabricated.** Absent or `[TBD]` sections are skipped, never grounded on. A design call cites its real grounding (`.project/<doc>.md#<section>` or a verified sibling `file:line`) or it is parked as a product gap.
 - **The decomposer is dispatched exactly once; the issue-author once per candidate.** The pipeline owns the dispatch count; the agents return text and the orchestrator consumes it — no agent opens a GitHub artifact of its own.
