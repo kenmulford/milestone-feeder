@@ -1,7 +1,7 @@
 # Expected contract — 03 design-resolvable-no-park  (GRADER ONLY)
 
 The brief is vague ("use the usual patterns") on DESIGN details — layout, validation, save
-behavior, avatar upload — but the substrate conventions ANSWER all of them. This is the
+behavior, avatar upload — but the project docs conventions ANSWER all of them. This is the
 opposite of 02: the gaps are design-resolvable, not product gaps.
 
 ## MUST

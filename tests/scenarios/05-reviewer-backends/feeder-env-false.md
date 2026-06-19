@@ -1,8 +1,8 @@
-# Test environment — 05 config A (selfCheck disabled)
+# Test environment — 05 config A (reviewer disabled)
 
-- `feeder.json`: `{ "selfCheck": false }`
+- `feeder.json`: `{ "reviewer": false }`
 - Driver shared keys:
   - `sourceGlobs`: `["src/**"]`
   - `uiSurfaceGlobs`: `["src/pages/**", "src/components/**"]`
   - `integrationBranch`: `"develop"`
-- No substrate folder needed.
+- No project docs folder needed.

@@ -1,9 +1,9 @@
 # Test environment (what the run assumes)
 
-- `feeder.json`: defaults (`selfCheck: "milestone-driver"`, `substrateDir: project/`).
+- `feeder.json`: defaults (`reviewer: "milestone-driver"`, `projectDocs: project/`).
 - Driver shared keys:
   - `sourceGlobs`: `["src/**"]`
   - `uiSurfaceGlobs`: `["src/pages/**", "src/components/**"]`
   - `integrationBranch`: `"develop"`
   - `nonNegotiables`: `["React 18 + TypeScript"]`
-- Substrate dir: `project/`
+- Project docs dir: `project/`

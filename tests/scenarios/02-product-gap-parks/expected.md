@@ -2,7 +2,7 @@
 
 The brief contains a genuine PRODUCT decision with no conventional default: **how featured
 items are selected** (editorial / admin-curated? algorithmic by popularity or recency?
-manual pinning? paid placement?). The substrate and conventions do NOT answer this.
+manual pinning? paid placement?). The project docs and conventions do NOT answer this.
 
 ## MUST
 - The feeder **parks** the selection-policy decision to the "needs product input" report. It does **not** invent a policy (no silent "we'll feature the most recent / most popular").

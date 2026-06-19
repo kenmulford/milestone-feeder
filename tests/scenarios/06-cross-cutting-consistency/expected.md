@@ -1,7 +1,7 @@
 # Expected contract — 06 cross-cutting-consistency  (FLAGSHIP · GRADER ONLY)
 
 The standing table directive lives ONLY in `project/design-system.md`; the brief does not
-restate it. The feeder must pull it from the substrate and propagate it into EVERY
+restate it. The feeder must pull it from your project's standing docs and propagate it into EVERY
 table-bearing page-issue, consistently, citing it — and the `design-reviewer` must catch any
 issue that drops it.
 

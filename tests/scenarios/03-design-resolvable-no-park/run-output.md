@@ -1,195 +1,165 @@
 # Milestone plan (PREVIEW) — Account Settings page: edit profile (name, email, avatar) + notification preferences and save
 
-Self-check: PASS — all 6 issues GAPS: none / Advisory-only (milestone-driver reviewers; #C cleared a design Blocker on retry 1 of ≤2)
+Milestone title (exact): Account Settings page
+Self-check: PASS — all 5 issues GAPS: none / Advisory-only (milestone-driver reviewers)
 Source brief: inline
 
-## Milestone description (preview)
+## Milestone description (Wave order)
 Add an Account Settings page where a signed-in user can edit their profile (name, email, avatar) and notification preferences, and save the changes.
 
 ## Waves
 - Wave 1: #A
-- Wave 2: #B (depends on #A)
-- Wave 3 (parallel): #C, #D, #E, #F (all depend on #B; #C/#D/#E also depend on #A)
+- Wave 2 (parallel): #B (depends on #A), #C (depends on #A), #D (depends on #A)
+- Wave 3: #E (depends on #A, #B, #C, #D)
 
 ## Issues
 
-### #A — Add ProfileSettings data model and save service for profile and notification preferences   [logic, risk:heavy]   [self-check: PASS]
+### #A — Scaffold AccountSettingsPage shell with two-column layout, sticky Save bar, and empty/error states   [ui, risk:heavy]   [self-check: PASS]
 ## Summary
-Introduce the `ProfileSettings` data model (profile fields and notification-preference shape) and the save service that the Account Settings page mutates against. This is the logic substrate the settings page depends on: per conventions.md, settings pages perform an optimistic save with a success toast and rollback-on-error, which requires a typed service contract the page can call, await, and roll back when the call fails. Out of scope: password/security settings (handled by the existing AccountSecurityPage).
+Add the Account Settings page shell at `src/pages/AccountSettingsPage.tsx` so a signed-in user has a place to edit their profile and notification preferences. This issue establishes the page structure only — the two-column form layout, the bottom sticky Save bar, the route to reach the page, and the page-level empty and error states. The profile fields, notification toggles, and the save behaviour are added by the issues that depend on this one; this shell is the container they plug into. The page mirrors the existing `AccountSecurityPage` so Settings pages stay visually and structurally consistent.
 
 ## Acceptance criteria
-- [ ] Happy path: `saveProfileSettings(next: ProfileSettings)` persists the provided profile fields (`name`, `email`, `avatar`) and notification preferences and resolves with the saved `ProfileSettings` so the page can confirm and show its success toast.
-- [ ] Empty state: an absent/never-saved profile is representable — `avatar` is optional (`string | null`) and `notifications` defaults to all toggles `false`; a `defaultProfileSettings` factory returns this empty-but-valid shape so the page can render before any save has occurred.
-- [ ] Error / failure path: when persistence fails the returned Promise rejects with a typed error (does not resolve), so the page's rollback-on-error path can revert optimistic state; the prior persisted value is left unchanged.
-- [ ] Disabled / edge state: `saveProfileSettings` rejects with the same typed validation error without attempting persistence when `name` is empty or `email` is not a valid email, so the page can keep Save disabled / surface the field error rather than persisting an invalid record.
+- [ ] Happy path: navigating to the Account Settings route renders `AccountSettingsPage` with the two-column form region and a sticky Save bar pinned to the bottom of the page, matching the `AccountSecurityPage` layout. A defined slot/region exists in the form column for fields and toggles to be added by dependent issues, and a Save affordance is present in the Save bar.
+- [ ] Empty state: when there is no profile content to display yet (no fields/toggles mounted, or profile data not yet provided), the page renders the empty state region in the form column rather than a blank area, consistent with the empty-state treatment required by conventions.md "States".
+- [ ] Error state: when the page fails to load the data it needs to render, the page renders the error state (in place of the form region) consistent with the error-state treatment required by conventions.md "States" and the `AccountSecurityPage` error handling it mirrors.
+- [ ] Disabled/edge state: before there are any unsaved changes (the initial, pristine state of the shell), the Save affordance in the sticky Save bar is rendered in a disabled state. (The enable-on-dirty / actual save logic is owned by the dependent save issue; this shell only renders the Save bar with the affordance disabled by default.)
 
 ## Design (recorded, consistent)
-- Model lives in `src/services/` (or `src/types/`) as a TypeScript module, exporting:
-  - `ProfileSettings` — `{ name: string; email: string; avatar: string | null; notifications: NotificationPreferences }`. `avatar` is `string | null` (URL/asset reference produced by `ImageUploader`), null when unset.
-  - `NotificationPreferences` — a flat record of named boolean toggles, all `false` by default. Exact toggle keys are a presentation concern resolved by the settings-page issue; the model types it as `Record<string, boolean>`.
-  - `defaultProfileSettings(): ProfileSettings` — factory returning the empty-but-valid shape (`name: ''`, `email: ''`, `avatar: null`, `notifications: {}`).
-- Save service contract: `saveProfileSettings(next: ProfileSettings): Promise<ProfileSettings>` — async; resolves with the persisted value; rejects with a typed error on validation failure or transport failure. This is the contract the optimistic-save flow (success toast on resolve, rollback on reject) mutates against, as AccountSecurityPage's save does.
-- Validation lives in the service: `name` non-empty after trim; `email` matches a standard email shape. The page mirrors the same checks inline via `FormField`'s validate-on-blur (src/components/FormField.tsx), but the service is authoritative.
-- Transport: persists over the stack's standard async transport for React 18 + TypeScript (same path AccountSecurityPage's save uses). No new transport introduced.
-- Convention followed: conventions.md "Settings pages: mirror AccountSecurityPage layout ... optimistic save with success toast and rollback-on-error" (src/pages/AccountSecurityPage.tsx); conventions.md Forms validation pattern (src/components/FormField.tsx); conventions.md Avatar upload via ImageUploader (src/components/ImageUploader.tsx); conventions.md "empty and error states required on every user-facing surface".
+- Page lives at `src/pages/AccountSettingsPage.tsx` (a `uiSurfaceGlobs` `src/pages/**` path), built with React 18 + TypeScript per the non-negotiable stack.
+- Layout, Save bar, and state treatments mirror `AccountSecurityPage`: a two-column form region with a sticky Save bar pinned to the bottom. Reproduce `AccountSecurityPage`'s structure rather than inventing a new layout, so Settings pages stay consistent.
+- This issue is the shell only: it defines the page container, the form-column region/slot where fields and toggles mount, the Save bar with its Save affordance, the route, and the empty + error states. Field rendering, toggle rendering, and save submission are out of scope here and are delivered by the dependent issues.
+- Empty and error states are required and rendered at the page/form-region level, following the same treatment `AccountSecurityPage` uses (per conventions.md "States"). The empty state shows in the form column when no profile content is mounted; the error state replaces the form region when required data fails to load.
+- The Save affordance defaults to disabled in the pristine shell (no unsaved changes yet). Enable-on-dirty behaviour and the optimistic-save / success-toast / rollback-on-error flow belong to the dependent save issue, not this shell.
+- Accessibility: the page is reachable as a labeled route/landmark; the Save affordance is a button with an accessible name "Save" (or the equivalent label `AccountSecurityPage`'s Save control uses), and remains focusable/announced as disabled in the pristine state. Mirror the labeling `AccountSecurityPage` already applies to its Save control.
+- Convention followed: src/pages/AccountSecurityPage.tsx (Settings pages: mirror AccountSecurityPage layout — two-column form, sticky Save bar at the bottom); project/conventions.md "States" (empty and error states required on every user-facing surface).
 
 ## Dependencies
-- (none — #A is in Wave 1 with no unmet dependency)
-
-## Classification
-- Surface: logic
-- Risk: heavy
-
-### #B — Scaffold Account Settings page shell mirroring AccountSecurityPage layout   [ui, risk:heavy]   [self-check: PASS]
-## Summary
-Add the Account Settings page shell at `src/pages/**` so a signed-in user has a dedicated surface for editing profile and notification preferences and saving changes. This issue delivers only the page scaffold: the two-column form layout, the bottom sticky Save bar, and the optimistic-save wiring (success toast on commit, rollback on error). It does not implement the individual profile fields, avatar upload, or notification toggles — those are added by the sibling issues that depend on this shell. The shell mirrors `AccountSecurityPage` so the new page is structurally consistent with the existing settings surface.
-
-## Acceptance criteria
-- [ ] Happy path: a signed-in user navigates to the Account Settings page and sees the two-column form layout with a sticky Save bar pinned to the bottom mirroring `AccountSecurityPage`; editing a wired field enables Save, clicking Save applies the change optimistically and a success toast confirms the save.
-- [ ] Empty state: when there are no changes to save (form is in its initial/unedited state), the page renders the full two-column layout and sticky Save bar with the Save action in its disabled state; no toast is shown.
-- [ ] Error / failure path: when the save service rejects, the optimistic update is rolled back to the pre-save values, an error state is surfaced to the user (per the substrate error-state convention), and the Save action returns to an actionable (enabled) state so the user can retry.
-- [ ] Disabled / edge state: the Save action is disabled while the form is unedited and while a save is in flight (loading); during an in-flight save the Save bar reflects the loading state and re-enables on settle (success or error).
-
-## Design (recorded, consistent)
-This is a UI page shell. It is built by mirroring the existing settings-page pattern; no new layout primitives are introduced.
-- Pattern to mirror: `AccountSecurityPage` — two-column form, sticky Save bar pinned to the bottom, optimistic save with success toast and rollback-on-error. Mirror its structure verbatim for layout and save flow. (src/pages/AccountSecurityPage.tsx)
-- Save flow: optimistic apply on Save; on service success show the success toast; on service rejection roll back to pre-save values and surface the error state. The save service and profile-settings model are provided by #A — this shell wires against them and owns no save logic of its own.
-- Required states: empty (unedited form rendered with disabled Save, no toast); error (service rejection → rollback + error state surfaced per substrate convention); loading (Save in flight → Save disabled, loading reflected on the Save bar); disabled (Save disabled while unedited and while saving). The substrate requires empty and error states on every user-facing surface (project/conventions.md "States: empty and error states required on every user-facing surface"); loading and disabled are required by the save flow this shell wires.
-- Affordances: a single Save action in the sticky Save bar (mirroring `AccountSecurityPage`). Save is non-destructive (it commits the user's own edits), so no confirm affordance is required; the optimistic-apply-then-rollback flow is the only commit path. No destructive operation exists in this shell.
-- Form fields: this shell renders no concrete fields; field content (profile fields via shared `FormField`, avatar via `ImageUploader`, notification toggles) is added by sibling issues. The shell provides the two-column form container those issues populate.
-- Accessibility: the Save action is a labeled button ("Save", accessible name "Save"); the page exposes a heading/label identifying it as "Account Settings"; the error state is surfaced as an accessible status message and the success toast as an accessible notification, consistent with `AccountSecurityPage`'s patterns. Interactive elements added by sibling issues carry their own labels per the `FormField`/`ImageUploader` conventions.
-- Stack: React 18 + TypeScript (non-negotiable).
-- Convention followed: project/conventions.md "Settings pages: mirror AccountSecurityPage layout — two-column form, sticky Save bar at bottom, optimistic save with success toast and rollback-on-error" (src/pages/AccountSecurityPage.tsx); project/conventions.md "States: empty and error states required on every user-facing surface".
-
-## Dependencies
-- Depends on #A — page shell wires optimistic save / rollback against the ProfileSettings save service and model from #A
+- None — #A is Wave 1 and depends on nothing. Other issues (fields, toggles, save) depend on this shell.
 
 ## Classification
 - Surface: UI
 - Risk: heavy
 
-### #C — Build profile name and email fields using shared FormField with inline validation   [ui, risk:heavy]   [self-check: PASS (cleared design Blocker on retry 1)]
+### #B — Add name and email profile fields to AccountSettingsPage using shared FormField with inline validation   [ui, risk:heavy]   [self-check: PASS]
 ## Summary
-Render the profile name and email inputs on the Account Settings page using the shared `FormField` component so a user can edit their name and email as part of editing their profile. Both fields use inline validation (validate on blur, error text under the field), bind to the profile model, and live inside the settings page shell, matching the established forms and settings-page conventions. The fields surface their validity into the page shell's shared Save-enablement contract; the sticky Save bar, optimistic save/rollback, and Save-enablement rule are owned by the page-shell issue #B (per conventions.md "Settings pages: mirror AccountSecurityPage").
+Add editable **name** and **email** profile fields to the Account Settings page so a signed-in user can view and change these values as part of editing their profile. The fields render as shared `FormField` inputs inside the page's form shell, with inline validation on blur (error text shown under each field) so the user gets immediate, in-context feedback before saving.
 
 ## Acceptance criteria
-- [ ] Happy path: With a loaded profile, the name and email fields render inside the settings page shell pre-populated from the profile model; editing a value and blurring with valid input updates the bound profile model and shows no error text.
-- [ ] Empty state: When the profile model has no name and/or no email, the corresponding field renders empty (showing its placeholder) with no error text until the user interacts; a required field left empty and blurred shows its required-error text under the field.
-- [ ] Error/failure path: On blur with invalid input (empty required name, or malformed email), the field shows inline error text directly under the field via `FormField` and is marked invalid (aria-invalid="true") so the value is not treated as valid for save; the invalid field surfaces its aria-invalid state into the page shell's Save-enablement contract owned by #B (Save disabled while any field is aria-invalid).
-- [ ] Disabled/edge state: While the profile is loading (not yet available) the name and email fields render in a disabled state and accept no input until the profile model resolves.
+- [ ] Happy path: The Account Settings form renders a name input and an email input, each as a shared `FormField`. Editing a field and moving focus away (blur) with a valid value shows no error, and the entered values are held in form state ready to save.
+- [ ] Empty state: When a required field (name, email) is left blank, on blur the field shows inline error text under the field indicating the value is required; the field's current value renders as empty rather than `undefined`/`null`.
+- [ ] Error / failure path: When the email value is not a valid email address, on blur the email field shows inline error text under the field describing the validation failure, and the field is marked invalid so a parent save flow can treat the form as not submittable.
+- [ ] Disabled / edge state: While the parent form's save is in progress (the Save bar's saving state from #A), the name and email inputs are disabled so the user cannot edit values mid-save.
 
 ## Design (recorded, consistent)
-Render two `FormField` instances — Name and Email — inside the Account Settings page shell (the `src/pages/**` surface created by #B). The two fields follow the two-column form layout of the settings page shell; that layout is inherited from #B (mirroring src/pages/AccountSecurityPage.tsx, conventions.md "Settings pages: mirror AccountSecurityPage — two-column form"). Each `FormField` mirrors the shared component's inline-validation behavior: validation runs on blur and error text is rendered under the field by `FormField` itself. Field values bind to the profile model from #A.
-Save-enablement: this issue does not own the Save bar. The sticky Save bar at the bottom of the settings page, the optimistic save with success toast and rollback-on-error, and the Save-enablement rule (Save disabled while any field is aria-invalid) are all owned by the page-shell issue #B, mirroring src/pages/AccountSecurityPage.tsx. This issue's responsibility is to surface each field's validity into that shared contract: a field that is invalid on blur sets aria-invalid="true", which #B's Save-enablement rule consumes to keep Save disabled while any field is aria-invalid.
-Required states: Empty (placeholder, no error until interaction); Loading (model not resolved → fields disabled, reject input); Error (on-blur invalid → inline error text under the field, aria-invalid="true"); Disabled (during loading).
-Accessibility: each field has an associated visible label rendered by `FormField` ("Name", "Email") programmatically tied to its input; email input uses `type="email"`; invalid fields set `aria-invalid="true"` and the error text is associated with the input.
-- Convention followed: project/conventions.md "Forms: shared FormField with inline validation (validate on blur; error text under the field)" — src/components/FormField.tsx.
-- Convention followed: project/conventions.md "States: empty and error states required on every user-facing surface."
-- Convention followed: project/conventions.md "Settings pages: mirror AccountSecurityPage — two-column form, sticky Save bar at bottom, optimistic save with success toast and rollback-on-error" — src/pages/AccountSecurityPage.tsx.
+- Both fields are rendered with the shared `FormField` component (not raw `<input>`), mounted inside the `AccountSettingsPage` form shell introduced by #A.
+- Validation is inline: validate on blur, with error text rendered under the field. This follows the established Forms behavior; do not validate on every keystroke and do not surface errors in a separate summary region.
+- Field rules: name is required (non-empty after trim); email is required and must be a syntactically valid email address. Required-empty and invalid-format both produce inline error text under the respective field on blur.
+- Each `FormField` is a labeled, interactive input — the visible label ("Name", "Email") is the accessible name; the inline error text is associated with its field so assistive technology announces it (mirror how `FormField` wires label and error per its pattern). No standalone affordances are added by this issue (no buttons); the Save action lives in the #A Save bar.
+- Disabled state for both inputs is driven by the parent form's in-progress save state owned by #A; this issue only consumes that flag to disable the inputs.
+- Convention followed: project/conventions.md "Forms" rule (shared `FormField` with inline validation — validate on blur, error text under the field; pattern: src/components/FormField.tsx). Settings-page form shell + Save bar / saving state: project/conventions.md "Settings pages" rule (pattern: src/pages/AccountSecurityPage.tsx), introduced for this page by #A.
 
 ## Dependencies
-- Depends on #B — name/email FormField inputs render inside the settings page shell (src/pages/** surface) created by #B; the two-column form layout, sticky Save bar, optimistic save/rollback, and Save-enablement contract (Save disabled while any field is aria-invalid) are owned by #B.
-- Depends on #A — name/email field values bind to the profile model from #A.
+- Depends on #A — FormField inputs mount inside the AccountSettingsPage form shell + Save bar introduced by #A (src/pages/AccountSettingsPage.tsx)
 
 ## Classification
 - Surface: UI
 - Risk: heavy
 
-### #D — Add avatar upload field using ImageUploader component   [ui, risk:heavy]   [self-check: PASS]
+### #C — Add avatar upload to the profile section using the shared ImageUploader   [ui, risk:heavy]   [self-check: PASS]
 ## Summary
-Add an avatar upload control to the Account Settings page by reusing the shared `ImageUploader` component (src/components/ImageUploader.tsx), rendered inside the settings page shell and wired into the profile save flow. The control reads and writes the avatar value on the profile model so that a saved avatar persists through the page's optimistic save (success toast + rollback-on-error), consistent with how the settings page mirrors `AccountSecurityPage`.
+Add an avatar field to the profile section of the Account Settings page so a signed-in user can set or change their profile picture. The field reuses the shared `ImageUploader` component and mounts inside the profile section of the page shell, alongside the existing name and email fields.
 
 ## Acceptance criteria
-- [ ] Happy path: User selects an image; `ImageUploader` uploads it and the resulting avatar value binds to the profile model; on Save the avatar persists optimistically with a success toast.
-- [ ] Empty state: When the profile has no avatar value, the control renders `ImageUploader`'s empty/placeholder state prompting the user to add an avatar (no broken image, no error).
-- [ ] Error / failure path: If the upload fails, an inline error state is shown on the control and the avatar value is not bound; if Save fails, the optimistic avatar change rolls back per the page's rollback-on-error pattern.
-- [ ] Disabled / edge state: While an upload is in progress the control shows its uploading (loading) state and the sticky Save bar's Save action is disabled until the upload settles (success or error).
+- [ ] A signed-in user sees their current avatar in the profile section and can upload a new image via the `ImageUploader`; the chosen image is reflected in the field and persists through the page's existing optimistic save (success toast on save).
+- [ ] When the user has no avatar set, the field renders its empty state (no current image) and invites the user to upload one.
+- [ ] When an upload or save fails, the field surfaces an error state and the optimistic save rolls back per the settings-page convention (the previous avatar is restored).
+- [ ] While an upload is in progress the uploader is in its loading/disabled state so a second upload cannot be triggered until the first resolves.
 
 ## Design (recorded, consistent)
-Render the avatar field within the Account Settings page shell (the two-column form created by #B that mirrors `AccountSecurityPage`), reusing the shared `ImageUploader` component rather than a bespoke uploader. The control's value binds to the avatar property of the profile model from #A, participating in the same optimistic save (success toast + rollback-on-error) the settings page inherits from `AccountSecurityPage`.
-UI Design:
-- Pattern to mirror: `ImageUploader` at src/components/ImageUploader.tsx (the upload control itself); page-level form/save structure mirrors `AccountSecurityPage` at src/pages/AccountSecurityPage.tsx (two-column form, sticky Save bar, optimistic save with success toast + rollback-on-error).
-- Required states:
-  - empty — no avatar value: `ImageUploader` placeholder/empty state inviting upload (convention: empty state required on every user-facing surface).
-  - loading — uploading: `ImageUploader` in-progress/uploading state while the file uploads.
-  - error — upload-error and save-error: inline error on the control for a failed upload (convention: error state required on every user-facing surface); save failure surfaces via the page's rollback-on-error + error feedback.
-  - disabled — Save action disabled while an upload is in progress; control disabled from accepting a new file mid-upload.
-- Affordances: a clickable upload trigger (button/dropzone) provided by `ImageUploader`; a way to replace an existing avatar; current avatar preview when a value is present.
-- Accessibility labels: the upload control has an accessible name (e.g., aria-label "Upload avatar" / "Change avatar"); the upload status (uploading, upload-error) is exposed to assistive tech (e.g., aria-live status / aria-busy during upload, descriptive error text associated with the control).
-- Convention followed: project/conventions.md "Avatar upload: reuse the `ImageUploader` component. Pattern: src/components/ImageUploader.tsx"; project/conventions.md "Settings pages: mirror `AccountSecurityPage` ... Pattern: src/pages/AccountSecurityPage.tsx"; project/conventions.md "States: empty and error states required on every user-facing surface."
+- The avatar field reuses the shared `ImageUploader` component rather than introducing a new upload control. This is the established avatar-upload mechanism for this codebase.
+  - Convention followed: project/conventions.md "Avatar upload" rule — reuse `ImageUploader` (Pattern: src/components/ImageUploader.tsx).
+- The field mounts inside the profile section of the Account Settings page shell, next to the name and email fields.
+  - Convention followed: Depends on #A — the profile section of the page shell is introduced there (src/pages, mirrors `AccountSecurityPage`).
+- Saving the avatar uses the page's optimistic save with success toast and rollback-on-error; the avatar field does not implement its own save path — it participates in the page-level Save bar.
+  - Convention followed: project/conventions.md "Settings pages" rule — mirror `AccountSecurityPage` (optimistic save, success toast, rollback-on-error; Pattern: src/pages/AccountSecurityPage.tsx).
+- Empty state (no avatar) and error state (failed upload/save) are both rendered, as required for every user-facing surface.
+  - Convention followed: project/conventions.md "States" rule — empty and error states required on every user-facing surface.
+- Required states: empty (no avatar set), loading (upload in progress), error (upload/save failure), disabled (uploader locked while an upload is in flight). These are provided by `ImageUploader` and mirror its established behavior.
+  - Convention followed: src/components/ImageUploader.tsx (the shared uploader is the pattern for these states).
+- Affordances: the upload affordance is the `ImageUploader` control itself; accessibility labels follow the shared component (the uploader's accessible label identifies it as the avatar/profile-picture upload). No destructive operation is introduced by this field, so no separate confirm affordance is required.
+  - Convention followed: src/components/ImageUploader.tsx (affordances and accessible labels come from the shared component).
 
 ## Dependencies
-- Depends on #B — avatar ImageUploader field renders inside the settings page shell created by #B
-- Depends on #A — avatar value binds to the profile model from #A
+- Depends on #A — ImageUploader avatar field mounts inside the profile section of the page shell introduced by #A.
 
 ## Classification
 - Surface: UI
 - Risk: heavy
 
-### #E — Build notification preference toggles section   [ui, risk:heavy]   [self-check: PASS]
+### #D — Add notification preference toggles to the Account Settings form   [ui, risk:light]   [self-check: PASS]
 ## Summary
-Render the notification-preference toggles section on the Account Settings page, placed inside the settings page shell from #B and wired into the shared save flow alongside the profile fields. One toggle is rendered per field in the notification-preference shape defined by #A; the section does not define its own category taxonomy — the set of toggles is derived entirely from #A's shape. Placement, two-column layout, sticky Save bar, and optimistic-save behavior mirror `AccountSecurityPage` per conventions.md.
+Render the user's notification preferences as toggle controls inside the Account Settings form, alongside the profile fields, so a signed-in user can turn each notification preference on or off and save it together with their profile changes. This delivers the "notification toggles" item named as in-scope in the brief.
 
 ## Acceptance criteria
-- [ ] Happy path: the section renders one labeled toggle per field in the notification-preference shape from #A; changing a toggle marks the form dirty and, on Save, persists optimistically with a success toast (mirroring `AccountSecurityPage` save behavior). Toggle order follows the field order of the #A shape.
-- [ ] Empty state: when the notification-preference shape from #A yields no fields (empty preference set), the section renders its heading with a convention-required empty state (no orphaned Save affordance for this section), per conventions.md "empty ... states required on every user-facing surface."
-- [ ] Error / failure path: when the optimistic save fails, the section's toggle values roll back to their pre-save state and an error state/toast is shown, matching the rollback-on-error behavior of `AccountSecurityPage`; per-toggle inline validation surfaces via the shared `FormField` pattern if a value is rejected.
-- [ ] Disabled / edge state: while a save is in flight, toggles are disabled (non-interactive) to prevent concurrent edits, consistent with the sticky Save bar's pending state; a toggle whose underlying preference is unavailable from #A's shape is not rendered (never rendered in an indeterminate/undefined state).
+- [ ] Happy path: when the Account Settings page loads with notification preferences from the data layer, each preference renders as a toggle in its own section of the two-column form (alongside the profile section); toggling a control and clicking Save in the sticky Save bar persists the new values via optimistic save and shows the success toast.
+- [ ] Empty state: when the data layer returns no notification preferences, the toggles section renders its empty state (no toggle rows) rather than an empty/blank panel, consistent with the empty-state requirement for every user-facing surface.
+- [ ] Error / failure path: when an optimistic save fails, the toggle values roll back to their pre-save state and an error is surfaced, mirroring the AccountSecurityPage rollback-on-error behavior; a load failure renders the page error state.
+- [ ] Disabled / edge state: while a save is in flight the Save bar / toggles reflect the non-interactive (saving) state so the user cannot double-submit, matching the AccountSecurityPage save-bar behavior.
 
 ## Design (recorded, consistent)
-- Placement & save wiring: the toggles section lives inside the settings page shell created by #B and participates in the same form/save lifecycle as the profile fields. Layout mirrors `AccountSecurityPage` — two-column form, sticky Save bar, optimistic save with success toast and rollback-on-error.
-- Category content: NOT invented here. Toggles are generated by iterating the notification-preference shape from #A (one toggle per field). This avoids defining a notification taxonomy that the substrate does not assert; the shape is the single source of truth for which categories exist and their labels.
-- States: empty state (no fields from #A) and error state are required per convention; loading/disabled state is driven by the in-flight save from the shared Save bar.
-- Affordances: a labeled toggle control per preference field; the shared sticky Save bar (owned by the page shell, not duplicated by this section); success toast on save; error toast + value rollback on failure.
-- Accessibility labels: each toggle exposes an accessible label derived from its preference field (e.g. `aria-label`/associated `<label>` naming the notification category and on/off semantics via the toggle's checked state); the section is introduced by a heading element so assistive tech can navigate to it; disabled-while-saving state is conveyed via the control's disabled/`aria-disabled` attribute.
-- Stack: React 18 + TypeScript (non-negotiable). Reuse shared form primitives (`FormField`) for inline validation consistency.
-- Convention followed: project/conventions.md "Settings pages: mirror `AccountSecurityPage` — two-column form, sticky Save bar, optimistic save with success toast + rollback-on-error" (src/pages/AccountSecurityPage.tsx); "Forms: shared `FormField`, inline validation" (src/components/FormField.tsx); "States: empty and error states required on every user-facing surface."
+- Toggles render inside the existing `AccountSettingsPage` two-column form introduced by #A, in their own section adjacent to the profile section (per the candidate sketch and the #A page shell).
+- Layout, sticky Save bar, optimistic-save-with-success-toast, and rollback-on-error are inherited by mirroring the `AccountSecurityPage` settings-page pattern — not re-invented here.
+- The toggles are rendered generically against whatever notification-preference shape the data layer provides (one toggle control per preference). No notification category taxonomy is defined here, because neither the brief nor conventions.md specifies one; the brief names "notification preferences / notification toggles" as the in-scope unit, which the layout convention fully resolves.
+- Each toggle is a labeled interactive control; the visible preference label is its accessible name. Empty and error states are present per the project States convention.
+- Convention followed: src/pages/AccountSecurityPage.tsx (settings page: two-column form, sticky Save bar, optimistic save with success toast, rollback-on-error); project/conventions.md States rule (empty and error states required on every user-facing surface).
 
 ## Dependencies
-- Depends on #B — notification toggles section renders inside the settings page shell created by #B.
-- Depends on #A — notification toggles bind to the notification-preference shape from #A (the shape also determines which toggles/categories are rendered).
-
-## Classification
-- Surface: UI
-- Risk: heavy
-
-### #F — Add empty and error states to the Account Settings page   [ui, risk:light]   [self-check: PASS]
-## Summary
-The Account Settings page (created by #B) lets a user edit profile + notification preferences and save. Per the project convention "empty and error states are required on every user-facing surface," this issue adds the load-failure error state, the empty/initial state, and the loading state to the Account Settings surface, mirroring the state treatment already established by `AccountSecurityPage`. Scope is the non-happy-path rendering of the existing settings surface; it does not introduce new form fields or the save behavior itself (owned by #B).
-
-## Acceptance criteria
-- [ ] Happy path: when the user's settings load successfully, the populated two-column form renders as it does today and no empty/error/loading affordance is shown.
-- [ ] Empty state: when settings load successfully but no profile/notification values are set yet (initial/empty account), the page renders the empty/initial state mirroring `AccountSecurityPage` rather than a blank form region, with an `aria-label` on the empty-state container describing the state.
-- [ ] Error / failure path: when the settings load request fails, the page renders an error state (matching `AccountSecurityPage`'s load-failure treatment) with a retry affordance; the error message is announced to assistive tech via `role="alert"` and the form/Save bar is not interactive.
-- [ ] Disabled / edge state: while settings are loading, the page renders a loading state and the Save bar is disabled (non-submittable); the disabled Save control carries an `aria-disabled="true"` label so it is announced as unavailable.
-
-## Design (recorded, consistent)
-Mirror the state treatment of the existing settings surface, `AccountSecurityPage`, which is the canonical settings page per conventions.md. The Account Settings page is a two-column form with a sticky Save bar; this issue layers the load-state branches over that surface:
-- Pattern to mirror: `src/pages/AccountSecurityPage.tsx` — replicate its empty, error (load-failure), and loading state treatment and place them on the Account Settings surface from #B.
-- Required states: loading (initial fetch in flight; Save bar disabled), empty (load succeeded, no values set yet), error (load failed; retry affordance, Save bar non-interactive), and the existing populated/happy state (unchanged).
-- Error state uses optimistic-save's existing rollback-on-error convention only for save failures (owned by #B); this issue covers the load-failure error state for the surface.
-- Accessibility: empty-state container gets a descriptive `aria-label`; error-state messaging uses `role="alert"` so failures are announced; the disabled Save control during loading carries `aria-disabled="true"`. Labels mirror those used by `AccountSecurityPage`.
-- Form fields, inline validation, and avatar upload remain via shared `FormField` (`src/components/FormField.tsx`) and `ImageUploader` (`src/components/ImageUploader.tsx`) — unchanged by this issue; no new fields introduced.
-- Convention followed: project/conventions.md "States: empty and error states required on every user-facing surface" and "Settings pages: mirror `AccountSecurityPage` … Pattern: src/pages/AccountSecurityPage.tsx".
-
-## Dependencies
-- Depends on #B — empty/error states attach to the Account Settings page surface created by #B.
+- Depends on #A — notification toggles lay out within the two-column form shell introduced by #A.
 
 ## Classification
 - Surface: UI
 - Risk: light
 
-## Substrate grounding
-- #A profile model + save service (optimistic save, success toast, rollback-on-error; service-authoritative validation) — grounded in project/conventions.md#settings-pages (mirror AccountSecurityPage, src/pages/AccountSecurityPage.tsx) and project/conventions.md#forms (FormField validation, src/components/FormField.tsx).
-- #B page shell (two-column form, sticky Save bar, optimistic save + rollback, Save-enablement) — grounded in project/conventions.md#settings-pages (src/pages/AccountSecurityPage.tsx) and project/conventions.md#states.
-- #C name/email FormField fields (inline validate-on-blur, error text under field, aria-invalid; two-column layout inherited from #B; Save-enablement contract owned by #B) — grounded in project/conventions.md#forms (src/components/FormField.tsx) and project/conventions.md#settings-pages (src/pages/AccountSecurityPage.tsx).
-- #D avatar upload (reuse ImageUploader; empty/uploading/upload-error/disabled states) — grounded in project/conventions.md#avatar-upload (src/components/ImageUploader.tsx) and project/conventions.md#settings-pages.
-- #E notification toggles (set derived from #A's notification-preference shape, not invented; mirror AccountSecurityPage placement + save) — grounded in project/conventions.md#settings-pages (src/pages/AccountSecurityPage.tsx) and project/conventions.md#forms; notification taxonomy intentionally NOT invented (derived from #A's shape).
-- #F empty/error/loading states on the page surface (mirror AccountSecurityPage load-state treatment) — grounded in project/conventions.md#states and project/conventions.md#settings-pages (src/pages/AccountSecurityPage.tsx).
-- Degradations: none (uiSurfaceGlobs present — design-lens distinction drawn; #A logic, #B–#F ui).
+### #E — Wire optimistic save with success toast and rollback-on-error to the Save bar   [logic, risk:heavy]   [self-check: PASS]
+## Summary
+When a signed-in user edits their account settings and clicks Save in the sticky Save bar, the page must persist their profile fields (name, email), avatar, and notification preferences, then confirm the result. This issue implements the save handler bound to the Save bar: it optimistically applies the change, shows a success toast when persistence succeeds, and rolls the UI back to the prior values if persistence fails. This gives the user immediate feedback while keeping the displayed state honest when a save does not land.
+
+## Acceptance criteria
+- [ ] Happy path: with at least one pending edit, clicking Save persists the profile fields (name, email), avatar, and notification preferences; the UI optimistically reflects the saved values and a success toast is shown when persistence resolves.
+- [ ] Empty state (nothing to save): when there are no pending changes, the Save action does not issue a persistence request and shows no success toast; the displayed values are unchanged.
+- [ ] Error / failure path: when persistence rejects, the optimistic update is rolled back to the values shown before Save and an error state is surfaced to the user (no success toast); the user can retry.
+- [ ] Disabled / in-flight edge state: while a save is in flight, the Save affordance is disabled so the same change cannot be submitted twice; it re-enables after the request resolves or rejects.
+
+## Design (recorded, consistent)
+- Save behavior mirrors `AccountSecurityPage`: optimistic save, success toast on success, rollback-on-error on failure. This is the authoritative pattern for Settings pages.
+- The handler binds to the sticky Save bar affordance owned by #A; it does not introduce its own UI surface.
+- On Save, the handler reads and persists the field values owned by #B (name, email), the avatar value owned by #C, and the notification preference values owned by #D — the complete set of editable account-settings state.
+- Optimistic flow: snapshot the current persisted values, apply the pending edits to the displayed state immediately, then issue the persistence request. On resolve, keep the optimistic values and show the success toast. On reject, restore the snapshot (rollback) and surface an error state.
+- Empty state: if there are no pending edits relative to the last-saved values, Save is a no-op (no request, no toast).
+- In-flight: disable the Save affordance for the duration of the request to prevent duplicate submissions, matching the optimistic-save lifecycle.
+- Empty and error states are surfaced because they are required on every user-facing surface that this save flow drives.
+- Convention followed: project/conventions.md "Settings pages" rule — mirror `AccountSecurityPage` (optimistic save with success toast and rollback-on-error); grounding pattern src/pages/AccountSecurityPage.tsx. Required empty/error states per project/conventions.md "States" rule.
+
+## Dependencies
+- Depends on #A — save handler binds to the sticky Save bar affordance introduced by #A
+- Depends on #B — save persists the name/email field values owned by #B
+- Depends on #C — save persists the avatar value owned by #C
+- Depends on #D — save persists the notification preference values owned by #D
+
+## Classification
+- Surface: logic
+- Risk: heavy
+
+## Project-docs grounding
+- #A page shell (two-column form, sticky Save bar, empty/error states; mirror AccountSecurityPage) — grounded in project/conventions.md#settings-pages (src/pages/AccountSecurityPage.tsx) and project/conventions.md#states.
+- #B name/email FormField fields (inline validate-on-blur, error text under field, disabled-while-saving) — grounded in project/conventions.md#forms (src/components/FormField.tsx) and project/conventions.md#settings-pages (src/pages/AccountSecurityPage.tsx).
+- #C avatar upload (reuse ImageUploader; empty/loading/error/disabled states) — grounded in project/conventions.md#avatar-upload (src/components/ImageUploader.tsx) and project/conventions.md#settings-pages (src/pages/AccountSecurityPage.tsx).
+- #D notification toggles (one toggle per data-layer preference; mirror AccountSecurityPage placement + save) — grounded in project/conventions.md#settings-pages (src/pages/AccountSecurityPage.tsx) and project/conventions.md#states; notification taxonomy intentionally NOT invented (derived from the data-layer shape, not parked, not invented).
+- #E optimistic save (success toast + rollback-on-error; binds to #A Save bar) — grounded in project/conventions.md#settings-pages (src/pages/AccountSecurityPage.tsx) and project/conventions.md#states.
+- Degradations: none (uiSurfaceGlobs present — design-lens distinction drawn; #A/#B/#C/#D ui, #E logic).
 
 ## Needs human input
 none
 
 ---
-To create these on GitHub, re-run with `--apply` — it ensures the labels, creates-or-adopts the milestone, opens each gate-surviving issue, rewrites the slug references to real issue numbers, and patches the milestone description with the Wave order. This preview wrote no GitHub state.
+This plan file is the build artifact — run `/milestone-feeder:create` to deploy it to GitHub (it ensures the labels, creates-or-adopts the milestone by the exact title above, opens each surviving issue, rewrites the slug references to real issue numbers, and patches the milestone description with the Wave order). `plan` wrote no GitHub state.
