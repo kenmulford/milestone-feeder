@@ -3,6 +3,37 @@
 Release notes for milestone-feeder. Each tagged release is also published on the
 [GitHub Releases page](https://github.com/kenmulford/milestone-feeder/releases).
 
+## v0.3.2 — Actor-aware source guard
+
+**Theme:** The feeder's source guard now tells *who* is editing apart — it still
+stops the feeder from writing its own source, but lets a sibling builder
+(milestone-driver's implementer) build the feeder without switching the guard off
+wholesale.
+
+### 🔧 Fixes
+
+| Issue | PR | What |
+|---|---|---|
+| #63 Make the no-source-edit hook agent-type-aware | #72 | The `no-source-edit` PreToolUse gate is now **actor-aware**. It keeps blocking the feeder's own actors — the main thread and the feeder's own subagents (`architect` / `issue-author`, matched by their bare frontmatter `name`) — while allowing a positively-identified non-feeder subagent (e.g. milestone-driver's `implementer`) to edit source. The driver can now build the feeder's own `skills/` / `agents/` / `hooks/` with **no blanket `CLAUDE_HOOK_DISABLE_NO_SOURCE_EDIT=1` override**, closing the latent feeder + driver collision. The gate fails closed (the main thread, the feeder's own agents, and any ambiguous actor all block). A CI drift-guard in `scripts/validate-plugin-structure.py` keeps the hook's hardcoded agent set in sync with `agents/*.md`, and the bash + PowerShell scripts were brought to case-sensitive parity. |
+
+### Consumer notes (upgrading from v0.3.1)
+
+- **Additive — nothing breaks.** Same commands, same config.
+- **If you run both milestone-feeder and milestone-driver:** the feeder's source
+  guard no longer blocks the driver's `implementer` from building the feeder's own
+  source, so you no longer need the blanket `CLAUDE_HOOK_DISABLE_NO_SOURCE_EDIT=1`
+  override for that. The feeder's own subagents are still blocked from writing source.
+- **The guard identifies actors by their bare agent `name`** (e.g. `architect`) —
+  that is what a PreToolUse hook receives, not a plugin-namespaced id. The set of the
+  feeder's own agent names is hardcoded inside the hooks (deliberately not in
+  `feeder.json` — it's a security control); a CI check fails the build if a new agent
+  is added without updating it.
+- **No config-key or schema changes** to `.milestone-config/feeder.json`.
+
+### ⚖️ Post-run audit trail
+
+Judgment-call PRs for this release: none
+
 ## v0.3.1 — Explicit milestone naming & the driver handoff
 
 **Theme:** v0.3.0 made the surface speak the user's language; v0.3.1 makes the
