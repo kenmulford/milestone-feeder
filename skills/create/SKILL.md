@@ -96,6 +96,74 @@ PowerShell 7+ is the same form — set `$env:t = "<milestone-title>"` first, the
 | **Exactly one title match, `state: closed`** | **Adopt + reopen:** `gh api --method PATCH "repos/{owner}/{repo}/milestones/<number>" -f state=open`, then record its `.number`. **Never delete** the milestone or any of its issues. |
 | **Multiple title matches** (GitHub permits same-title milestones) | **Adopt the FIRST returned**, reopen it if closed, and log a notice — `create: multiple milestones titled "<t>" — adopted first returned (#<n>)`. Never delete the others. |
 
+**Write the deploy receipt (the concluding action of pass b).** As soon as pass (b) has resolved the milestone `.number` — **any** outcome above (created / adopted-open / adopted-reopened / first-of-multiple) — write that number back into the **same plan file Step 1 resolved** (`.milestone-feeder/plan-<slug>.md`, `skills/create/SKILL.md` Step 1) as a single labeled receipt field. This is the stable handle `update` will resolve by after a later title change (`docs/specs/v0.3.1-driver-handoff.md` §4 *"The deploy receipt — a stable handle for rename"*; the plan-file additive-fields row, §6: *"`Milestone number (GitHub):` `<n>` — the deploy receipt … `create` writes it post-deploy"*). The receipt is the create-SIDE back-write only — the `update`-side READ is a separate issue and is **not** part of `create`.
+
+- **Field shape.** Exactly one labeled line, a **sibling to the plan file's existing header lines** (`Milestone title (exact):`, `Self-check:`, `Source brief:` near the top — the format block at `skills/plan/SKILL.md:282-288`):
+
+  ```
+  Milestone number (GitHub): <n>
+  ```
+
+- **Guard — write ONLY when a real number was resolved.** If pass (b) resolved **no** `.number` (it neither created nor adopted a milestone), write **nothing** — no receipt line, no placeholder. Prior absence of the line is normal: a first deploy has none, and a plan file that never receives a receipt stays valid and deployable (the field is additive; `docs/specs/v0.3.1-driver-handoff.md` §6: *"A v0.3.0 plan file lacking them still parses (the consumers degrade gracefully)"*).
+- **Idempotent read-modify-write.** Read the plan file; if a `Milestone number (GitHub):` line **already exists**, **rewrite its number in place** — exactly one such line, **never** a duplicate; if it is **absent**, **insert** one (as a sibling header line). This is a read-modify-write that **converges to exactly one receipt line carrying the current number**, so it is safe to re-run: a second `create` on an already-adopted milestone rewrites the same line to the same number (no duplicate, no second insert) — unlike pass (d)'s no-op idempotency (where re-applying changes nothing), the receipt actively overwrites, but the line count never grows. (Re-running `create` is safe and produces no duplicates — the same guarantee pass (d) makes for issue bodies, `skills/create/SKILL.md` "Partial-failure path".) Both shells below are idempotent by construction: the presence branch rewrites the existing line in place (exactly one), and the absent branch inserts exactly once.
+
+  ```bash
+  # bash — rewrite the receipt in place if present, else insert it after the header lines.
+  # Uses awk (portable across BSD/macOS and GNU sed/awk); avoids GNU-sed-only `a`,
+  # which exits 1 on BSD/macOS sed. n is the milestone number captured above; plan is
+  # the path Step 1 resolved. On any write error, emit the notice and continue (don't block).
+  plan=".milestone-feeder/plan-<slug>.md"
+  n="<resolved-milestone-number>"
+  notice="create: deployed milestone #$n but could not write the receipt to $plan — re-run to record it"
+  tmp="$(mktemp)" || { echo "$notice"; }
+  if [ -n "$tmp" ]; then
+    if grep -q '^Milestone number (GitHub):' "$plan"; then
+      # present → rewrite the FIRST receipt line in place (exactly one line; never a duplicate)
+      awk -v n="$n" '!done && /^Milestone number \(GitHub\):/ { print "Milestone number (GitHub): " n; done=1; next } { print }' "$plan" > "$tmp" \
+        && mv "$tmp" "$plan" || echo "$notice"
+    elif grep -q '^Source brief:' "$plan"; then
+      # absent, anchor present → insert exactly once after the Source brief header line
+      awk -v n="$n" '{ print } !done && /^Source brief:/ { print "Milestone number (GitHub): " n; done=1 }' "$plan" > "$tmp" \
+        && mv "$tmp" "$plan" || echo "$notice"
+    else
+      # absent AND no anchor (malformed/hand-edited plan) → degrade VISIBLY:
+      # append the receipt at EOF (still exactly one line; the present-branch finds it next run)
+      awk -v n="$n" '{ print } END { print "Milestone number (GitHub): " n }' "$plan" > "$tmp" \
+        && mv "$tmp" "$plan" || echo "$notice"
+    fi
+  fi
+  ```
+
+  ```powershell
+  # PowerShell 7+ — same idempotent rewrite-or-insert; write UTF-8 without a BOM.
+  # On any write error, emit the notice and continue (don't block the deploy).
+  $plan = ".milestone-feeder/plan-<slug>.md"
+  $n    = "<resolved-milestone-number>"
+  $notice = "create: deployed milestone #$n but could not write the receipt to $plan — re-run to record it"
+  try {
+    $lines = Get-Content -LiteralPath $plan
+    if ($lines -match '^Milestone number \(GitHub\):') {
+      # present → rewrite the number in place (exactly one line; never a duplicate)
+      $out = $lines -replace '^Milestone number \(GitHub\):.*', "Milestone number (GitHub): $n"
+    } elseif ($lines -match '^Source brief:') {
+      # absent, anchor present → insert as a sibling after the Source brief header line
+      $out = $lines | ForEach-Object {
+        $_
+        if ($_ -match '^Source brief:') { "Milestone number (GitHub): $n" }
+      }
+    } else {
+      # absent AND no anchor (malformed/hand-edited plan) → degrade VISIBLY:
+      # append the receipt at EOF (still exactly one line; the present branch finds it next run)
+      $out = @($lines) + "Milestone number (GitHub): $n"
+    }
+    Set-Content -LiteralPath $plan -Value $out -Encoding utf8NoBOM -ErrorAction Stop
+  } catch {
+    Write-Output $notice
+  }
+  ```
+
+- **Failure semantics — report, don't block.** A plan-file back-write failure is **REPORTED as a notice but does NOT block** — by this point the GitHub deploy already succeeded (the milestone exists; pass c is about to create the issues), and the plan file is **gitignored per-run scratch** (`docs/specs/v0.3.1-driver-handoff.md` §4: *"The plan file is gitignored per-run scratch, so this back-write is low-stakes"*). On a write error, emit a notice — `create: deployed milestone #<n> but could not write the receipt to <plan> — re-run to record it` — and continue to pass (c). Never abort the deploy over the receipt.
+
 #### c. Create each surviving issue; build the slug→`#n` map
 
 Create **only the SURVIVING** issues recorded in the plan file's `## Issues` section — the gate-clean / Advisory-only, **non-parked, non-dropped** issues (Step 2). **Parked and dropped issues recorded in the plan file are NEVER created** (the report still routes the parked ones at pass e; dropped dependents are simply omitted).
