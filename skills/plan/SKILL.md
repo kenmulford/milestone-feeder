@@ -304,6 +304,25 @@ Write the reviewable **plan file** to a gitignored per-run scratch path: `.miles
 
 **Surface the resolved identity for confirm/override.** Both the resolved `Milestone title (exact)` (carrying the semver per the Step 5.1 ladder) **and** its `Version provenance` line are written to the plan file and **surfaced for the user to confirm or override BEFORE running `create`** — `plan` never silently finalizes a milestone identity the user cannot see or change (`docs/specs/v0.3.1-driver-handoff.md` §2, §3, §6). On an infer rung the title carries the **reference version verbatim**, and this surfaced line is **where the user adjusts the patch / minor / major bump** before `create` deploys it.
 
+**Preserve an existing deploy receipt on re-plan.** The plan file may already carry a `Milestone number (GitHub): <n>` line — the **deploy receipt** `create` writes back post-deploy (the create-side write block at `skills/create/SKILL.md:99-135`; the exact field shape at `skills/create/SKILL.md:104`). It is the stable handle `update` resolves by, so a re-plan must NOT drop it: **before overwriting** `.milestone-feeder/plan-<slug>.md`, **read the PRIOR file at that same path** (if one exists) and **carry its receipt line forward, verbatim**, into the freshly-written plan file — as a sibling header line in the same position `create` writes it (after `Source brief:`). The receipt is **additive and READ-ONLY here**: `plan` never resolves a number or writes one (it has no milestone number — it writes only local slugs); it merely **preserves** the line `create` already recorded. **No prior file, OR a prior file with no receipt line → OMIT it, NO error** — a plan with no receipt is valid and deployable (`docs/specs/v0.3.1-driver-handoff.md` §6: *"A v0.3.0 plan file lacking them still parses (the consumers degrade gracefully)"*; the additive-fields row: *"`plan` preserves it on re-plan"*). Read the prior receipt line before the overwrite:
+
+```bash
+# bash — capture the prior receipt line (if any) BEFORE overwriting the plan file.
+# rcpt is empty when there is no prior file or no receipt line — then omit it (no error).
+plan=".milestone-feeder/plan-<slug>.md"
+rcpt="$(grep -m1 '^Milestone number (GitHub):' "$plan" 2>/dev/null)"
+```
+
+```powershell
+# PowerShell 7+ — same read; $rcpt is $null/empty when absent — then omit it (no error).
+$plan = ".milestone-feeder/plan-<slug>.md"
+$rcpt = (Get-Content -LiteralPath $plan -ErrorAction SilentlyContinue |
+         Select-String -Pattern '^Milestone number \(GitHub\):' |
+         Select-Object -First 1).Line
+```
+
+When `rcpt` is non-empty, write it verbatim into the new plan file as the sibling header line after `Source brief:`; when empty, write no such line.
+
 **Plan-file format.** Write the file in this shape — the **Milestone title (exact)** line is its own labeled field, separate from the goal in the header:
 
 ```markdown
@@ -317,6 +336,7 @@ Self-check: <the Step 6 outcome — one of:
   PARKED — <M> issue(s) → needs product input; <K> issue(s) → needs human direction (still-Blocker after 2 retries)
   SKIPPED (reviewer:false) — 🔴 gate disabled; generated issues were NOT vetted>
 Source brief: <inline | file:<path> | epic #<n>>
+Milestone number (GitHub): <n>   # OPTIONAL sibling header line — carried forward verbatim from a prior plan file if present; omitted on first plan (create writes it post-deploy, skills/create/SKILL.md:104)
 
 ## Milestone description (Wave order)
 <the Step 5 Wave-ordered description, verbatim — the §4 template with local slugs>
