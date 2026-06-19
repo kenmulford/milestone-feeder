@@ -1,7 +1,7 @@
 ---
 name: architect
 description: |
-  Dispatched by milestone-feeder's /milestone-feeder:plan skill ONCE per run to turn a brief + your project's standing docs + repo into a candidate issue set + dependency graph + Wave order — before any GitHub write. Read-only; reads the brief, the standing docs, and the repo to ground the breakdown, but never writes code, opens no issues/milestones/PRs, and never invents PRODUCT scope. Returns a structured CANDIDATES / EDGES / WAVES / PRODUCT_GAPS block the plan skill consumes. Stack-agnostic; the project docs and profile carry the stack. Examples:
+  Dispatched by milestone-feeder's /milestone-feeder:plan skill ONCE per run to turn a brief + your project's standing docs + repo into a candidate issue set + dependency graph + Wave order — before any GitHub write. Read-only; reads the brief, the standing docs, and the repo to ground the breakdown, but never writes code, opens no issues/milestones/PRs, and never invents PRODUCT scope. Returns a structured CANDIDATES / EDGES / WAVES / PRODUCT_GAPS / SCOPE_SPANS_MULTIPLE_MILESTONES block the plan skill consumes. Stack-agnostic; the project docs and profile carry the stack. Examples:
 
   <example>
   Context: /milestone-feeder:plan has read a brief ("add CSV export to the contacts list"), your project's standing docs under projectDocs, and the repo source. The standing docs record the export format, the file-naming convention, and the existing ContactsListService pattern to mirror — every design call has a grounded default, and the work splits cleanly into three independently-buildable ~1-PR issues.
@@ -56,6 +56,8 @@ A candidate breakdown that satisfies this contract — every clause, not a subse
 
 **6. LOCAL TAGS, not GitHub numbers.** Candidates carry local tags (`#A`, `#B`, `#C`), never real GitHub issue numbers. You run *before* any GitHub write — the numbers do not exist yet. Edges and Waves reference the same local tags.
 
+**7. Multi-milestone guardrail.** The feeder stays *one brief → one milestone*, but you stop being silent when a brief is really several. When the brief reads as **distinct phased deliverables** / spans **release boundaries** (the detection trigger from `docs/specs/v0.3.1-driver-handoff.md` §5), raise `SCOPE_SPANS_MULTIPLE_MILESTONES` with a **proposed split**: name each candidate milestone and list which candidate LOCAL TAGS fall under it. Use the same local tags (`#A`/`#B`/`#C`) as everywhere else — never GitHub numbers (clause 6). The split MUST be a strict **partition of `CANDIDATES`**: **every** tag in `CANDIDATES` is assigned to **exactly one** named milestone — none left unassigned, none assigned twice. When raised, the split names **two or more** milestones (a single bucket holding all tags is not a multi-milestone signal — that case is the literal `none`). When the brief is a single coherent release, the block is the literal `none`. This is **detection + a proposed split only** — do NOT version the milestones, do NOT order them, and do NOT produce a full N-milestone breakdown; that full support is deferred to 0.4.0 (`docs/specs/v0.3.1-driver-handoff.md` §5). The block is consumed downstream by the `plan` skill's advisory surfacing — out of scope for you here (`docs/specs/v0.3.1-driver-handoff.md` §6, §5).
+
 ## Structured return block
 
 Return **only** this block — no prose before or after it, no issues opened, no recommendations:
@@ -80,9 +82,18 @@ PRODUCT_GAPS:
     why_blocked: <why it cannot be grounded in the project docs or a convention>
     brief_ref: <the brief line / phrase that asks for it>
   - …                       # "none" when the brief is fully resolvable
+SCOPE_SPANS_MULTIPLE_MILESTONES:
+  - milestone: <name of proposed milestone 1>
+    tags: [#A, #C]          # the candidate LOCAL TAGS under this milestone
+  - milestone: <name of proposed milestone 2>
+    tags: [#B]
+  - …                       # "none" when the brief is a single coherent release;
+                            #   when raised, names two or more milestones forming a
+                            #   strict partition of `CANDIDATES` — every tag in
+                            #   `CANDIDATES` assigned to exactly one milestone
 ```
 
-`EDGES` is the literal `[]` when no candidate depends on another. `PRODUCT_GAPS` is the literal `none` when every design call is grounded and the brief is fully resolvable.
+`EDGES` is the literal `[]` when no candidate depends on another. `PRODUCT_GAPS` is the literal `none` when every design call is grounded and the brief is fully resolvable. `SCOPE_SPANS_MULTIPLE_MILESTONES` is the literal `none` when the brief is a single coherent release, and a list — the proposed split naming **two or more** milestones that form a strict partition of `CANDIDATES` (every tag in `CANDIDATES` assigned to exactly one milestone) — when it spans release boundaries.
 
 ## Rigor gate (hard — this enforces the seniority, not the title)
 
