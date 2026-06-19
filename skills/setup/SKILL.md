@@ -27,20 +27,7 @@ Before asking anything, gather signals from the repo. Run these checks silently 
 | Project docs directory | `.project/` present at repo root? | `projectDocs` default `.project/`; if the standing docs live elsewhere, that path is the suggested value |
 | Resolvable driver profile | `.milestone-config/driver.json` present, else legacy root `milestone-driver.json` present? | Confirms the shared keys the feeder reads (`uiSurfaceGlobs`, `integrationBranch`, the consumer's `sourceGlobs`) are available from the driver config (`SPEC.md` §7) — informational, not written into `feeder.json` |
 | Reviewer availability | Does `milestone-driver:triage-reviewer` resolve in this session? | `reviewer` default `"milestone-driver"` when it resolves, else `"internal"` (degrade to the feeder's own checklist mirroring the five triage criteria, `SPEC.md` §5) |
-| Existing profile | Read `.milestone-config/feeder.json` if present | Pre-fill any already-set keys (re-run handling below). If the file carries old key names, offer the courtesy migration below before pre-filling |
-
-#### Courtesy migration — old key names → new (a notice, not a contract)
-
-Earlier feeder profiles used four older key names. The skills now read **only** the new names — there is **no silent old-key fallback** in any skill body: an old key is either migrated here (with the notice below) or ignored, never honoured in place. When Phase 1 reads an existing `.milestone-config/feeder.json` that still carries any of these old keys, present this old→new mapping and offer to rewrite them to the new names in place. This is a courtesy, not a contract.
-
-| Old key (in file) | New key (written) | Value handling |
-|---|---|---|
-| `substrateDir` | `projectDocs` | value carried over unchanged |
-| `selfCheck` | `reviewer` | value carried over unchanged (`"milestone-driver"` \| `"internal"` \| `false`) |
-| `issueSizeGuidance` | `issueSize` | value carried over unchanged |
-| `decomposerAgent` | `architectAgent` | value carried over; if it is the old bundled default `"milestone-feeder:decomposer"`, update it to `"milestone-feeder:architect"` |
-
-`issueAuthorAgent` and `sourceGlobs` are unchanged — leave them exactly as they are. Present the mapping as a simple accept/decline: on accept, rewrite the file with the new key names (preserving values per the table) and continue Phase 2 with the migrated values pre-filled; on decline, leave the file as-is and continue with the new-key defaults (the old keys are ignored, never silently honoured). No 🔴 — this is a plain accept-or-decline choice, not a blocking decision.
+| Existing profile | Read `.milestone-config/feeder.json` if present | Pre-fill any already-set keys (re-run handling below) |
 
 ### Phase 2 — Tier-by-tier confirmation
 
@@ -135,7 +122,7 @@ Return control to the caller (`plan`) immediately. Do **not** ask the user to re
 
 ## Re-run behavior (idempotency)
 
-- **Existing profile.** If `.milestone-config/feeder.json` already exists, Phase 1 pre-fills from it and Phase 2 re-confirms every key with the existing value shown as the default (accept, edit, or re-configure) — mirroring the driver setup's existing-profile handling. The full flow still runs, but with current values pre-filled. If the file carries old key names, Phase 1 first offers the courtesy migration (old→new mapping with a notice) before pre-filling; the skills read only the new keys, so any old key the user declines to migrate is ignored, never silently honoured.
+- **Existing profile.** If `.milestone-config/feeder.json` already exists, Phase 1 pre-fills from it and Phase 2 re-confirms every key with the existing value shown as the default (accept, edit, or re-configure) — mirroring the driver setup's existing-profile handling. The full flow still runs, but with current values pre-filled.
 - **Labels.** Provisioning is idempotent via `--force`: re-running when a label already exists upserts its color/description and creates no duplicates.
 
 ## Output style
