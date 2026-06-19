@@ -72,6 +72,11 @@ That check is the guardrail. Two parts, in plain terms:
 
 The richer your project docs, the better the issues and the fewer decisions land back on your plate. Nothing here is new machinery — it's the grounding and the check, described in plain terms.
 
+Two more things the feeder does for you:
+
+- **Name your milestone with a version up front.** Add a line like `Milestone: myapp v1.2.0` to your brief (or just say it inline). The feeder reads the version straight from the milestone's name so its sibling, `milestone-driver`, knows exactly what version to build toward. If you don't name one, the feeder proposes a version — pulled from your existing milestones or git tags — and shows it to you to confirm or change before it builds anything. You're never handed a milestone whose name you didn't get to see.
+- **It flags a brief that looks like several milestones.** If your idea really reads as a few separate releases, the feeder still builds one milestone — but it tells you up front, "this looks like ~N milestones," and shows you how it would split them, so you can break the brief up and re-run if you want. Never a silent giant milestone, and never a hard stop — the call is yours.
+
 ## Config
 
 Configuration is **optional** — every setting has a sensible default, so the tool runs with no config at all. When you do want to tune it, the settings live in `.milestone-config/feeder.json` (the same folder `milestone-driver` keeps its `driver.json` in). The first `plan` run writes this file for you.
@@ -86,7 +91,7 @@ Full setup walkthrough: [docs/consumer-setup.md](docs/consumer-setup.md). Every 
 
 ## Status
 
-v0.3.0 — the surface speaks your language: `plan` to draft, `create` to build, `update` to sync. Self-hosted: the feeder was planned as its own milestone and built by milestone-driver.
+v0.3.1 — name your milestone with a version up front and the feeder hands it cleanly to `milestone-driver`: explicit, versioned milestone naming; `update` finds and renames the right milestone even after a title change; and a heads-up when your brief looks like several milestones. Self-hosted: the feeder was planned as its own milestone and built by milestone-driver.
 
 ## Docs
 

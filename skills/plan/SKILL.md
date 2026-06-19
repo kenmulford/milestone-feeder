@@ -61,11 +61,14 @@ The brief arrives in one of three forms. **Detect** which:
   in-scope:        [<bullets>],
   out-of-scope:    [<bullets>],
   surfaces:        [<the screens / modules / surfaces the brief touches>],
-  epicIssueNumber: <n>   # present only when the brief was a GitHub epic issue; else omitted
+  epicIssueNumber: <n>                # present only when the brief was a GitHub epic issue; else omitted
+  milestoneLine:   <the verbatim "<name> vX.Y.Z" string>   # present only when the user stated the milestone identity up front; else omitted
 }
 ```
 
 Record `epicIssueNumber` when the brief was an epic issue. `plan` posts **nothing** to the epic — the number is recorded in the plan file's source-brief reference so the downstream `create` / `update` can route their needs-input report to the epic comment. `plan` itself writes no GitHub state.
+
+**Capture the explicit milestone identity (`milestoneLine`) when the user states it up front** (`docs/specs/v0.3.1-driver-handoff.md` §3 — milestone identity is a user-owned field). The user may name the milestone — with its version — either as a labelled `Milestone: <name> vX.Y.Z` line **in the brief doc** or as an inline statement alongside the brief. When present, capture that verbatim `<name> vX.Y.Z` string as `milestoneLine` — it is carried **verbatim** into the version-resolution step (Step 5's ladder, rung 1; `docs/specs/v0.3.1-driver-handoff.md` §2). This field is **optional and additive**: a brief with no `Milestone:` line and no inline statement omits it and normalizes exactly as before (`skills/plan/SKILL.md:46` ingest, `:56` normalize) — the missing field degrades gracefully to the rest of the ladder.
 
 ### Step 2 — Product-gap check (the park boundary)
 
@@ -112,9 +115,19 @@ PRODUCT_GAPS:
     why_blocked: <why it cannot be grounded in the project docs or a convention>
     brief_ref: <the brief line / phrase that asks for it>
   - …                       # "none" when the brief is fully resolvable
+SCOPE_SPANS_MULTIPLE_MILESTONES:
+  - milestone: <name of proposed milestone 1>
+    tags: [#A, #C]          # the candidate LOCAL TAGS under this milestone
+  - milestone: <name of proposed milestone 2>
+    tags: [#B]
+  - …                       # "none" when the brief is a single coherent release;
+                            #   when raised, names two or more milestones forming a
+                            #   strict partition of `CANDIDATES`
 ```
 
 `EDGES` is the literal `[]` when no candidate depends on another; `PRODUCT_GAPS` is the literal `none` when the brief is fully resolvable. **Merge** any architect `PRODUCT_GAPS` into `productGaps[]` — they join the gaps found at Step 2.
+
+**Capture `SCOPE_SPANS_MULTIPLE_MILESTONES`** exactly parallel to how `PRODUCT_GAPS` is consumed: record it **verbatim** when raised (the list of `{ milestone, tags }` — the architect's proposed split); the literal `none` when absent. `plan` does **NOT** re-partition — it carries the architect's proposed split verbatim (the architect owns the structural read; `plan` only surfaces it). **Non-blocking invariant:** this signal NEVER gates the run, and never changes `CANDIDATES` / `EDGES` / `WAVES` / the surviving issue set / Wave order / milestone identity; `plan` still produces a deployable single-milestone plan on every path. **Edge:** because the signal is sourced from the architect's structural read of `CANDIDATES` (not the surviving issue set), it is carried verbatim and surfaced **even if every candidate is later parked/dropped at Step 6** — it is independent of which issues survive. Grounding: `docs/specs/v0.3.1-driver-handoff.md` §5 (detection + advisory, non-blocking) and §6 (the additive Multi-milestone advisory plan-file field).
 
 ### Step 4 — Dispatch issue-author per candidate (parallelizable)
 
@@ -159,6 +172,30 @@ Render the **milestone description** to the `SPEC.md` §4 Wave template, substit
 ```
 
 This is the human-readable description and the exact ordering source the driver's `solve-milestone` and `triage` consume (`SPEC.md` §4). In the plan file the identifiers are **local slugs** (`#A`/`#B`); `create` rewrites them to real GitHub numbers once the issues exist (the two-pass slug→`#n` mechanic, owned by `create`). `plan` itself does no slug→`#n` rewrite — no GitHub numbers exist yet, so it writes local slugs only.
+
+#### 5.1 — Resolve the milestone version + exact title (the version ladder)
+
+Resolve the milestone's **exact title** — the load-bearing identity string that carries the semver **inside it** (there is **no separate version field**; the driver parses the version from the title, so that is the single place it can live — `docs/specs/v0.3.1-driver-handoff.md` §2, and §10's "A separate version field" non-goal). Resolve it by the **layered ladder below, FIRST-MATCH-WINS** — the first rung that yields an answer wins and the ladder STOPS (`docs/specs/v0.3.1-driver-handoff.md` §2 *"The layered version default"*). Alongside the title, record a one-line **version provenance** (one of `explicit` | `declaration` | `inferred from <tag/milestone>` | `prompted`) so the surfaced default is legible (`docs/specs/v0.3.1-driver-handoff.md` §6).
+
+**This sub-step is READ-ONLY on GitHub.** Its only new repo reads are a read-only `git tag` read and a **read-only** `gh api` milestones read (rung 3); it **creates, posts, and patches nothing**. The greenfield prompt (rung 4) is the **one sanctioned interactive moment** of the run. This is consistent with the no-GitHub-write invariant (`skills/plan/SKILL.md:10` and the **Non-negotiables** section): `plan` writes NO GitHub state.
+
+| Rung | Source | Outcome | Provenance |
+|---|---|---|---|
+| **1. Explicit** | The `milestoneLine` captured at Step 1 (the up-front `Milestone: <name> vX.Y.Z` line or inline statement) — **or** a version the user types when prompted at rung 4. | Used **verbatim** as the exact title. Ladder STOPS. | `explicit` |
+| **2. Declaration** | `versioning` from `.milestone-config/feeder.json` (the optional key #56 introduced; `docs/profile-schema.md` — the `versioning` own-keys row + its per-key note). | `"none"` → **NO version, NO prompt**; goal-derived name only → ladder STOPS. `"semver"` → project IS versioned → **continue DOWN to rung 3** to find the number (the declaration confirms *versioned* but carries no number). Absent / invalid / unrecognized value → **treat as absent** → continue to rung 3 (infer-or-ask); **never error on the key** (per the `docs/profile-schema.md` `versioning` per-key note: an invalid/unrecognized value is treated as absent). | `declaration` (only on the `"none"` stop) |
+| **3. Infer** | Read-only repo signals (see the two sub-rungs below). | The matched/latest **reference** semver composes the title (carried **verbatim**); the feeder **PROPOSES** the title and **surfaces it** in the plan file for confirm/adjust — it does **not** silently finalize. Falls to rung 4 only if neither signal yields anything. | `inferred from <milestone>` or `inferred from <tag>` |
+| **4. Prompt** | Only when **nothing above resolved** (no declaration / no `"semver"`-with-a-number, no milestone titles, no tags — a greenfield repo). | Ask up front, **ONCE** — the one sanctioned interactive moment: *"Is this a versioned project? If so, what version is this milestone?"* (`docs/specs/v0.3.1-driver-handoff.md` §2 rung 4). **Version typed →** used **verbatim** as the exact title (the same verbatim-into-title mechanic as rung 1), with provenance `prompted` (NOT `explicit` — the value was prompted, not stated up front); ladder STOPS. **DECLINE →** NO version is added, the title uses the goal-derived name (exactly as rung 2 `"none"`), provenance is recorded as `declaration` (the user has declared this project non-versioned at the prompt), and the ladder STOPS. | `prompted` (version typed) / `declaration` (declined) |
+
+**Provenance legibility note.** `declaration` provenance applies only to the rung-2 `"none"` STOP and the rung-4 DECLINE (above) — both record that the user declared the project non-versioned. A project declared `versioning:"semver"` (rung 2) that reaches the rung-4 prompt because nothing was inferable still records provenance `prompted`, not `declaration`: a number had to be prompted, so the provenance reflects how the *number* was obtained, even though the project was declared versioned.
+
+**Rung 3 — the two read-only infer signals (in order):**
+
+1. **FIRST, the highest semver among EXISTING milestone TITLES.** **Reuse the canonical `env.t`-style quote-safe `gh api` milestones read defined in `skills/create/SKILL.md` Step 3 pass (b) BY REFERENCE — do NOT re-define it** (the same reuse-by-reference discipline `skills/update/SKILL.md:60` follows; both bash and PowerShell 7+ forms are given at `skills/create/SKILL.md:84-90`). **One intentional delta from create pass (b):** create pass (b) `select`s the **one** milestone whose title equals `env.t`; here you read **ALL** milestone titles (no `env.t` filter — e.g. `--jq '.[] | .title'`) and scan them for the **highest** semver, since you are finding a reference version rather than matching one exact title (the delta is noted here exactly as `skills/update/SKILL.md` notes its own pass-(b) delta). The matched milestone's **NAME part is reused** for the title; its (highest) semver is the **REFERENCE** version. Provenance `inferred from <milestone>`.
+2. **ELSE the latest `vX.Y.Z` git tag.** Use a cross-platform `git tag` read (plain `git tag` works identically on bash and PowerShell 7+; e.g. `git tag --list 'v*'` then pick the highest semver — keep any sort shell-neutral, do not rely on a shell-specific sort flag). The **reference** version is that tag; the **name** falls back to today's goal-derived name. Provenance `inferred from <tag>`.
+
+**On EITHER infer path:** the inferred/composed title carries the **REFERENCE (highest existing) semver VERBATIM**, and the surfaced plan-file line is **WHERE THE USER ADJUSTS the patch / minor / major bump** — the feeder cannot know whether this milestone is a patch, minor, or major bump, so it proposes the reference version verbatim and lets the user adjust the bump on the surfaced line (`docs/specs/v0.3.1-driver-handoff.md` §2 rung 3). The feeder PROPOSES; it does not silently finalize.
+
+**The resolved exact title always carries the semver INSIDE the title string** — there is no separate version field (`docs/specs/v0.3.1-driver-handoff.md` §2, §10). It lands in the plan file's `Milestone title (exact)` identity field (Step 7; `docs/specs/v0.3.1-driver-handoff.md` §6), with its `Version provenance` line, **both SURFACED for the user to confirm or override BEFORE running `create`** (`docs/specs/v0.3.1-driver-handoff.md` §2, §3). A `"none"` declaration (rung 2) yields a goal-derived name with **no semver** and provenance `declaration`; non-versioned projects are left alone.
 
 ### Step 6 — Self-check gate (the keystone)
 
@@ -265,7 +302,9 @@ Write the reviewable **plan file** to a gitignored per-run scratch path: `.miles
 
 | Field | Requirement |
 |---|---|
-| **Milestone title (exact)** | The exact milestone title, on its own labeled line — **distinct** from the one-line goal. `create` / `update` resolve the milestone by this exact title (creating it if absent, adopting it if it already exists). This is the load-bearing identity field; the one-line goal is descriptive only. |
+| **Milestone title (exact)** | The exact milestone title, on its own labeled line — **distinct** from the one-line goal. Now **user-owned** and carrying the resolved **semver inside the string** (no separate version field), resolved at Step 5.1 by the version ladder and **surfaced for the user to confirm or override BEFORE `create`** (`docs/specs/v0.3.1-driver-handoff.md` §3, §6). `create` / `update` still resolve the milestone by this exact title (creating it if absent, adopting it if it already exists), and the driver parses the version from it — this remains the load-bearing identity field; the one-line goal is descriptive only. |
+| **Version provenance** | One line, one of `explicit` \| `declaration` \| `inferred from <tag/milestone>` \| `prompted` (the Step 5.1 ladder rung that resolved the title — `docs/specs/v0.3.1-driver-handoff.md` §6 "Version provenance" row). It makes the surfaced default **legible** so the user can trust or correct it. |
+| **Multi-milestone advisory** | **ADDITIVE and OPTIONAL** — present **ONLY** when the architect raised `SCOPE_SPANS_MULTIPLE_MILESTONES` (Step 3). Carries the flag + the proposed split (milestone names + their candidate tags) **VERBATIM** from the architect — `plan` does not re-partition. **OMITTED entirely** when the signal is `none`, so a single-milestone plan is byte-for-byte unchanged. **Non-blocking** — it does not change what gets deployed; the plan stays a deployable single-milestone plan. Sourced from the architect's structural read of `CANDIDATES`, so it is written even if every candidate is parked/dropped (Step 6). Grounding: `docs/specs/v0.3.1-driver-handoff.md` §6 (the additive plan-file field) and §5. |
 | **One-line goal** | The milestone goal in one line — the header. |
 | **Milestone description (Wave order)** | The Step 5 build-order / Wave description, verbatim, with local slugs (`#A`/`#B`). This is what `create` PATCHes onto the milestone after issue numbers exist. |
 | **Per surviving issue** | For each surviving (gate-clean / Advisory-only) issue: its slug, title, the FULL §4 `ISSUE_BODY` verbatim, its labels, and its surface/risk. `create` reads these — no regeneration. |
@@ -274,18 +313,43 @@ Write the reviewable **plan file** to a gitignored per-run scratch path: `.miles
 | **Self-check verdict line** | The Step 6 outcome (PASS / INTERNAL / PARKED / SKIPPED(reviewer:false)). `create` trusts it; no re-vet. |
 | **Source brief reference** | `inline` \| `file:<path>` \| `epic #<n>` — drives the downstream report routing and the brief↔plan match. Record `epicIssueNumber` here when the brief was an epic. |
 
+**Surface the resolved identity for confirm/override.** Both the resolved `Milestone title (exact)` (carrying the semver per the Step 5.1 ladder) **and** its `Version provenance` line are written to the plan file and **surfaced for the user to confirm or override BEFORE running `create`** — `plan` never silently finalizes a milestone identity the user cannot see or change (`docs/specs/v0.3.1-driver-handoff.md` §2, §3, §6). On an infer rung the title carries the **reference version verbatim**, and this surfaced line is **where the user adjusts the patch / minor / major bump** before `create` deploys it.
+
+**Surface the multi-milestone advisory — ONLY when raised — alongside the same identity moment.** When the architect raised `SCOPE_SPANS_MULTIPLE_MILESTONES` (Step 3), surface its advisory **prominently UP FRONT, at the same confirm/override moment** the user already sees the milestone identity above (NOT a separate prompt, NOT a hard block): a clear *"this looks like ~N milestones — deploy the one big milestone, or split the brief and re-run"* message plus the proposed split (the milestone names + their candidate tags, verbatim from the architect). It is **advisory only** — the user decides; `plan` still produced a deployable single-milestone plan and changes nothing about what `create` deploys. Surface it **ONLY when the signal is raised**; when the signal is `none`, surface **nothing** — no advisory line, no message — and the surfaced moment is exactly as before (`docs/specs/v0.3.1-driver-handoff.md` §5).
+
+**Preserve an existing deploy receipt on re-plan.** The plan file may already carry a `Milestone number (GitHub): <n>` line — the **deploy receipt** `create` writes back post-deploy (the create-side write block at `skills/create/SKILL.md:99-135`; the exact field shape at `skills/create/SKILL.md:104`). It is the stable handle `update` resolves by, so a re-plan must NOT drop it: **before overwriting** `.milestone-feeder/plan-<slug>.md`, **read the PRIOR file at that same path** (if one exists) and **carry its receipt line forward, verbatim**, into the freshly-written plan file — as a sibling header line in the same position `create` writes it (after `Source brief:`). The receipt is **additive and READ-ONLY here**: `plan` never resolves a number or writes one (it has no milestone number — it writes only local slugs); it merely **preserves** the line `create` already recorded. **No prior file, OR a prior file with no receipt line → OMIT it, NO error** — a plan with no receipt is valid and deployable (`docs/specs/v0.3.1-driver-handoff.md` §6: *"A v0.3.0 plan file lacking them still parses (the consumers degrade gracefully)"*; the additive-fields row: *"`plan` preserves it on re-plan"*). Read the prior receipt line before the overwrite:
+
+```bash
+# bash — capture the prior receipt line (if any) BEFORE overwriting the plan file.
+# rcpt is empty when there is no prior file or no receipt line — then omit it (no error).
+plan=".milestone-feeder/plan-<slug>.md"
+rcpt="$(grep -m1 '^Milestone number (GitHub):' "$plan" 2>/dev/null)"
+```
+
+```powershell
+# PowerShell 7+ — same read; $rcpt is $null/empty when absent — then omit it (no error).
+$plan = ".milestone-feeder/plan-<slug>.md"
+$rcpt = (Get-Content -LiteralPath $plan -ErrorAction SilentlyContinue |
+         Select-String -Pattern '^Milestone number \(GitHub\):' |
+         Select-Object -First 1).Line
+```
+
+When `rcpt` is non-empty, write it verbatim into the new plan file as the sibling header line after `Source brief:`; when empty, write no such line.
+
 **Plan-file format.** Write the file in this shape — the **Milestone title (exact)** line is its own labeled field, separate from the goal in the header:
 
 ```markdown
 # Milestone plan — <milestone goal, one line>
 
-Milestone title (exact): <the exact milestone title — create/update resolve the milestone by THIS string>
+Milestone title (exact): <the exact milestone title — carries the resolved semver INSIDE the string; create/update resolve the milestone by THIS string. SURFACED for the user to confirm/override before `create`; on an infer rung it carries the reference version verbatim — adjust the patch/minor/major bump on this line>
+Version provenance: <explicit | declaration | inferred from <tag/milestone> | prompted>
 Self-check: <the Step 6 outcome — one of:
   PASS — all <N> issues GAPS: none (milestone-driver reviewers)
   INTERNAL — all <N> issues GAPS: none (internal checklist; milestone-driver reviewers did not resolve)
   PARKED — <M> issue(s) → needs product input; <K> issue(s) → needs human direction (still-Blocker after 2 retries)
   SKIPPED (reviewer:false) — 🔴 gate disabled; generated issues were NOT vetted>
 Source brief: <inline | file:<path> | epic #<n>>
+Milestone number (GitHub): <n>   # OPTIONAL sibling header line — carried forward verbatim from a prior plan file if present; omitted on first plan (create writes it post-deploy, skills/create/SKILL.md:104)
 
 ## Milestone description (Wave order)
 <the Step 5 Wave-ordered description, verbatim — the §4 template with local slugs>
@@ -304,6 +368,11 @@ Source brief: <inline | file:<path> | epic #<n>>
 <marker only; a dependent of a parked issue cannot build, so it is not carried (Step 6 §6.6)>
 
 ### … (one block per surviving candidate, in Wave order; only PASS / Advisory-only issues carry a full body)
+
+## Multi-milestone advisory   <!-- OPTIONAL section — written ONLY when the architect raised SCOPE_SPANS_MULTIPLE_MILESTONES (Step 3); OMITTED ENTIRELY when the signal is `none`, leaving the file byte-for-byte the pre-#61 shape. Advisory only — does not change what gets deployed; the plan stays a deployable single-milestone plan. -->
+🔴 This brief looks like ~<N> milestones. Deploy the one big milestone below, or split the brief and re-run. Proposed split (carried verbatim from the architect):
+- <proposed milestone 1 name>: #A, #C
+- <proposed milestone 2 name>: #B
 
 ## Project-docs grounding
 - <each design call carried forward> — grounded in <.project/<doc>.md#<section> | sibling file:line>

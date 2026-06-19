@@ -7,7 +7,7 @@ description: This skill should be used when "milestone-feeder:setup" is invoked 
 
 Generate or repair the feeder profile through a guided, inference-first flow. Every key is presented with a plain-language description and a detected default. Optional keys state their skip-consequence. No blank prompts — if a default cannot be inferred, an example is shown.
 
-The canonical profile location is `<repo-root>/.milestone-config/feeder.json` — the suite-wide `.milestone-config/` directory the sibling `milestone-driver` plugin also reads from (it stores `driver.json` alongside). **Unlike the driver, the feeder has no required hard-stop key:** the feeder writes no branches and runs fully on bundled defaults, so an empty `{}` profile is valid (all defaults apply). Setup still writes the file — even when every key defaults — so config-presence detection (`plan`'s Step 0 → auto-invoke setup when the file is absent) is unambiguous.
+The canonical profile location is `<repo-root>/.milestone-config/feeder.json` — the suite-wide `.milestone-config/` directory the sibling `milestone-driver` plugin also reads from (it stores `driver.json` alongside). **Unlike the driver, the feeder has no required hard-stop key:** the feeder writes no branches and no key hard-stops the write, so an empty `{}` profile is valid — nearly every key falls back to a bundled default (the exception is `versioning`, which has no default: skipping it means infer-or-ask, not a default value). Setup still writes the file — even when every key is left at its default or skipped — so config-presence detection (`plan`'s Step 0 → auto-invoke setup when the file is absent) is unambiguous.
 
 **After writing the file, return control to the caller** (`plan`) so the original task continues immediately. The user does not need to re-run the command.
 
@@ -38,7 +38,7 @@ Present keys in these tiers: **Core → Agents → Sizing**, plus the self-prote
 - For optional keys: state the skip-consequence on the same line.
 - Accept, edit, or skip — never leave a field blank without an explicit skip choice.
 
-**No required hard-stop key.** Unlike the driver (whose Core keys `integrationBranch` / `protectedBranch` / `sourceGlobs` hard-stop), the feeder has **no** key that blocks the write. The feeder writes no branches and runs fully on defaults, so every tier below is acceptable as a one-keystroke accept-the-default. An empty `{}` is a valid result — and setup still writes the file regardless, so config-presence detection is unambiguous.
+**No required hard-stop key.** Unlike the driver (whose Core keys `integrationBranch` / `protectedBranch` / `sourceGlobs` hard-stop), the feeder has **no** key that blocks the write. The feeder writes no branches and no key hard-stops, so every tier below is a one-keystroke accept-or-skip. Most keys accept the detected default; the exception is `versioning` (in the Sizing tier), which has no default — so its one-keystroke choice is accept-or-skip, and skip means infer-or-ask, not a default value. An empty `{}` is a valid result — and setup still writes the file regardless, so config-presence detection is unambiguous.
 
 **Tier: Core** (optional; show the detected default — accept with one keystroke)
 
@@ -54,11 +54,12 @@ Present keys in these tiers: **Core → Agents → Sizing**, plus the self-prote
 | `architectAgent` | "Which agent produces the issue breakdown + dependency graph? (Rarely changed — the bundled default is fine for most repos.)" | Auto-fill `"milestone-feeder:architect"` — show it, confirm, move on. Skip → bundled default used; key omitted. |
 | `issueAuthorAgent` | "Which agent authors each issue's full spec? (Rarely changed — the bundled default is fine for most repos.)" | Auto-fill `"milestone-feeder:issue-author"` — show it, confirm, move on. Skip → bundled default used; key omitted. |
 
-**Tier: Sizing** (optional)
+**Tier: Sizing & versioning** (optional)
 
 | Key | Plain-language label | Skip-consequence |
 |---|---|---|
 | `issueSize` | "Any natural-language sizing rule the author should honour when splitting work? (e.g. `≤1 PR, ≤1 new screen`)" | Skip → "No sizing constraint beyond the procedure's defaults." |
+| `versioning` | "Is this project semver-versioned? Drives whether `plan` adds a version to the milestone. Accept `\"semver\"` (versioned — version every milestone), `\"none\"` (non-versioned — never add a version), or skip." | Skip → the key is **omitted** (it has no default) and `plan` infers-or-asks at plan time. |
 
 **Self-protection key (the feeder's OWN repo)**
 
@@ -71,7 +72,7 @@ Present keys in these tiers: **Core → Agents → Sizing**, plus the self-prote
 The canonical profile location is `<repo-root>/.milestone-config/feeder.json`.
 
 - Create the `.milestone-config/` directory if absent (`mkdir -p .milestone-config`).
-- Assemble the profile object from the keys the user accepted or edited. **Omit any key left at its bundled default** (absent-means-default, `docs/profile-schema.md`): writing the default explicitly adds noise and drifts when the default changes. A minimal feeder-own-repo profile carries only the self-protection `sourceGlobs`; an empty `{}` is valid.
+- Assemble the profile object from the keys the user accepted or edited. **Omit any key left at its bundled default** (absent-means-default, `docs/profile-schema.md`): writing the default explicitly adds noise and drifts when the default changes. `versioning` has **no** default, so a skipped `versioning` is likewise **omitted** — never written as a placeholder; its absent state means `plan` infers-or-asks. A minimal feeder-own-repo profile carries only the self-protection `sourceGlobs`; an empty `{}` is valid.
 - Write the assembled object to `.milestone-config/feeder.json`. **Always write the file**, even when the result is `{}` — config-presence is the signal `plan`'s Step 0 reads to decide whether to auto-invoke setup, so an absent file and an empty file are deliberately distinct.
 - Print the final file contents so the user can verify.
 
@@ -133,6 +134,6 @@ Be concise — report status and outcomes flatly, no wall-of-text. Present steps
 
 - Never present a blank prompt. Every key shows either a detected default or an illustrative example.
 - Skip always states its consequence. A user who skips knows exactly what default or behavior applies.
-- No required hard-stop key. Unlike the driver, the feeder writes no branches and runs fully on defaults — there is no key whose absence blocks the write.
-- Always write the file. Even an all-defaults result writes `.milestone-config/feeder.json` (an empty `{}` is valid), so config-presence detection is unambiguous. Omit default-filled keys from the written object (absent-means-default).
+- No required hard-stop key. Unlike the driver, the feeder writes no branches and no key hard-stops the write — every key falls back to its default, except `versioning`, which has none (skip = infer-or-ask).
+- Always write the file. Even an all-defaults result writes `.milestone-config/feeder.json` (an empty `{}` is valid), so config-presence detection is unambiguous. Omit default-filled keys from the written object (absent-means-default); also omit `versioning` when skipped — it has no default, so a skip means omit (infer-or-ask), never a placeholder.
 - **Committing the profile:** writing the file is enough for `plan` to read it this session. When `setup` is invoked **directly** (`/milestone-feeder:setup`), suggest the user commit it (`git add .milestone-config/feeder.json && git commit -m "chore: add milestone-feeder profile"`) so every clone and CI has it. When `setup` is auto-invoked **by `plan`**, leave the commit to the normal flow — do not create a commit on the current branch.

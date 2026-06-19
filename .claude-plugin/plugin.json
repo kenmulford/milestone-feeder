@@ -1,6 +1,6 @@
 {
   "name": "milestone-feeder",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Turns a feature brief into a GitHub milestone + small, well-formed issues that milestone-driver can build with no human clarification. Run `plan` to turn your brief into a reviewable plan of independently-buildable issues — each with a full spec (acceptance criteria covering empty/error/disabled states, recorded consistent design, declared dependency edges, and UI/logic + risk classification) and a build order encoded in the milestone description; every issue is checked against the driver's own triage reviewers before anything is written. Run `create` to build exactly the plan you approved, and `update` to sync a changed plan onto the existing milestone (never closes or deletes). Reads code, never writes it. Stack-agnostic via a thin per-repo profile.",
   "author": {
     "name": "Ken Mulford",

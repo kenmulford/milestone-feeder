@@ -3,6 +3,59 @@
 Release notes for milestone-feeder. Each tagged release is also published on the
 [GitHub Releases page](https://github.com/kenmulford/milestone-feeder/releases).
 
+## v0.3.1 — Explicit milestone naming & the driver handoff
+
+**Theme:** v0.3.0 made the surface speak the user's language; v0.3.1 makes the
+**handoff to `milestone-driver` clean.** The driver derives its target version by
+parsing the milestone title for a semver — but a feeder-made milestone carried no
+version, silently degrading the driver to "no version → prompt the user." v0.3.1
+closes that gap by making **milestone identity explicit and user-owned, with the
+semver living in the milestone title** where the driver reads it. It also lets
+`update` find and rename the right milestone after a title change, and stops the
+feeder being silent when a brief is really several milestones. **This release is
+additive — nothing breaks.** No command or config changes; one new *optional*
+config key and new (optional) plan-file fields. A v0.3.0 plan file with none of
+the new fields still works — the new paths degrade gracefully.
+
+### ✨ Versioned milestone naming (#50)
+
+| Issue | What |
+|---|---|
+| #50 | The milestone title becomes a **user-owned field carrying the semver inside it** (e.g. `myapp v1.2.0`) — there is no separate version field, because the driver parses the version from the title. State the title up front (inline or a `Milestone: <name> vX.Y.Z` line in the brief), or let `plan` resolve a default by a **layered, first-match-wins ladder**: explicit → the project's `versioning` declaration → inference (the highest semver among existing milestone titles, else the latest `vX.Y.Z` git tag) → a one-time prompt only when nothing is inferable. The resolved title and a one-line **version provenance** (`explicit` / `declaration` / `inferred from <tag/milestone>` / `prompted`) are surfaced in the plan file for confirm/override before `create` — `plan` never silently invents an identity. A `"none"` declaration adds no version and never prompts. |
+
+### ✨ `update` retargeting + bounded rename-in-place (#51)
+
+| Issue | What |
+|---|---|
+| #51 | Because identity is now the explicit title, `update` resolves the **source plan** by the brief slug but the **target milestone** by identity — so a revised plan in a *new* brief reconciles onto its existing milestone. To survive a title change, `create` writes the GitHub milestone number back into the plan file as a **deploy receipt** (`Milestone number (GitHub): <n>`); `update` resolves **by that number first** (falling back to title-match when absent), and when it resolved by number and the plan's title differs, it **PATCHes the new title** — the single bounded way `update` mutates a milestone's identity. A wholesale new brief + new title + no receipt → no title match → **error-and-stop directing you to `create`**, with the one-line `gh` rename command for the rare true-rename case. `plan` carries the receipt forward on re-plan so the handle isn't stranded. Resolving by the stable number also hardens every non-rename `update`. |
+
+### ✨ The multi-milestone guardrail (advisory, non-blocking)
+
+| Issue | What |
+|---|---|
+| (guardrail) | The feeder stays **one brief → one milestone**, but stops being silent about a brief that's really several. When a brief reads as distinct phased deliverables / release boundaries, the architect raises a `SCOPE_SPANS_MULTIPLE_MILESTONES` signal with a proposed split (the candidate milestones and which issues fall under each). `plan` still writes a **deployable single-milestone plan** but **prominently flags** *"this looks like ~N milestones"* and shows the split, surfaced up front alongside the versioning step. Never a hard block, never a silent giant milestone — the user decides whether to deploy the one milestone or split the brief and re-run. Full `brief → N-milestones` decomposition is deferred to v0.4.0. |
+
+### ✨ The optional `versioning` config key
+
+| Issue | What |
+|---|---|
+| (config) | A new **optional** key in `.milestone-config/feeder.json` (no file rename). `versioning` answers only the *is-this-versioned* question — the version *number* comes from the layered ladder. Three-way: `"semver"` = version every milestone; `"none"` = non-versioned project, never add a version or prompt; **absent** = infer from repo signals (existing milestone titles, then git tags), else ask once at plan time. Forward-compatible with a future bootstrapper that will write this key at scaffold time. Defined in `docs/profile-schema.md` and offered by `setup` as an optional key (skip-consequence stated). |
+
+### Consumer notes
+
+- **This is an additive release.** Nothing breaks — same commands, same config
+  file. The new `versioning` key is optional, and a v0.3.0 plan file still works.
+- **Name your milestone with a version up front** (inline or a `Milestone: <name>
+  vX.Y.Z` line in your brief) so the driver builds toward the right version. Skip
+  it and the feeder proposes one from your existing milestones or git tags and
+  shows it to you before building anything.
+- **`update` finds the right milestone even after a rename.** It resolves by the
+  milestone number `create` recorded, falling back to the title — and renames in
+  place when your plan's title changed. A brand-new brief with a new title stops
+  and points you at `create`.
+- **The feeder flags a brief that looks like several milestones** — advisory only.
+  It still builds one milestone; the split is yours to make.
+
 ## v0.3.0 — Humanize the surface
 
 **Theme:** v0.2.0 works, but everything a user typed or read spoke in
