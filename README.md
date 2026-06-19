@@ -60,6 +60,8 @@ The gate, the parking rules, and the `--apply` write order are documented in [do
 
 v0.2.0 — the self-check gate, `--apply`, and `refine` are shipped (v0.1.0 was the preview slice). Self-hosted: the feeder was built as its own milestone, driven by milestone-driver.
 
+The preview pipeline and the self-check gate are exercised by a scenario harness ([`tests/`](tests/), scorecard in [`tests/RESULTS.md`](tests/RESULTS.md)) — all green, with the gate running milestone-driver's real reviewers. The `--apply` and `refine` write paths are covered by design and a sandbox follow-up, not yet exercised end-to-end.
+
 ## Docs
 
 - [docs/consumer-setup.md](docs/consumer-setup.md): setup and wiring.
