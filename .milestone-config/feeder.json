@@ -1,0 +1,3 @@
+{
+  "sourceGlobs": ["skills/**", "agents/**", "hooks/**"]
+}

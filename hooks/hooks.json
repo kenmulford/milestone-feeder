@@ -1,0 +1,13 @@
+{
+  "description": "milestone-feeder mechanical gate, invoked via the bash-first/pwsh-fallback launcher run-hook.cmd. no-source-edit: unconditionally deny edits to the feeder's own source globs (resolved from <repo>/.milestone-config/feeder.json first, then the driver config .milestone-config/driver.json -> root milestone-driver.json, else fail-open). The feeder reads code and authors issue text — it never writes source — so this is the only gate it needs.",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Write|Edit|MultiEdit|NotebookEdit",
+        "hooks": [
+          { "type": "command", "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd\" no-source-edit", "timeout": 15 }
+        ]
+      }
+    ]
+  }
+}
