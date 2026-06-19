@@ -9,6 +9,10 @@ desktop.ini
 *.swp
 *~
 
+# Python bytecode cache from the CI gate scripts under scripts/
+__pycache__/
+*.pyc
+
 # Logs and scratch
 *.log
 /tmp/
