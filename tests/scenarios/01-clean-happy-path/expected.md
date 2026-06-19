@@ -17,3 +17,22 @@ gate-clean milestone with NO parks.
 
 ## FAIL if
 - Invents scope not in the brief; misses a dependency edge; parks something a convention answers; produces issues missing error/empty states; or the gate rubber-stamps an incomplete issue.
+
+## POST-RUN ADJUDICATION (fixture correction — 2026-06-18)
+The first run (blind) parked the **rate-limit threshold value** as a product gap: the brief
+says "a per-user rate limit" with no number, and the substrate grounds the *mechanism*
+(`RateLimiter`, 429 + `Retry-After`) but states no default number. The independent grader
+ruled — correctly — that **parking the unspecified threshold rather than inventing one is
+right behavior**, and that the original `MUST #6: ZERO parks` was the mistaken assertion
+(a clean brief that omits a no-conventional-default number *should* park it).
+
+Corrections to this contract:
+- **MUST #5** is relaxed to: every emitted issue returns `GAPS: none` **or Advisory-only**
+  (advisories are non-gating).
+- **MUST #6** is superseded: exactly **one** minimal, correctly-scoped product-gap park
+  (the threshold) is expected and correct — not a failure. Inventing a number would be the
+  failure. Everything else (decomposition, both edges, Wave order, real-reviewer gate,
+  cited grounding) must still hold.
+
+Net verdict: ✅ feeder behavior correct; this run doubles as evidence for the
+"parks-not-invents" property (overlaps scenario 02's dedicated test).
