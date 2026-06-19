@@ -48,8 +48,8 @@ You can also run `/milestone-feeder:setup` directly at any time to create or rep
 the profile.
 
 **Manual authoring (fallback).** Create `.milestone-config/feeder.json` by hand —
-see [`profile-schema.md`](profile-schema.md) for the full key reference. Every
-own-key has a bundled default, so omit any key you do not override (absent-means-
+see [`profile-schema.md`](profile-schema.md) for the full key reference. Most keys
+have a bundled default, so omit any key you do not override (absent-means-
 default); a minimal profile carries only what diverges. Commit it so every clone
 and CI has the same `no-source-edit` behavior. Minimal example:
 
@@ -57,6 +57,26 @@ and CI has the same `no-source-edit` behavior. Minimal example:
 {
   "projectDocs": ".project/",
   "reviewer": "milestone-driver"
+}
+```
+
+**The optional `versioning` key.** `versioning` tells the feeder whether your
+project uses version numbers. Set it to `"semver"` if your project is versioned
+(every milestone gets a version), or `"none"` if it isn't (no version is ever
+added and you're never asked). It is **optional** — like `reviewer`, you can leave
+it out, and the feeder degrades gracefully: **if you skip it, the feeder figures
+out whether you version by looking at your repo** — your existing milestone titles
+first, then your git tags — and only **asks you once at plan time** if it can't
+tell. So skipping it costs you nothing on a repo that already has versioned
+milestones or `vX.Y.Z` tags; on a brand-new repo with neither, you'll get one
+quick question the first time you plan. Set it explicitly to skip even that
+question:
+
+```json
+{
+  "projectDocs": ".project/",
+  "reviewer": "milestone-driver",
+  "versioning": "semver"
 }
 ```
 

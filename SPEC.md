@@ -1,8 +1,8 @@
-# milestone-feeder — as-built spec (v0.3.0)
+# milestone-feeder — as-built spec (v0.3.1)
 
 A Claude Code plugin that turns a feature brief into a **GitHub milestone + small, well-formed issues** that `milestone-driver` can build with no human clarification. The direct predecessor of the driver.
 
-Sibling of `milestone-driver`, same design DNA (see the suite plan: [`../dev-tools/SUITE-PLAN.md`](../dev-tools/SUITE-PLAN.md) §1). Separate plugin, separate config. Status: **as-built spec for v0.3.0** — the live surface (verbs `plan` / `create` / `update` / `setup`, no flags, plan-file-as-contract).
+Sibling of `milestone-driver`, same design DNA (see the suite plan: [`../dev-tools/SUITE-PLAN.md`](../dev-tools/SUITE-PLAN.md) §1). Separate plugin, separate config. Status: **as-built spec for v0.3.1** — the live surface (verbs `plan` / `create` / `update` / `setup`, no flags, plan-file-as-contract), now with **user-owned, versioned milestone identity** (the semver lives in the milestone title), **`update` retargeting by deploy receipt + bounded rename-in-place**, and a **non-blocking multi-milestone advisory**.
 
 Decisions already locked: name `milestone-feeder`; config at `.milestone-config/feeder.json`; separate plugin in its own repo (suite/marketplace linkage deferred). Decisions taken as sensible defaults below are marked **Decision (default)** — veto any.
 
@@ -70,7 +70,10 @@ The plan file MUST carry, unambiguously, every field below:
 
 | Field | Why `create` / `update` need it |
 |---|---|
-| **Milestone title (exact)** + one-line goal | The **identity field**: `create` / `update` resolve the milestone by this exact title (create-or-adopt). Distinct from the one-line goal, which is descriptive only. |
+| **Milestone title (exact)** + one-line goal | The **identity field**: `create` / `update` resolve the milestone by this exact title (create-or-adopt). Now **user-owned and carrying the semver** — the version lives inside this one title string (there is no separate version field), and the driver parses the version from it. Distinct from the one-line goal, which is descriptive only. |
+| **Milestone number (GitHub):** `<n>` — the deploy receipt | The stable handle for `update`: `create` writes it post-deploy; `plan` preserves it on re-plan; `update` resolves the milestone by it (surviving a title change) and renames on a title diff. Additive — a plan file lacking it still parses. |
+| **Version provenance** (one line: `explicit` \| `declaration` \| `inferred from <tag/milestone>` \| `prompted`) | Records which ladder rung resolved the title (§7) so the surfaced default is legible — the user can trust or correct it. |
+| **Multi-milestone advisory** — the `SCOPE_SPANS_MULTIPLE_MILESTONES` flag + proposed split, when raised | Surfaces the guardrail when a brief reads as several milestones. Additive / optional; present only when raised, and **does not change what gets deployed** (the plan stays a deployable single milestone). |
 | **Milestone description** (Wave / build order, local slugs `#A`/`#B`) | The wave-encoded description to PATCH onto the milestone after issue numbers exist. |
 | **Per surviving issue** — slug, title, the FULL §4 body verbatim, labels, surface/risk | The issues to create / patch — verbatim, **no regeneration**. |
 | **Parked issues** — slug, title, kind (`product-gap` \| `needs-human-direction`) | Marked, **never created.** Routed to the needs-input report. |
@@ -83,6 +86,16 @@ The plan file MUST carry, unambiguously, every field below:
 Issue numbers don't exist until creation, so the plan file carries **local slugs** (`#A`/`#B`) throughout. The load-bearing two-pass slug→`#n` rewrite happens when `create` / `update` write to GitHub — once the issues exist and the slug→`#n` map is complete. `plan` itself does no rewrite.
 
 **What changed from v0.2.0 is ONLY the source** of the issue bodies / labels / waves: they are now **read from the plan file, not regenerated.** The write sequence (label ensure, create-or-adopt, two-pass slug→`#n`, report routing) is unchanged.
+
+### v0.3.1 — user-owned versioned identity, `update` retargeting, the multi-milestone guardrail
+
+v0.3.1 is an **additive** release on this surface — no command or config breaks, the new plan-file fields above degrade gracefully (a v0.3.0 plan file lacking them still parses), and the change is in **where a milestone's identity comes from and how the family carries it**, not in the `plan → create → update` pipeline. Three behaviors:
+
+- **User-owned, versioned milestone identity.** The milestone title is now a **user-owned field** carrying the **semver inside it** (e.g. `myapp v1.2.0`) — there is **no separate version field**, because the driver derives its target version by parsing the milestone title for a semver. The user can state the title up front (inline or as a `Milestone: <name> vX.Y.Z` line in the brief); if they don't, `plan` resolves a default by a **layered, first-match-wins ladder** — *explicit* up front → the project's `versioning` declaration (§7) → *inference* from the highest semver among existing milestone titles, else the latest `vX.Y.Z` git tag → a one-time *prompt* only when nothing is inferable. The resolved title and a one-line **version provenance** are **surfaced in the plan file for confirm/override before `create`** — `plan` never silently invents an identity the user can't see or change. A `"none"` declaration means no version and no prompt; non-versioned projects are left alone.
+
+- **`update` retargeting + bounded rename-in-place.** Because identity is now the explicit title (not a goal-derivative), `update` resolves the **source plan** by the brief slug but the **target milestone** by the identity — so a revised plan in a new brief file reconciles onto its existing milestone. To survive a title change, `create` writes the GitHub milestone number back into the plan file as a **deploy receipt** (`Milestone number (GitHub): <n>`); `update` resolves **by that number first** (falling back to title-match when absent), and when it resolved by number and the plan's title differs, it **PATCHes the new title** — the single bounded way `update` mutates a milestone's identity. A wholesale new brief with a new title and no receipt → title-match → no match → **error-and-stop directing you to `create`**, with the one-line `gh` rename command for the rare true-rename case. `plan` carries the receipt forward on re-plan so the handle isn't stranded.
+
+- **The multi-milestone guardrail (advisory, non-blocking).** The feeder stays **one brief → one milestone**, but stops being silent about a brief that's really several. When a brief reads as distinct phased deliverables / release boundaries, the architect raises `SCOPE_SPANS_MULTIPLE_MILESTONES` with a proposed split; `plan` still writes a **deployable single-milestone plan** but **prominently flags** *"this looks like ~N milestones"* and shows the split, surfaced up front alongside the versioning step. **Never a hard block, never a silent giant milestone** — the user decides whether to deploy the one milestone or split the brief and re-run. Full `brief → N-milestones` decomposition is deferred to v0.4.0.
 
 ---
 
@@ -165,13 +178,13 @@ Before writing the plan file, **`plan`** dispatches the driver's own `triage-rev
 | 2 | **Product-gap check** (the flag boundary): separate product decisions (no conventional default) from design/implementation decisions (resolvable from project docs/convention). Product gaps are recorded, not guessed. |
 | 3 | Dispatch the **`architect`** agent **once**: candidate issue set (small, independently-buildable, ~one PR each) + dependency edges + Wave order. |
 | 4 | Dispatch the **`issue-author`** agent **per candidate** (parallelizable) → full spec to §4. |
-| 5 | Assemble the dependency graph; render the milestone description (§4) with local slugs. |
+| 5 | Resolve the **milestone identity** — the user-owned exact title carrying the semver, by the v0.3.1 layered ladder (explicit → declaration → inference → prompt; §3.1), with its version provenance; assemble the dependency graph; render the milestone description (§4) with local slugs. |
 | 6 | **Self-check** (§5): iterate to clean (≤2 retries per issue) or flag product gaps. |
-| 7 | **Write the plan file** (`.milestone-feeder/plan-<slug>.md`) — the build artifact (§3.1), plus the needs-input report when anything was parked. No GitHub writes. |
+| 7 | **Write the plan file** (`.milestone-feeder/plan-<slug>.md`) — the build artifact (§3.1), plus the needs-input report when anything was parked; **surface the resolved identity (title + provenance) for confirm/override**, and the multi-milestone advisory **when raised**, before `create`; **carry forward** an existing deploy receipt on re-plan. No GitHub writes. |
 
-**Then `create` deploys the plan file** (faithful — the §6 apply write sequence): ensure labels → create-or-adopt the milestone by exact title → create the surviving issues + build the slug→`#n` map → second-pass slug→`#n` rewrite (issue bodies + the milestone description) → file the needs-input report (epic comment when the brief was an epic; else local file). On the found path it dispatches no agent and re-runs no gate.
+**Then `create` deploys the plan file** (faithful — the §6 apply write sequence): ensure labels → create-or-adopt the milestone by exact title → create the surviving issues + build the slug→`#n` map → second-pass slug→`#n` rewrite (issue bodies + the milestone description) → file the needs-input report (epic comment when the brief was an epic; else local file). On the found path it dispatches no agent and re-runs no gate. After the milestone is resolved, `create` **writes the deploy receipt** (`Milestone number (GitHub): <n>`) back into the plan file — the stable handle `update` later resolves by (a back-write failure is a reported notice, never a blocked deploy, since the plan file is gitignored scratch).
 
-**And `update` reconciles it** onto an existing milestone (create-or-patch / add-edge-and-re-render / flag-never-close / no-op): create any plan issue missing on GitHub, patch any drifted body (showing the diff first), add any new dependency edge and re-render the build order, and **flag** — never close — any live issue the plan no longer carries. A fully-synced milestone is a true no-op.
+**And `update` reconciles it** onto an existing milestone (create-or-patch / add-edge-and-re-render / flag-never-close / no-op): it resolves the milestone **by the deploy-receipt number first** (falling back to exact-title when absent) and, when resolved by number with a changed plan title, **renames the milestone in place** (a single bounded title PATCH) before reconciling; then create any plan issue missing on GitHub, patch any drifted body (showing the diff first), add any new dependency edge and re-render the build order, and **flag** — never close — any live issue the plan no longer carries. A wholesale new brief with a new title and no receipt → no title match → **error-and-stop directing you to `create`**, with the one-line `gh` rename command for the rare true-rename case. A fully-synced milestone is a true no-op.
 
 There are **no flags** anywhere: `plan` previews (writes the plan file), `create` / `update` write — each *is* its own verb.
 
@@ -185,6 +198,7 @@ Thin and consumer-driven, same discipline as the driver: new keys only when a re
 |---|---|---|---|
 | `projectDocs` | string | `.project/` | Where the project's standing docs live. |
 | `reviewer` | `"milestone-driver" \| "internal" \| false` | `"milestone-driver"` | Who checks each issue before it's created; `false` = off. |
+| `versioning` | `"semver" \| "none"` | *(none)* — absent is a distinct "infer-or-ask" state | Whether this project is semver-versioned; drives milestone-version resolution at plan time (three-way: `"semver"` = version every milestone, `"none"` = never add a version or prompt, **absent** = infer from repo signals else prompt). |
 | `issueSize` | string | *(none)* | Optional natural-language sizing rule (e.g. "≤1 PR, ≤1 new screen"). |
 | `architectAgent` | string | `milestone-feeder:architect` | Override the breakdown (architect) agent. |
 | `issueAuthorAgent` | string | `milestone-feeder:issue-author` | Override the authoring agent. |
