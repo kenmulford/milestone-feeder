@@ -1,0 +1,52 @@
+name: CI
+
+# Two pull-request gates for the milestone-feeder plugin. Both must pass before
+# a PR into main or develop can merge. Neither builds anything — this repo is a
+# Claude Code plugin (markdown skills/agents + JSON manifests), so the gates only
+# verify the surface stays clean and loadable.
+#
+#   1. vocabulary-purge gate   — fails if the retired v0.3.0 words reappear on
+#                                the live plugin surface (spec §11).
+#   2. plugin-structure check  — fails if a manifest or a skill/agent/command
+#                                frontmatter block is malformed.
+#
+# The two job names below ("vocabulary-purge gate" and "plugin-structure check")
+# are the required-status-check contexts to wire in branch protection.
+#
+# Runs on pull_request only: required status checks are evaluated on PRs, so a
+# push-triggered run would gate nothing and only add noise on the protected
+# branch tip. Each branch's protection requires these contexts at merge time.
+
+on:
+  pull_request:
+    branches: [main, develop]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  vocabulary-purge-gate:
+    name: vocabulary-purge gate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the code under review
+        uses: actions/checkout@v7
+      - name: Scan the live surface for retired v0.3.0 vocabulary
+        run: ./scripts/check-vocabulary.sh
+
+  plugin-structure-check:
+    name: plugin-structure check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the code under review
+        uses: actions/checkout@v7
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.x"
+      - name: Validate manifests and skill/agent/command frontmatter
+        run: python3 scripts/validate-plugin-structure.py
