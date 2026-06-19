@@ -1,39 +1,65 @@
 # Architecture
 
-A generic decompose engine ships in the plugin; each repo supplies a thin profile
-(`.milestone-config/feeder.json`) plus a substrate (the project-constitution docs
-under `substrateDir`). The engine turns a feature brief into a milestone of small,
-well-formed issues; the profile and substrate carry the stack, the conventions,
-and the design defaults the engine grounds its decomposition in.
+A generic planning engine ships in the plugin; each repo supplies a thin profile
+(`.milestone-config/feeder.json`) plus your project's standing docs (the
+constitution docs under `projectDocs`). The engine turns a feature brief into a
+milestone of small, well-formed issues; the profile and standing docs carry the
+stack, the conventions, and the design defaults the engine grounds the breakdown in.
 
 ## Plugin contents
 
-The as-built v0.2.0 components. The self-check gate, the `--apply` GitHub-write
-path, and the `refine` skill all shipped in v0.2.0 (see
-[The self-check gate](#the-self-check-gate) and [The decompose procedure](#the-decompose-procedure)).
+The as-built v0.3.0 components. `plan` previews to a plan file, `create` deploys the
+approved plan, and `update` reconciles a refreshed plan onto an existing milestone
+(see [The reviewer gate](#the-reviewer-gate) and [The plan procedure](#the-plan-procedure)).
+The plan file is the **build artifact** (see [The plan file as build artifact](#the-plan-file-as-build-artifact)).
 
 | Component | Path | Purpose |
 |---|---|---|
-| Setup skill | `skills/setup/SKILL.md` | First-run profile bootstrap: infer keys from repo signals, write `.milestone-config/feeder.json`, provision the label taxonomy aligned to the driver's. Auto-invoked by `decompose` when the profile is absent. Mirrors `milestone-driver:setup`. |
-| Decompose skill | `skills/decompose/SKILL.md` | Orchestrator: brief → milestone + issues. Runs Steps 0–6 (incl. the self-check gate) and emits at Step 7 — a reviewable plan file (preview, default) or the GitHub artifacts (`--apply`). `/milestone-feeder:decompose <brief>`. |
-| Decomposer agent | `agents/decomposer.md` | Architect lens: brief + substrate + repo → candidate issue set + dependency edges + Wave order. One heavy reasoning step, dispatched once. Read-only. |
+| Setup skill | `skills/setup/SKILL.md` | First-run profile bootstrap: infer keys from repo signals, write `.milestone-config/feeder.json`, provision the label taxonomy aligned to the driver's. Auto-invoked by `plan`/`create` when the profile is absent. Mirrors `milestone-driver:setup`. |
+| Plan skill | `skills/plan/SKILL.md` | Orchestrator preview: brief → a reviewable plan file. Runs Steps 0–6 (incl. the reviewer gate) and emits at Step 7 — the plan file at `.milestone-feeder/plan-<slug>.md`. **No GitHub writes.** `/milestone-feeder:plan <brief>`. |
+| Create skill | `skills/create/SKILL.md` | Deploys the approved plan: reads the plan file and performs the GitHub writes (labels, create-or-adopt milestone, issues, slug→`#n` rewrite, description PATCH). Runs `plan` first only if no plan file exists. `/milestone-feeder:create <brief>`. See [The create deploy / write order](#the-create-deploy--write-order). |
+| Architect agent | `agents/architect.md` | Architect lens: brief + standing docs + repo → candidate issue set + dependency edges + Wave order. One heavy reasoning step, dispatched once. Read-only. |
 | Issue-author agent | `agents/issue-author.md` | Per-issue subagent: authors one issue's full spec to the §4 output contract so it passes the driver's triage clean. Read-only; returns issue text, never opens the issue. |
 | Hook: `no-source-edit` | `hooks/` (`hooks.json`, `run-hook.cmd`, `.sh`, `.ps1`) | `PreToolUse` (`Write`/`Edit`/`MultiEdit`/`NotebookEdit`): unconditionally deny edits to the feeder's own `sourceGlobs`. The only mechanical gate the feeder needs — it authors no code and opens no PRs. See [The mechanical gate](#the-mechanical-gate). |
 | Manifest + registration | `.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`, `hooks/hooks.json` | Plugin metadata (incl. the `superpowers` dependency), marketplace registration, and Claude-side hook registration. |
-| Refine skill | `skills/refine/SKILL.md` | Idempotent re-run against an existing milestone: re-triage live issues through the self-check gate, patch gapped bodies, fill missing edges, re-render the Wave order. `/milestone-feeder:refine <milestone>`. Creates and deletes no issues; a clean milestone is a no-op. Reuses decompose's gate (Step 6) and `--apply` write-primitives (§7-apply) by reference. |
-| Self-check gate | (in `decompose`, Step 6 §6.1–§6.6; `SPEC.md` §5) | Dispatches the driver's `triage-reviewer` / `design-reviewer` against each generated issue before any emit; runs in preview too (it writes no GitHub state). Three backends — `"milestone-driver"`, `"internal"`, `false`. See [The self-check gate](#the-self-check-gate). |
-| `--apply` GitHub write path | (in `decompose`, Step 7 §7-apply) | Ensures the labels idempotently, creates-or-adopts the milestone by title, opens each gate-surviving issue, rewrites slug→`#n` references, PATCHes the Wave-encoded milestone description, and files the needs-product-input report (epic comment on apply / local file otherwise). Idempotent re-apply via adopt + match-by-title. |
+| Update skill | `skills/update/SKILL.md` | Plan-driven reconcile against an existing milestone: re-triage live issues through the reviewer gate, patch gapped bodies, fill missing edges, re-render the Wave order. `/milestone-feeder:update <brief>`. Creates and deletes no issues; a clean milestone is a no-op. Reuses the reviewer gate (Step 6) and `create`'s write-primitives by reference. |
+| Reviewer gate | (in `plan`, Step 6 §6.1–§6.6; `SPEC.md` §5) | Dispatches the driver's `triage-reviewer` / `design-reviewer` against each generated issue before any emit; it writes no GitHub state. Three backends — `"milestone-driver"`, `"internal"`, `false`. See [The reviewer gate](#the-reviewer-gate). |
+| `create` GitHub write path | (in `create`, §7-apply deploy sequence) | Ensures the labels idempotently, creates-or-adopts the milestone by title, opens each gate-surviving issue, rewrites slug→`#n` references, PATCHes the Wave-encoded milestone description, and files the needs-product-input report (epic comment for a GitHub-epic brief / local file otherwise). Idempotent re-run via adopt + match-by-title. |
 
-**Reused, not rebuilt (composability):** the self-check dispatches
+**Reused, not rebuilt (composability):** the reviewer gate dispatches
 `milestone-driver:triage-reviewer` and `:design-reviewer` directly against the
 generated issue text (no `gh` call of their own), so the feeder's quality bar *is*
 the driver's entry gate — no second, drifting definition of "well-formed"
-(`SPEC.md` §3, §5). `refine` reuses the same gate and the `--apply` write-primitives
+(`SPEC.md` §3, §5). `update` reuses the same gate and `create`'s write-primitives
 by reference rather than re-deriving a drifting copy.
+
+## The plan file as build artifact
+
+The plan file is the **build artifact** — the single source of truth `create` and
+`update` deploy (`SPEC.md`; spec §3). The mental model: **the plan file is the
+spec; GitHub is the deployment.** `plan` compiles it; `create` deploys it fresh;
+`update` re-deploys it onto an existing milestone.
+
+`plan` writes it to a gitignored scratch path, named by a **deterministic slug** of
+the milestone goal so `create`/`update` can find it from the same brief:
+
+```
+.milestone-feeder/plan-<slug>.md
+```
+
+The plan file carries, unambiguously: the exact milestone title + one-line goal;
+the wave-encoded milestone description (local slugs `#A`/`#B`); per surviving issue
+its slug, title, full §4 body, labels, and surface/risk; the parked and dropped
+issues (marked, never created); the reviewer-gate verdict line; and the source-brief
+reference. `create` reads it and deploys **exactly** it — no pipeline re-run, no
+re-vet (it trusts the recorded gate verdict). The slug→`#n` rewrite still happens at
+write time, because issue numbers do not exist until creation; what changed from
+v0.2.0 is **only** the source of the issue bodies/labels/waves — read from the plan
+file, not regenerated.
 
 ## Plugin version
 
-The plugin version lives only in `.claude-plugin/plugin.json` (currently `0.2.0`)
+The plugin version lives only in `.claude-plugin/plugin.json` (currently `0.3.0`)
 as the single source of truth. There is **no per-PR version machinery** — the
 feeder opens no PRs and touches no branches, so the driver's bump-rides-the-PR
 mechanism has nothing to ride. The version is bumped by hand when a release is cut.
@@ -48,7 +74,7 @@ clean (`GAPS: none`). Product gaps are parked, never invented (`SPEC.md` §2).
 
 ```
 feature brief (file / inline / GitHub epic issue)
-        │   reads substrate (.project/) + .milestone-config/driver.json (shared keys)
+        │   reads your project's standing docs (.project/) + .milestone-config/driver.json (shared keys)
         ▼
    ┌───────────────┐   milestone + issues    ┌──────────────────┐
    │ milestone-feeder │ ──────────────────────▶ │ milestone-driver │ ──▶ merged PRs
@@ -58,9 +84,10 @@ feature brief (file / inline / GitHub epic issue)
 ```
 
 The park boundary is the load-bearing constraint: the feeder makes *design and
-implementation* calls when the substrate or a stated repo convention supplies the
-answer, and parks *product* calls — what to build, or user-facing behavior with no
-conventional default — to a "needs product input" report rather than guessing them.
+implementation* calls when your project's standing docs or a stated repo convention
+supplies the answer, and parks *product* calls — what to build, or user-facing
+behavior with no conventional default — to a "needs product input" report rather
+than guessing them.
 
 ## The mechanical gate
 
@@ -75,30 +102,31 @@ code and authors issue text — it never writes source — so the deny is
 
 The `sourceGlobs` this gate reads is **self-protection only** — the feeder guarding
 its own repo — and is semantically distinct from the *consumer's* shared
-`sourceGlobs` that the feeder reads from the driver config when decomposing a target
+`sourceGlobs` that the feeder reads from the driver config when planning a target
 repo (`SPEC.md` §7; `docs/profile-schema.md`).
 
-## The decompose procedure
+## The plan procedure
 
-The `decompose` skill runs `SPEC.md` §6 Steps 0–6 (the self-check gate is Step 6)
-and emits at Step 7 — a preview plan file by default, or the GitHub artifacts on
-`--apply`. The self-check gate runs on **both** paths (it writes no GitHub state);
-only Step 7 `--apply` writes GitHub state.
+The `plan` skill runs `SPEC.md` §6 Steps 0–6 (the reviewer gate is Step 6) and
+emits the plan file at Step 7. It writes **no GitHub state** — the reviewer gate
+writes none either. `create` then deploys the emitted plan file (see
+[The create deploy / write order](#the-create-deploy--write-order)).
 
 | Step | Action |
 |---|---|
-| 0 | Read `.milestone-config/feeder.json` (absent → auto-invoke `setup`); read the substrate under `substrateDir` (best-effort); resolve the shared keys (`sourceGlobs`, `uiSurfaceGlobs`, `integrationBranch`) from the driver config, plus `nonNegotiables` (the additional reviewer-profile input the gate passes through). |
+| 0 | Read `.milestone-config/feeder.json` (absent → auto-invoke `setup`); read your project's standing docs under `projectDocs` (best-effort); resolve the shared keys (`sourceGlobs`, `uiSurfaceGlobs`, `integrationBranch`) from the driver config, plus `nonNegotiables` (the additional reviewer-profile input the gate passes through). |
 | 1 | Ingest the brief — a GitHub epic issue (`#<n>`), a file path, or inline text — and normalize it internally first. |
-| 2 | **Product-gap check (the park boundary):** separate product decisions (no conventional default) from design/implementation decisions (resolvable from substrate/convention). Product gaps are recorded, not guessed. |
-| 3 | Dispatch the `decomposer` **once**: candidate issue set + dependency edges + Wave order, with local tags (not GitHub numbers). |
+| 2 | **Product-gap check (the park boundary):** separate product decisions (no conventional default) from design/implementation decisions (resolvable from the standing docs/convention). Product gaps are recorded, not guessed. |
+| 3 | Dispatch the architect (`architectAgent`) **once**: candidate issue set + dependency edges + Wave order, with local tags (not GitHub numbers). |
 | 4 | Dispatch the `issue-author` **per candidate** (parallelizable) → each issue's full §4 spec. |
 | 5 | Assemble the dependency graph; render the milestone description to the §4 Wave template (local slugs). |
-| 6 | **Self-check gate** (the keystone): vet every generated issue against the same gate that fronts the driver's build loop. Iterate each FAILed issue to clean (≤2 `issue-author` re-dispatches) or park it. Runs in preview too — **no GitHub writes.** See [The self-check gate](#the-self-check-gate). |
-| 7 | **Emit.** Preview (default) writes a reviewable plan file to `.milestone-feeder/plan-<slug>.md`, plus a "needs product input" report when product gaps remain — **no GitHub writes**. `--apply` runs the preview emit first (the local audit record), then creates the GitHub artifacts. |
+| 6 | **Reviewer gate** (the keystone): vet every generated issue against the same gate that fronts the driver's build loop. Iterate each FAILed issue to clean (≤2 `issue-author` re-dispatches) or park it. **No GitHub writes.** See [The reviewer gate](#the-reviewer-gate). |
+| 7 | **Emit the plan file.** Write the reviewable plan file to `.milestone-feeder/plan-<slug>.md` — the build artifact `create`/`update` deploy — plus a "needs product input" report when product gaps remain. **No GitHub writes.** |
 
-### The Step 7 `--apply` write order
+### The create deploy / write order
 
-On `--apply`, the skill itself (never a dispatched agent — the agent-read-only
+`create` reads the plan file (running `plan` first only when no plan file exists)
+and deploys it. The skill itself (never a dispatched agent — the agent-read-only
 invariant holds) performs the GitHub writes in a fixed order. Only the
 **gate-surviving** issues are created; parked and dropped issues are never created.
 
@@ -108,28 +136,28 @@ invariant holds) performs the GitHub writes in a fixed order. Only the
 | b | **Create-or-adopt the milestone by exact title** (quote-safe `env.t` resolve): no match → create; one match → adopt (reopen if closed); multiple → adopt the first and log. Never deletes. |
 | c | **Create each gate-surviving issue** in Wave order, applying its `ui`/`logic` + `risk:*` labels; build the slug→`#n` map. On adopt, title-matched open issues are reused (no duplicate) and their bodies left as-is. |
 | d | **Second pass — rewrite slug→`#n`** (substring-safe) in each newly-created issue body and in the milestone description, then `gh issue edit`/`gh api PATCH`. Two passes are required because numbers don't exist until pass (c). |
-| e | **File the needs-product-input report** — epic comment on `--apply` when the brief was a GitHub epic, else a local file. |
+| e | **File the needs-product-input report** — epic comment when the brief was a GitHub epic, else a local file. |
 
-Idempotent re-apply relies on stable, exact, open issue titles: the adopt +
+Idempotent re-run relies on stable, exact, open issue titles: the adopt +
 match-by-title path reuses existing issues rather than duplicating them, and pass
 (d) is a no-op against already-numeric bodies/descriptions.
 
-## The self-check gate
+## The reviewer gate
 
-Before emitting, `decompose` vets **every generated issue** with the same gate
+Before emitting, `plan` vets **every generated issue** with the same gate
 that fronts the driver's build loop, so what the feeder emits passes the driver's
 triage clean (`SPEC.md` §5; Step 6 §6.1–§6.6). Each reviewer is dispatched
-**read-only against the generated text** — no `gh` call of its own. `refine` runs
+**read-only against the generated text** — no `gh` call of its own. `update` runs
 the same gate against a milestone's **live** issues (real comments, the live
 description, real `#n`).
 
-### Backends (`selfCheck`)
+### Backends (`reviewer`)
 
-| `selfCheck` | Backend |
+| `reviewer` | Backend |
 |---|---|
 | `"milestone-driver"` (default) | Dispatch `milestone-driver:triage-reviewer` per generated issue (and `:design-reviewer` when its triage returns `NEEDS_DESIGN_REVIEW: yes`). If the reviewers do not resolve at dispatch time, **degrade to `"internal"`** for the run (a notice, never a failure); a later single-issue non-resolution falls back to the internal checklist for that one issue. |
 | `"internal"` | Run the built-in checklist mirroring the five triage criteria (consistency, buildability, completeness, dependencies, UI flag). Same pass/Blocker verdict shape, so the gate logic is backend-agnostic. |
-| `false` | **Skip the gate** with a visible 🔴 warning to the user, recorded as `SKIPPED (selfCheck:false)` in the plan-file status line. Generated issues are NOT vetted. |
+| `false` | **Skip the gate** with a visible 🔴 warning to the user, recorded as `SKIPPED (reviewer:false)` in the plan-file status line. Generated issues are NOT vetted. |
 
 ### Result → action (`SPEC.md` §5)
 
@@ -150,15 +178,16 @@ milestone.
 
 | Mode | Trigger | Behavior |
 |---|---|---|
-| Decompose (preview) | `/milestone-feeder:decompose <brief>` | Full procedure, Steps 0–6 (incl. the self-check gate); stops at a reviewable plan file. **No GitHub writes.** Shipped (v0.2.0). |
-| Decompose (apply) | `… --apply` | Same, then creates the milestone + issues + labels (and an epic comment for a GitHub-epic brief). Shipped (v0.2.0). |
-| Refine | `/milestone-feeder:refine <milestone>` | Re-triage an **existing** milestone's live issues through the self-check gate, patch gapped bodies, fill missing edges, re-render the Wave order. Preview (default) writes a diff-style patch plan; `--apply` edits the live issues. Creates and deletes no issues; a clean milestone is a true no-op (writes nothing). Shipped (v0.2.0). |
+| Plan | `/milestone-feeder:plan <brief>` | Full procedure, Steps 0–6 (incl. the reviewer gate); stops at the plan file. **No GitHub writes.** |
+| Create | `/milestone-feeder:create <brief>` | Deploys the approved plan: ensures the labels, creates the milestone + issues (and an epic comment for a GitHub-epic brief). Runs `plan` first only when no plan file exists. |
+| Update | `/milestone-feeder:update <brief>` | Reconcile a refreshed plan onto an **existing** milestone (matched by exact title) through the reviewer gate — patch gapped bodies, fill missing edges, re-render the Wave order, showing the diff before it writes. **Never closes/deletes**; a live issue absent from the plan is flagged for your decision; a clean milestone is a true no-op (writes nothing). |
 
 **Authoring-autonomy boundary.** The feeder makes design/implementation calls
-grounded in the substrate or a stated repo convention — and cites the grounding
-(`.project/<doc>.md#<section>` or a sibling `file:line`). It parks product calls —
-decisions with no conventional default — to the "needs product input" report. It
-authors no code, opens no PRs, and never touches branches (`SPEC.md` §8).
+grounded in your project's standing docs or a stated repo convention — and cites
+the grounding (`.project/<doc>.md#<section>` or a sibling `file:line`). It parks
+product calls — decisions with no conventional default — to the "needs product
+input" report. It authors no code, opens no PRs, and never touches branches
+(`SPEC.md` §8).
 
 ## Output style
 
