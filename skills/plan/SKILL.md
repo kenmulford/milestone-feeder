@@ -115,9 +115,19 @@ PRODUCT_GAPS:
     why_blocked: <why it cannot be grounded in the project docs or a convention>
     brief_ref: <the brief line / phrase that asks for it>
   - …                       # "none" when the brief is fully resolvable
+SCOPE_SPANS_MULTIPLE_MILESTONES:
+  - milestone: <name of proposed milestone 1>
+    tags: [#A, #C]          # the candidate LOCAL TAGS under this milestone
+  - milestone: <name of proposed milestone 2>
+    tags: [#B]
+  - …                       # "none" when the brief is a single coherent release;
+                            #   when raised, names two or more milestones forming a
+                            #   strict partition of `CANDIDATES`
 ```
 
 `EDGES` is the literal `[]` when no candidate depends on another; `PRODUCT_GAPS` is the literal `none` when the brief is fully resolvable. **Merge** any architect `PRODUCT_GAPS` into `productGaps[]` — they join the gaps found at Step 2.
+
+**Capture `SCOPE_SPANS_MULTIPLE_MILESTONES`** exactly parallel to how `PRODUCT_GAPS` is consumed: record it **verbatim** when raised (the list of `{ milestone, tags }` — the architect's proposed split); the literal `none` when absent. `plan` does **NOT** re-partition — it carries the architect's proposed split verbatim (the architect owns the structural read; `plan` only surfaces it). **Non-blocking invariant:** this signal NEVER gates the run, and never changes `CANDIDATES` / `EDGES` / `WAVES` / the surviving issue set / Wave order / milestone identity; `plan` still produces a deployable single-milestone plan on every path. **Edge:** because the signal is sourced from the architect's structural read of `CANDIDATES` (not the surviving issue set), it is carried verbatim and surfaced **even if every candidate is later parked/dropped at Step 6** — it is independent of which issues survive. Grounding: `docs/specs/v0.3.1-driver-handoff.md` §5 (detection + advisory, non-blocking) and §6 (the additive Multi-milestone advisory plan-file field).
 
 ### Step 4 — Dispatch issue-author per candidate (parallelizable)
 
@@ -294,6 +304,7 @@ Write the reviewable **plan file** to a gitignored per-run scratch path: `.miles
 |---|---|
 | **Milestone title (exact)** | The exact milestone title, on its own labeled line — **distinct** from the one-line goal. Now **user-owned** and carrying the resolved **semver inside the string** (no separate version field), resolved at Step 5.1 by the version ladder and **surfaced for the user to confirm or override BEFORE `create`** (`docs/specs/v0.3.1-driver-handoff.md` §3, §6). `create` / `update` still resolve the milestone by this exact title (creating it if absent, adopting it if it already exists), and the driver parses the version from it — this remains the load-bearing identity field; the one-line goal is descriptive only. |
 | **Version provenance** | One line, one of `explicit` \| `declaration` \| `inferred from <tag/milestone>` \| `prompted` (the Step 5.1 ladder rung that resolved the title — `docs/specs/v0.3.1-driver-handoff.md` §6 "Version provenance" row). It makes the surfaced default **legible** so the user can trust or correct it. |
+| **Multi-milestone advisory** | **ADDITIVE and OPTIONAL** — present **ONLY** when the architect raised `SCOPE_SPANS_MULTIPLE_MILESTONES` (Step 3). Carries the flag + the proposed split (milestone names + their candidate tags) **VERBATIM** from the architect — `plan` does not re-partition. **OMITTED entirely** when the signal is `none`, so a single-milestone plan is byte-for-byte unchanged. **Non-blocking** — it does not change what gets deployed; the plan stays a deployable single-milestone plan. Sourced from the architect's structural read of `CANDIDATES`, so it is written even if every candidate is parked/dropped (Step 6). Grounding: `docs/specs/v0.3.1-driver-handoff.md` §6 (the additive plan-file field) and §5. |
 | **One-line goal** | The milestone goal in one line — the header. |
 | **Milestone description (Wave order)** | The Step 5 build-order / Wave description, verbatim, with local slugs (`#A`/`#B`). This is what `create` PATCHes onto the milestone after issue numbers exist. |
 | **Per surviving issue** | For each surviving (gate-clean / Advisory-only) issue: its slug, title, the FULL §4 `ISSUE_BODY` verbatim, its labels, and its surface/risk. `create` reads these — no regeneration. |
@@ -303,6 +314,8 @@ Write the reviewable **plan file** to a gitignored per-run scratch path: `.miles
 | **Source brief reference** | `inline` \| `file:<path>` \| `epic #<n>` — drives the downstream report routing and the brief↔plan match. Record `epicIssueNumber` here when the brief was an epic. |
 
 **Surface the resolved identity for confirm/override.** Both the resolved `Milestone title (exact)` (carrying the semver per the Step 5.1 ladder) **and** its `Version provenance` line are written to the plan file and **surfaced for the user to confirm or override BEFORE running `create`** — `plan` never silently finalizes a milestone identity the user cannot see or change (`docs/specs/v0.3.1-driver-handoff.md` §2, §3, §6). On an infer rung the title carries the **reference version verbatim**, and this surfaced line is **where the user adjusts the patch / minor / major bump** before `create` deploys it.
+
+**Surface the multi-milestone advisory — ONLY when raised — alongside the same identity moment.** When the architect raised `SCOPE_SPANS_MULTIPLE_MILESTONES` (Step 3), surface its advisory **prominently UP FRONT, at the same confirm/override moment** the user already sees the milestone identity above (NOT a separate prompt, NOT a hard block): a clear *"this looks like ~N milestones — deploy the one big milestone, or split the brief and re-run"* message plus the proposed split (the milestone names + their candidate tags, verbatim from the architect). It is **advisory only** — the user decides; `plan` still produced a deployable single-milestone plan and changes nothing about what `create` deploys. Surface it **ONLY when the signal is raised**; when the signal is `none`, surface **nothing** — no advisory line, no message — and the surfaced moment is exactly as before (`docs/specs/v0.3.1-driver-handoff.md` §5).
 
 **Preserve an existing deploy receipt on re-plan.** The plan file may already carry a `Milestone number (GitHub): <n>` line — the **deploy receipt** `create` writes back post-deploy (the create-side write block at `skills/create/SKILL.md:99-135`; the exact field shape at `skills/create/SKILL.md:104`). It is the stable handle `update` resolves by, so a re-plan must NOT drop it: **before overwriting** `.milestone-feeder/plan-<slug>.md`, **read the PRIOR file at that same path** (if one exists) and **carry its receipt line forward, verbatim**, into the freshly-written plan file — as a sibling header line in the same position `create` writes it (after `Source brief:`). The receipt is **additive and READ-ONLY here**: `plan` never resolves a number or writes one (it has no milestone number — it writes only local slugs); it merely **preserves** the line `create` already recorded. **No prior file, OR a prior file with no receipt line → OMIT it, NO error** — a plan with no receipt is valid and deployable (`docs/specs/v0.3.1-driver-handoff.md` §6: *"A v0.3.0 plan file lacking them still parses (the consumers degrade gracefully)"*; the additive-fields row: *"`plan` preserves it on re-plan"*). Read the prior receipt line before the overwrite:
 
@@ -355,6 +368,11 @@ Milestone number (GitHub): <n>   # OPTIONAL sibling header line — carried forw
 <marker only; a dependent of a parked issue cannot build, so it is not carried (Step 6 §6.6)>
 
 ### … (one block per surviving candidate, in Wave order; only PASS / Advisory-only issues carry a full body)
+
+## Multi-milestone advisory   <!-- OPTIONAL section — written ONLY when the architect raised SCOPE_SPANS_MULTIPLE_MILESTONES (Step 3); OMITTED ENTIRELY when the signal is `none`, leaving the file byte-for-byte the pre-#61 shape. Advisory only — does not change what gets deployed; the plan stays a deployable single-milestone plan. -->
+🔴 This brief looks like ~<N> milestones. Deploy the one big milestone below, or split the brief and re-run. Proposed split (carried verbatim from the architect):
+- <proposed milestone 1 name>: #A, #C
+- <proposed milestone 2 name>: #B
 
 ## Project-docs grounding
 - <each design call carried forward> — grounded in <.project/<doc>.md#<section> | sibling file:line>
