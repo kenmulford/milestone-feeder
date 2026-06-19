@@ -1,8 +1,8 @@
 # Test environment (what the run assumes)
 
-- `feeder.json`: defaults (`selfCheck: "milestone-driver"`, `substrateDir: project/`).
+- `feeder.json`: defaults (`reviewer: "milestone-driver"`, `projectDocs: project/`).
 - Driver shared keys:
   - `sourceGlobs`: `["src/**"]`
   - `uiSurfaceGlobs`: `["src/pages/**", "src/components/**"]`
   - `integrationBranch`: `"develop"`
-- No substrate folder for this scenario (none needed).
+- No project docs folder for this scenario (none needed).
