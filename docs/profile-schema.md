@@ -28,15 +28,18 @@ CI.
 
 Keep it thin and consumer-driven, the same discipline as the driver: **new keys
 are added only when a real consumer needs them — never speculatively**
-(`SPEC.md` §7). Every own-key has a bundled default, so a profile may omit any
-key it does not override; an empty `{}` is valid (all defaults apply). The only
+(`SPEC.md` §7). Nearly every own-key has a bundled default, so a profile may omit
+any key it does not override; an empty `{}` is valid (defaults apply where they exist). The one
+exception is `versioning`, which has **no** bundled default — absent is a distinct
+"infer-or-ask" state, not a default value (see its per-key note). The only
 key the feeder's own repo must carry is the self-protection `sourceGlobs` (so the
 `no-source-edit` hook has a primary source to read).
 
 ## Own keys
 
 These keys are owned by the feeder and resolved from `feeder.json`. All are
-optional in the file (each has a bundled default).
+optional in the file. Every key except `versioning` has a bundled default;
+`versioning` has none — absent is its own "infer-or-ask" state (see its note).
 
 | Key | Type | Default | Purpose |
 |---|---|---|---|
@@ -45,6 +48,7 @@ optional in the file (each has a bundled default).
 | `architectAgent` | string | `milestone-feeder:architect` | Override the breakdown agent (default-filled). |
 | `issueAuthorAgent` | string | `milestone-feeder:issue-author` | Override the authoring agent (default-filled). |
 | `issueSize` | string | *(none)* | Optional natural-language sizing rule (e.g. "≤1 PR, ≤1 new screen"). |
+| `versioning` | `"semver" \| "none"` | *(none)* | Whether this project is semver-versioned. Drives milestone-version resolution at plan time. Three-way (see note). |
 | `sourceGlobs` | string[] | `["skills/**","agents/**","hooks/**"]` | **Self-protection only** — the paths the feeder's own `no-source-edit` hook guards in the feeder's *own* repo. Distinct from the consumer's shared `sourceGlobs`. Resolution chain below. |
 
 ### Per-key notes
@@ -66,6 +70,26 @@ rarely overridden. Omit them from the profile unless pointing at a custom agent.
 **`issueSize`.** Optional free-text sizing rule the author honours when
 splitting work into issues. Absent → no sizing constraint beyond the procedure's
 defaults.
+
+**`versioning`.** Answers only one question — *is this project
+semver-versioned?* — with a three-way contract (grounded in
+`docs/specs/v0.3.1-driver-handoff.md` §7 and the versioning model in
+`docs/specs/v0.3.1-driver-handoff.md` §2):
+
+- `"semver"` = the project is versioned: `plan` versions every milestone, finding
+  the actual number via the layered ladder.
+- `"none"` = the project is non-versioned: `plan` never adds a version and never
+  prompts for one.
+- **Absent** = unknown: `plan` infers from repo signals (existing milestone
+  titles, then git tags), and only asks when nothing is inferable.
+
+Unlike every other own-key, `versioning` has **no bundled default** — absent is a
+distinct documented state, *not* a default value. So it follows the
+[absent-means-default discipline](#absent-means-default-discipline) the same way:
+when it is skipped, it is **omitted** from the profile (never written as a
+placeholder), and the absent state means infer-or-ask. An **invalid or
+unrecognized value** (anything that is not exactly `"semver"` or `"none"`) is
+treated as absent — `plan` falls back to infer-or-ask and never errors on the key.
 
 **`sourceGlobs` (self-protection).** The paths the feeder's `no-source-edit` hook
 guards in the feeder's **own** repo. This is **semantically distinct** from the
@@ -135,11 +159,14 @@ that driver change has shipped in a given consumer's pinned version.
 
 ## Absent-means-default discipline
 
-**Omit a key rather than write its default value.** Every own-key has a bundled
-default; writing the default explicitly adds noise and drifts when the default
-changes. A minimal profile carries only the keys that diverge from default — for
-the feeder's own repo, that is just the self-protection `sourceGlobs` (so the
-hook has a primary source). An empty `{}` is a valid profile.
+**Omit a key rather than write its default value.** Almost every own-key has a
+bundled default; writing the default explicitly adds noise and drifts when the
+default changes. `versioning` is the exception — it has no default, so "skip"
+means **omit it** and let its absent state (infer-or-ask) apply, never write a
+placeholder. Either way the rule is the same: omit on skip. A minimal profile
+carries only the keys that diverge from default — for the feeder's own repo, that
+is just the self-protection `sourceGlobs` (so the hook has a primary source). An
+empty `{}` is a valid profile.
 
 ## Minimal example
 
