@@ -38,6 +38,7 @@ Exit 0 = valid. Exit 1 = at least one structural problem (each printed).
 from __future__ import annotations
 
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -185,6 +186,8 @@ for skill_md in sorted((REPO_ROOT / "skills").rglob("SKILL.md")):
         require_keys(skill_md, fm, ["name", "description"])
 
 # Agents: every agents/**/*.md (recursive) — require name + description.
+# Also collect each agent's `name` for the no-source-edit drift-guard below.
+agent_names: list[str] = []
 agents_dir = REPO_ROOT / "agents"
 if agents_dir.is_dir():
     for agent_md in sorted(agents_dir.rglob("*.md")):
@@ -192,6 +195,9 @@ if agents_dir.is_dir():
         fm = parse_frontmatter(agent_md)
         if fm is not None:
             require_keys(agent_md, fm, ["name", "description"])
+            name = str(fm.get("name", "")).strip()
+            if name:
+                agent_names.append(name)
 
 # Commands: every commands/**/*.md (recursive) — require description only
 # (a command's name is derived from its filename). None exist today.
@@ -202,6 +208,134 @@ if commands_dir.is_dir():
         fm = parse_frontmatter(cmd_md)
         if fm is not None:
             require_keys(cmd_md, fm, ["description"])
+
+# --- 4: no-source-edit actor-gate drift-guard -------------------------------
+#
+# Why this exists: hooks/no-source-edit.{sh,ps1} carry a HARDCODED set of the
+# feeder's OWN agent names. That set is a security control — it must live inside
+# the protected hooks/** boundary, NOT be read from feeder.json — so it cannot be
+# auto-derived at runtime. This guard prevents the safety-relevant drift: if
+# someone adds or renames an agents/*.md without updating the hooks, that agent
+# would be MISSING from the hook set, so the gate would mis-classify it (treating
+# a feeder subagent as an outside actor and letting it write source).
+#
+# Each hook carries the set TWICE and the two must agree:
+#   1. A machine-parseable COMMENT literal:  # FEEDER_OWN_AGENTS: <name> <name>
+#      (identical text in both scripts; one regex parses it for sh and ps1).
+#   2. The RUNTIME literal the hook actually executes — language-specific:
+#        sh:   FEEDER_OWN_AGENTS="architect issue-author"   (space-separated)
+#        ps1:  $FeederOwnAgents = @('architect', 'issue-author')  (PS array)
+# The guard verifies BOTH literals: it parses the runtime set the hook truly
+# uses, asserts it equals the comment set (so neither a stale comment nor a stale
+# runtime line can pass silently — a maintainer who updates one but not the other
+# is caught), and coverage-checks the RUNTIME set against agents/*.md (the runtime
+# set is the one the live gate executes, so it is the safety-relevant one to
+# cover). The comment set is also coverage-checked as belt-and-suspenders.
+#
+# The coverage check is intentionally ONE-DIRECTIONAL: it asserts every agent
+# name in agents/*.md appears in each hook's set. It does NOT flag a stale extra
+# name that is in a hook set but no longer in agents/*.md — that direction is
+# fail-CLOSED (a non-existent agent name can never match a real actor, so at worst
+# it is dead weight). The comment-vs-runtime check, by contrast, IS strict set
+# equality, because a disagreement there is exactly the false-PASS this guard
+# exists to catch. All parsing is stdlib `re` only — NO shell/pwsh execution.
+
+FEEDER_AGENT_SET_RE = re.compile(r"^#\s*FEEDER_OWN_AGENTS:\s*(.+?)\s*$", re.MULTILINE)
+
+# Runtime literals, keyed by hook-script type (see the block comment above).
+#   sh:  capture the value inside FEEDER_OWN_AGENTS="...".
+#   ps1: capture the inside of $FeederOwnAgents = @( ... ), then pull each
+#        single- or double-quoted token out of that captured group.
+RUNTIME_SH_RE = re.compile(r'^FEEDER_OWN_AGENTS="([^"]*)"', re.MULTILINE)
+RUNTIME_PS1_RE = re.compile(r"\$FeederOwnAgents\s*=\s*@\(([^)]*)\)")
+PS1_TOKEN_RE = re.compile(r"""['"]([^'"]*)['"]""")
+
+
+def parse_hook_agent_set(path: Path) -> set[str] | None:
+    """Extract the COMMENT-literal feeder-agent set from a hook script.
+
+    Reads the `# FEEDER_OWN_AGENTS: a b c` comment literal both hook scripts
+    carry and returns the names as a set. This is only one of the two literals
+    the drift-guard verifies: it ALSO parses each script's RUNTIME literal (see
+    parse_hook_runtime_set) and asserts the two agree and both cover every agent,
+    so neither a stale comment nor a stale runtime line can pass silently.
+    Records an error and returns None if the comment literal is missing or empty
+    (a hook that lost the set can no longer be drift-checked).
+    """
+    if not path.is_file():
+        err(path, "required hook script is missing")
+        return None
+    text = path.read_text(encoding="utf-8-sig")
+    m = FEEDER_AGENT_SET_RE.search(text)
+    if m is None:
+        err(path, "missing the '# FEEDER_OWN_AGENTS: ...' set literal "
+                  "(required for the actor-gate drift-guard)")
+        return None
+    names = {n for n in m.group(1).split() if n}
+    if not names:
+        err(path, "'# FEEDER_OWN_AGENTS:' literal is empty")
+        return None
+    return names
+
+
+def parse_hook_runtime_set(path: Path, label: str) -> set[str] | None:
+    """Extract the RUNTIME feeder-agent literal the hook actually executes.
+
+    Language-specific (keyed by `label`, the hook_scripts dict key): the sh
+    `FEEDER_OWN_AGENTS="..."` string or the ps1 `$FeederOwnAgents = @(...)`
+    array. Returns the names as a set, or records an error and returns None if
+    the runtime literal is missing or empty (a hook that lost its executable set
+    can mis-classify actors). stdlib `re` only — the script is never executed.
+    """
+    text = path.read_text(encoding="utf-8-sig")
+    if label == "sh":
+        m = RUNTIME_SH_RE.search(text)
+        names = {n for n in m.group(1).split() if n} if m else None
+    elif label == "ps1":
+        m = RUNTIME_PS1_RE.search(text)
+        names = {t for t in PS1_TOKEN_RE.findall(m.group(1)) if t} if m else None
+    else:  # pragma: no cover — guard against an unknown script type.
+        names = None
+    if not names:
+        err(path, "missing or empty RUNTIME FEEDER_OWN_AGENTS literal "
+                  "(the set the hook actually executes) — required for the "
+                  "actor-gate drift-guard")
+        return None
+    return names
+
+
+hook_scripts = {
+    "sh": REPO_ROOT / "hooks" / "no-source-edit.sh",
+    "ps1": REPO_ROOT / "hooks" / "no-source-edit.ps1",
+}
+for _label, hook_path in hook_scripts.items():
+    checked += 1
+    comment_set = parse_hook_agent_set(hook_path)
+    runtime_set = parse_hook_runtime_set(hook_path, _label) if hook_path.is_file() else None
+    if comment_set is None or runtime_set is None:
+        continue
+    # Comment-vs-runtime: strict equality. A disagreement is the false-PASS this
+    # guard exists to catch (e.g. comment updated but runtime line left stale).
+    if comment_set != runtime_set:
+        err(hook_path, f"FEEDER_OWN_AGENTS comment literal "
+                       f"{sorted(comment_set)} disagrees with the runtime literal "
+                       f"{sorted(runtime_set)} the hook executes — update both so "
+                       f"the live actor gate matches its documented set")
+    # Coverage: every declared agent must appear in BOTH sets. The runtime set is
+    # the safety-relevant one (it is what the live gate executes); the comment set
+    # is checked too as belt-and-suspenders.
+    for agent_name in agent_names:
+        if agent_name not in runtime_set:
+            err(hook_path, f"runtime FEEDER_OWN_AGENTS set is missing agent "
+                           f"'{agent_name}' (declared in agents/*.md) — the "
+                           f"no-source-edit actor gate the hook executes has "
+                           f"drifted from the real agent set; add it to keep the "
+                           f"safety gate correct")
+        if agent_name not in comment_set:
+            err(hook_path, f"FEEDER_OWN_AGENTS comment literal is missing agent "
+                           f"'{agent_name}' (declared in agents/*.md) — the "
+                           f"actor-gate drift-guard comment has drifted from the "
+                           f"real agent set; add it to keep the safety gate correct")
 
 # --- report -----------------------------------------------------------------
 
