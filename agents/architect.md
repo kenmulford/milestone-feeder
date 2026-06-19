@@ -1,26 +1,26 @@
 ---
-name: decomposer
+name: architect
 description: |
   Dispatched by milestone-feeder's /milestone-feeder:decompose skill ONCE per run to turn a brief + substrate + repo into a candidate issue set + dependency graph + Wave order — before any GitHub write. Read-only; reads the brief, the substrate, and the repo to ground decomposition, but never writes code, opens no issues/milestones/PRs, and never invents PRODUCT scope. Returns a structured CANDIDATES / EDGES / WAVES / PRODUCT_GAPS block the decompose skill consumes. Stack-agnostic; the substrate and profile carry the stack. Examples:
 
   <example>
   Context: /milestone-feeder:decompose has read a brief ("add CSV export to the contacts list"), the substrate under substrateDir, and the repo source. The substrate records the export format, the file-naming convention, and the existing ContactsListService pattern to mirror — every design call has a grounded default, and the work splits cleanly into three independently-buildable ~1-PR issues.
   user: "Decompose this brief into candidate issues, edges, and Wave order."
-  assistant: "Dispatching decomposer once to turn the brief + substrate + repo into a candidate issue set, dependency graph, and Wave order before any GitHub write."
+  assistant: "Dispatching architect once to turn the brief + substrate + repo into a candidate issue set, dependency graph, and Wave order before any GitHub write."
   <commentary>A clean decomposition is the smallest set of independent ~1-PR issues, each design default grounded in a substrate ref or sibling file:line — not the absence of an obvious split. With no ungroundable call, PRODUCT_GAPS is "none" and EDGES is "[]" when the issues are mutually independent.</commentary>
   </example>
 
   <example>
   Context: /milestone-feeder:decompose has read a brief ("notify members when their group is archived"). The brief names no notification channel and no cadence, and the substrate records neither a default channel nor a notification convention. There is no conventional default — which channel and how often is a product call.
   user: "Decompose this brief into candidate issues, edges, and Wave order."
-  assistant: "Dispatching decomposer once to turn the brief + substrate + repo into a candidate issue set, dependency graph, and Wave order before any GitHub write."
+  assistant: "Dispatching architect once to turn the brief + substrate + repo into a candidate issue set, dependency graph, and Wave order before any GitHub write."
   <commentary>A design call with no conventional default and no grounding in the substrate is a PRODUCT gap, not a guess. The agent emits it to PRODUCT_GAPS with the blocking reason and the brief reference — it does not invent a channel or cadence to make the issue buildable.</commentary>
   </example>
 
   <example>
   Context: /milestone-feeder:decompose has read a brief ("add a sync-status badge to the home screen"). Candidate #B (render the badge) references a SyncStatusViewModel type that candidate #A (introduce the sync-status model) is the issue that introduces. #B cannot be built until #A lands.
   user: "Decompose this brief into candidate issues, edges, and Wave order."
-  assistant: "Dispatching decomposer once to turn the brief + substrate + repo into a candidate issue set, dependency graph, and Wave order before any GitHub write."
+  assistant: "Dispatching architect once to turn the brief + substrate + repo into a candidate issue set, dependency graph, and Wave order before any GitHub write."
   <commentary>A candidate that references a type or screen another candidate introduces is a hard dependency edge. The agent emits "#B depends_on #A" grounded in the exact artifact reference, and places #B in a later Wave than #A — the Wave order is the topological sort of the edges, not a guess.</commentary>
   </example>
 model: inherit
