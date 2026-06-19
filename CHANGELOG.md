@@ -3,6 +3,75 @@
 Release notes for milestone-feeder. Each tagged release is also published on the
 [GitHub Releases page](https://github.com/kenmulford/milestone-feeder/releases).
 
+## v0.3.0 — Humanize the surface
+
+**Theme:** v0.2.0 works, but everything a user typed or read spoke in
+implementation jargon. v0.3.0 is one focused pass that makes the surface speak the
+user's language — intent-named command verbs, no flags, human config keys, and an
+agent renamed to match what it does. **This release is breaking vs v0.2.0.** It is
+not a behavioral redesign: one behavioral change ships, and only because it makes
+the surface honest — `create` now builds exactly the plan you approved instead of
+re-running the pipeline and possibly diverging from the preview.
+
+### 💥 Breaking — the command surface (verbs, not flags)
+
+Three intent-named verbs replace two verbs plus a flag. Each verb *is* the
+explanation of what it does. There are no back-compat aliases — the old commands
+are gone.
+
+| v0.2.0 | v0.3.0 | What you mean |
+|---|---|---|
+| `decompose <brief>` (preview) | **`plan <brief>`** | "Turn my idea into a reviewable plan." |
+| `decompose <brief> --apply` | **`create <brief>`** | "Approve it — build the milestone + issues." |
+| `refine <milestone>` | **`update <brief>`** | "My plan changed — sync it to the milestone." |
+
+- **`create` is read-the-plan and faithful.** It resolves the plan file `plan`
+  wrote and deploys **exactly** it — no pipeline re-run, no re-vet. If no plan file
+  exists yet, it runs `plan` for you first, then deploys that. What you reviewed is
+  what gets built.
+- **`update` is safe.** It reconciles a refreshed plan onto the existing milestone:
+  creates missing issues, patches drifted bodies (showing the diff first), and adds
+  new dependency edges. It **never closes or deletes** a live issue — one absent
+  from your plan is flagged for your decision, not removed. Re-running on an
+  already-synced milestone writes nothing (idempotent).
+
+### 💥 Breaking — config keys renamed (the file stays the same)
+
+The config file is still `.milestone-config/feeder.json` (no rename — pairs with
+`driver.json`, avoids hook churn). The **keys inside** are humanized. There is no
+silent old-key fallback; an external consumer who set the old keys re-runs `setup`.
+
+| v0.2.0 key | v0.3.0 key | What it is |
+|---|---|---|
+| `substrateDir` | **`projectDocs`** | Where your project's standing docs live. |
+| `selfCheck` | **`reviewer`** | Who checks each issue before it's created (`"milestone-driver"` / `"internal"` / `false`). |
+| `issueSizeGuidance` | **`issueSize`** | Optional sizing rule. |
+| `decomposerAgent` | **`architectAgent`** | Tracks the agent rename below. |
+
+### ✨ Agent rename — `decomposer` → `architect`
+
+| Issue | What |
+|---|---|
+| #27 | The breakdown agent (brief → candidate issues + dependency graph + build order) is renamed `decomposer` → `architect` (`agents/decomposer.md` → `agents/architect.md`, id `milestone-feeder:decomposer` → `milestone-feeder:architect`). It pairs cleanly with the issue-author: the architect designs the breakdown, the issue-author writes each issue. Logic and contracts are unchanged — only the name and the prose around it. |
+
+### ✨ Release metadata & verification
+
+| Issue | What |
+|---|---|
+| #33 | Release metadata re-vocab'd to the final surface: `plugin.json` (`version` → `0.3.0`, description rewritten to the `plan`/`create`/`update` surface, the `decomposition` keyword dropped), `marketplace.json` (no `--apply`, no residual `decompose` prose), and this CHANGELOG entry. |
+| #36 | The credibility harness migrated to the v0.3.0 surface (new verbs, new keys, `feeder.json` kept) and **re-run** — fresh transcripts, so the **4/4 green** scorecard proves v0.3.0, not v0.2.0. The rename changed names, not behavior. |
+
+### Consumer notes
+
+- **This is a breaking release.** Use `plan` / `create` / `update` (not
+  `decompose` / `decompose --apply` / `refine`), and the new config keys
+  (`projectDocs` / `reviewer` / `issueSize` / `architectAgent`). The config file
+  name is unchanged. Re-run `setup` if you had set any of the old keys.
+- **`create` builds what you approved.** It deploys the recorded plan faithfully;
+  to change what gets built, change your brief and re-run `plan`.
+- **`update` never destroys.** It only creates and patches; an issue that left your
+  plan is flagged, never auto-closed.
+
 ## v0.2.0 — Gate & apply
 
 **Theme:** The feeder grows teeth and a write hand. The preview slice now runs the
