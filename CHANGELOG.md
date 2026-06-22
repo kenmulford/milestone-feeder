@@ -170,7 +170,7 @@ the new fields still works — the new paths degrade gracefully.
 
 | Issue | What |
 |---|---|
-| (guardrail) | The feeder stays **one brief → one milestone**, but stops being silent about a brief that's really several. When a brief reads as distinct phased deliverables / release boundaries, the architect raises a `SCOPE_SPANS_MULTIPLE_MILESTONES` signal with a proposed split (the candidate milestones and which issues fall under each). `plan` still writes a **deployable single-milestone plan** but **prominently flags** *"this looks like ~N milestones"* and shows the split, surfaced up front alongside the versioning step. Never a hard block, never a silent giant milestone — the user decides whether to deploy the one milestone or split the brief and re-run. Full `brief → N-milestones` decomposition is deferred to v0.4.0. |
+| (guardrail) | The feeder stays **one brief → one milestone**, but stops being silent about a brief that's really several. When a brief reads as distinct phased deliverables / release boundaries, the architect raises a `SCOPE_SPANS_MULTIPLE_MILESTONES` signal with a proposed split (the candidate milestones and which issues fall under each). `plan` still writes a **deployable single-milestone plan** but **prominently flags** *"this looks like ~N milestones"* and shows the split, surfaced up front alongside the versioning step. Never a hard block, never a silent giant milestone — the user decides whether to deploy the one milestone or split the brief and re-run. Full `brief → N-milestones` decomposition is deferred to a future release. |
 
 ### ✨ The optional `versioning` config key
 
