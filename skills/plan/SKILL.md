@@ -90,7 +90,7 @@ Dispatch the agent named in `architectAgent` (default `milestone-feeder:architec
 **Brief it with** (matches `agents/architect.md` → "What you receive"):
 
 - The **normalized brief** from Step 1 (`{ goal, in-scope, out-of-scope, surfaces }`).
-- The **filled project-docs sections** from Step 0 — only the sections that exist (absent / `[TBD]` skipped).
+- The **resolved grounding digest** from Step 0 — the `.project/<doc>.md#<section>` slices assembled there — as the architect's project-docs grounding. The digest is what is handed in; an **empty digest** (no `.project/`, or all sections absent / `[TBD]`) is passed through unchanged and is **not an error** (degrade exactly as Step 0 does — "a missing project-docs directory is not an error"). The digest **supplements, never replaces** the architect's on-demand Read/grep citation-verification path: the architect still reads the repo on demand to verify any citation per its rigor gate (`agents/architect.md` Rigor gate — "Every design default cites its grounding"), so where a slice is insufficient it falls back to reading source. (The digest's slice shape and absent-/`[TBD]`-skip rule are defined in Step 0; not restated here.)
 - The **resolved shared keys** — the *values* for `sourceGlobs`, `uiSurfaceGlobs`, `integrationBranch`.
 - `issueSize` when set; else the default (~1 PR each, independently buildable).
 - The `productGaps[]` carried from Step 2.
