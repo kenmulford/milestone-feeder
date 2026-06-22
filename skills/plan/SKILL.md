@@ -160,7 +160,7 @@ For **EACH** candidate returned at Step 3 **that was not pre-parked (or dropped)
 **Brief each with** (matches `agents/issue-author.md` → "What you receive"):
 
 - The **candidate** — its tag, title, surface/risk hint, and sketch (from Step 3).
-- The **brief + project docs** — the grounding sources from Steps 0–1.
+- The **brief** (the grounding source carrying *what to build*, in product terms) **and the resolved grounding digest** from Step 0 — the `.project/<doc>.md#<section>` slices assembled there — as the author's project-docs grounding. The digest is what is handed in; an **empty digest** (no `.project/`, or all sections absent / `[TBD]`) is passed through unchanged and is **not an error** (degrade exactly as Step 0 does — "a missing project-docs directory is not an error"). The digest **supplements, never replaces** the author's on-demand Read/grep citation-verification path: the author still greps the live repo to verify any citation before recording it per its rigor gate (`agents/issue-author.md` Rigor gate — "grep before you cite"), and may grep for anything not in the digest — the digest is not an allowlist. (The digest's slice shape and absent-/`[TBD]`-skip rule are defined in Step 0; not restated here.)
 - The **resolved shared keys** — `sourceGlobs`, `uiSurfaceGlobs`, `integrationBranch`.
 - The **edges naming this candidate** — the architect edges that touch this tag, to record verbatim (the author transcribes; it does not invent edges or reorder Waves).
 - Any `productGaps[]` **scoped to this candidate**.
