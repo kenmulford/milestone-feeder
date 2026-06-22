@@ -3,6 +3,65 @@
 Release notes for milestone-feeder. Each tagged release is also published on the
 [GitHub Releases page](https://github.com/kenmulford/milestone-feeder/releases).
 
+## v0.4.0 — Faster plans, fail-fast on product gaps
+
+**Released:** 2026-06-22
+
+**Theme:** This release makes `plan` cheaper and quicker to run, and smarter
+about stopping early. It does the same work as before — turn your brief into a
+reviewable set of issues — but now uses a cheaper model where the work is
+mechanical and a stronger one only where the thinking is hard, runs the
+per-issue work in parallel instead of one at a time, and bails out up front when
+a product decision you haven't made would block several issues at once. **Nothing
+about the output changes** — the issues you get, the checks they pass, and the
+files written are exactly as before. Same commands, same config: this is a
+speed-and-cost pass plus one early-exit behavior change.
+
+### ⚡ Efficiency — right model for each job, and parallel work
+
+`plan` dispatches several helpers under the hood: one *architect* that designs the
+breakdown once, one *issue-author* per candidate issue that writes it up, and
+*reviewers* that check each issue before it lands in your plan. Until now these all
+defaulted to the same strong (and expensive) model and ran one after another.
+
+| Change | PR | What |
+|---|---|---|
+| Cheaper model for issue-writing | #80 (#85) | The issue-author — the helper that writes up each candidate issue — is now pinned to the cheaper **Sonnet** tier. It does structured transcription against a breakdown the architect already designed, so it doesn't need the top tier. Because there is one issue-author per candidate issue, this is the highest-multiplicity helper and where most of the cost sat; quality is held constant by the same reviewer checks that run afterward. |
+| Strong model for the hard thinking | #81 (#86) | The architect — the helper that decomposes your brief, works out which issues depend on which, and sorts them into build order — is now pinned to the strong **Opus** tier on purpose. It runs only once per plan, it's the hardest reasoning step, and every later step builds on its output, so this is quality protection for the whole plan. |
+| Write the issues in parallel | #82 (#88) | The per-issue writing now runs several issues at a time (a rolling window, **up to 4 at once**) instead of strictly one after another, joining before the review step. For a plan with many issues this turns wall-clock time from O(N) into roughly O(N/4). The issue-authors are independent and write no shared state, so running them together cannot change what any issue says. |
+| Run the issue checks in parallel | #83 (#89) | The review step — the densest part of a run — now also batches **up to 4 checks at a time**, in two staged passes: first the buildability check on every issue, then the design check on the UI issues that need one. The reviewers only read and return a verdict, so batching cannot change any verdict; the staged ordering and the existing retry/re-render rules are preserved. |
+
+### 🧭 Behavior — stop early when a shared product gap blocks several issues
+
+When `plan` hits a design decision it can't make for you — say your brief asks to
+"notify members" but never says *how* — it parks that issue and flags the decision
+for you instead of guessing. Until now it discovered each blocked issue only late,
+one at a time, while writing them up.
+
+| Change | PR | What |
+|---|---|---|
+| Fail fast on shared product gaps | #87 (#91, #92) | The architect now records *which* candidate issues each open product decision blocks (a new `blocks:` tag on each product gap). `plan` parks those blocked issues at a new early step — **before** it writes and reviews the rest — so one decision you still need to make, like a missing notification channel that several issues depend on, is caught **once, up front** instead of being rediscovered separately for each affected issue. **Nothing else changes:** the same issues get parked and surfaced in the "needs your input" report through the same park machinery; only the timing moves earlier. Issues that aren't blocked are still written, reviewed, and checked exactly as before, and the late catch-all park still handles any gap the architect didn't tie to specific issues. |
+
+### 📝 Docs
+
+| Change | PR | What |
+|---|---|---|
+| One-marketplace install in the README | #77 (from #76) | The README now leads with the **milestone-suite** marketplace as the recommended way to install — one marketplace that carries all three milestone plugins — while keeping the per-repo marketplace as a still-supported, clearly-labeled alternative. |
+
+### Consumer notes (upgrading from v0.3.2)
+
+- **Additive — nothing breaks.** Same commands (`plan` / `create` / `update`),
+  same config file (`.milestone-config/feeder.json`), same plan-file output.
+- **Your plans get faster and cheaper to produce,** with the issues, the checks
+  they pass, and the files written all unchanged.
+- **`plan` now stops earlier** when a product decision you haven't made would
+  block several issues — you'll see those flagged for your input up front rather
+  than near the end of the run. The decision to make, and the report you get, are
+  the same.
+- **No config-key or schema changes** to `.milestone-config/feeder.json`. If you
+  override the helper models yourself, note the new defaults: issue-author →
+  Sonnet, architect → Opus.
+
 ## v0.3.2 — Actor-aware source guard
 
 **Theme:** The feeder's source guard now tells *who* is editing apart — it still
