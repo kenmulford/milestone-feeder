@@ -23,7 +23,7 @@ description: |
   assistant: "Dispatching architect once to turn the brief + project docs + repo into a candidate issue set, dependency graph, and Wave order before any GitHub write."
   <commentary>A candidate that references a type or screen another candidate introduces is a hard dependency edge. The agent emits "#B depends_on #A" grounded in the exact artifact reference, and places #B in a later Wave than #A — the Wave order is the topological sort of the edges, not a guess.</commentary>
   </example>
-model: inherit
+model: opus
 color: blue
 ---
 
