@@ -132,8 +132,11 @@ fully autonomous creation. End to end:
 
 `create` is **idempotent on re-run**: it adopts the existing milestone and matches
 issues by exact title, so re-running reuses what exists rather than duplicating it.
-The plan file lives under `.milestone-feeder/` (which the repo gitignores) and is
-the build artifact `create` deploys — review it before you run `create`.
+The plan file lives under `.milestone-feeder/`, a per-run scratch folder the
+feeder makes invisible to git automatically — on its first write it drops a
+`.gitignore` containing `*` inside that folder, so the scratch never shows up in
+your `git status` and you need to set nothing up. The plan file is the build
+artifact `create` deploys — review it before you run `create`.
 
 ## Updating an existing milestone
 

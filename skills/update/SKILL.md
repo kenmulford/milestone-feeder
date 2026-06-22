@@ -159,6 +159,8 @@ Write a reconcile summary. The **on-GitHub-not-in-plan** flags go to a report th
 | **GitHub epic issue** (`epic #<n>` recorded) | Post the report as a **comment on the epic issue:** `gh issue comment <epicIssueNumber> --body "<report>"`. |
 | **File path / inline text** (no epic) | Write the **local file** `.milestone-feeder/update-report-<slug>.md` and **PRINT a notice** that the report is local (no epic issue to comment on). |
 
+Before writing the local report, ensure the scratch dir self-ignores (it normally already does — Step 1 resolved or wrote the plan file under `.milestone-feeder/`, and `plan` ensured `.milestone-feeder/.gitignore` contains `*`; `skills/plan/SKILL.md` Step 7): create `.milestone-feeder/` if absent and ensure `.milestone-feeder/.gitignore` contains a single `*` line, so the report is git-invisible in the consumer repo with zero user setup.
+
 The report carries the create pass (e) needs-input pointer (any parked / dropped issues recorded in the plan, routed as create routes them) **plus** `update`'s reconcile flags — the live OPEN issues the plan no longer carries, each marked 🔴 *flagged for your decision — `update` will not close it; closing is your call.*
 
 **Summarize the run** (concise, table form): N created, M body-patched (with the diffs shown at Step 4), E edges added (description PATCHed yes/no), F flagged-for-your-decision — or, when nothing differed, the single no-op line.

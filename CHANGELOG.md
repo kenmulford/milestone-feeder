@@ -29,6 +29,12 @@ path, it never replaces it — so grounding can't quietly degrade.
 | Update the architect's contract | #98 (#103) | The architect helper's own instructions now describe receiving the resolved digest rather than a docs folder to walk, keeping the helper and the step that briefs it in lockstep. Its citation-checking rules are untouched. |
 | Update the issue-author's contract | #99 (#104) | The issue-author helper's instructions are reframed the same way — it receives the resolved digest, not a re-read license — with its "grep before you cite" verification rule preserved exactly. |
 
+### 🧹 Hygiene — keep per-run scratch out of your `git status`
+
+| Change | PR | What |
+|---|---|---|
+| Self-ignore the per-run scratch folder | #107 | The feeder writes its plan file and reports into a `.milestone-feeder/` scratch folder in your repo. It now makes that folder invisible to git **on its first write** — it drops a `.gitignore` containing `*` inside the folder, so a run never leaves untracked files cluttering your `git status`, with zero setup on your part and without touching your repo's root `.gitignore`. |
+
 ### Consumer notes (upgrading from v0.4.0)
 
 - **Additive — nothing breaks.** Same commands (`plan` / `create` / `update`),
