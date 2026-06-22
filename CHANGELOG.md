@@ -3,6 +3,53 @@
 Release notes for milestone-feeder. Each tagged release is also published on the
 [GitHub Releases page](https://github.com/kenmulford/milestone-feeder/releases).
 
+## v0.4.1 — Read your house docs once, not once per helper
+
+**Theme:** This release stops `plan` from paying to read the same project docs over
+and over. Before, every helper that `plan` runs under the hood — the architect that
+designs the breakdown, and every issue-author that writes up a candidate issue —
+re-read your whole `.project/` docs folder from scratch. On a populated docs folder
+with many issues, that was the same content read many times over in a single run.
+Now `plan` reads the relevant sections **once**, up front, into a compact "grounding
+digest" and hands that digest to each helper instead of pointing them back at the
+folder. **Nothing about your plans changes** — the issues you get, the design
+decisions they record, the source citations they carry, and the checks they pass are
+all exactly as before. This is purely a cost-and-size pass: each helper is handed the
+same grounding it would have read, just resolved once instead of N times. Helpers can
+still read the repo on demand to double-check any citation — the digest adds to that
+path, it never replaces it — so grounding can't quietly degrade.
+
+### ⚡ Efficiency — resolve the project docs once, reuse everywhere
+
+| Change | PR | What |
+|---|---|---|
+| Build the grounding digest once | #95 (#100) | `plan`'s first step already reads your project docs (`.project/`). It now also gathers the relevant sections into a compact **grounding digest** — built one time per run — that later steps reuse instead of re-reading the folder. The digest carries every section the helpers would otherwise re-read (a superset, so nothing is dropped), and a missing or empty docs folder just yields an empty digest with no error. |
+| Hand the digest to the architect | #96 (#101) | The architect — the helper that decomposes your brief into issues and build order — is now handed the resolved digest as its project-docs grounding, instead of a folder to re-read. It still reads the repo on demand to verify any citation. |
+| Hand the digest to each issue-author | #97 (#102) | Each issue-author — one per candidate issue, the highest-multiplicity helper — is now handed the same resolved digest instead of re-reading the folder itself. This is the largest saving, since the re-read was previously paid once per issue. The brief and the on-demand verify path are unchanged. |
+| Update the architect's contract | #98 (#103) | The architect helper's own instructions now describe receiving the resolved digest rather than a docs folder to walk, keeping the helper and the step that briefs it in lockstep. Its citation-checking rules are untouched. |
+| Update the issue-author's contract | #99 (#104) | The issue-author helper's instructions are reframed the same way — it receives the resolved digest, not a re-read license — with its "grep before you cite" verification rule preserved exactly. |
+
+### 🧹 Hygiene — keep per-run scratch out of your `git status`
+
+| Change | PR | What |
+|---|---|---|
+| Self-ignore the per-run scratch folder | #107 | The feeder writes its plan file and reports into a `.milestone-feeder/` scratch folder in your repo. It now makes that folder invisible to git **on its first write** — it drops a `.gitignore` containing `*` inside the folder, so a run never leaves untracked files cluttering your `git status`, with zero setup on your part and without touching your repo's root `.gitignore`. |
+
+### Consumer notes (upgrading from v0.4.0)
+
+- **Additive — nothing breaks.** Same commands (`plan` / `create` / `update`),
+  same config file (`.milestone-config/feeder.json`), same plan-file output.
+- **Your plans get cheaper and smaller to produce,** with the issues, the design
+  they record, the citations they carry, and the checks they pass all unchanged.
+- **Grounding can't quietly degrade.** The digest is a superset of what the
+  helpers used to re-read, and helpers still read the repo on demand to verify any
+  citation — the digest supplements that path, it never replaces it.
+- **No config-key or schema changes** to `.milestone-config/feeder.json`.
+
+### ⚖️ Post-run audit trail
+
+Judgment-call PRs for this release: none
+
 ## v0.4.0 — Faster plans, fail-fast on product gaps
 
 **Released:** 2026-06-22

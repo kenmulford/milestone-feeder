@@ -33,6 +33,8 @@ Extract the feeder's own keys with their bundled defaults (`docs/profile-schema.
 
 Read the project docs under `projectDocs` **best-effort** (`SPEC.md` §6 Step 0). Honor the `.project/` contract: a section that is absent or marked `[TBD]` is treated as **not present** — it is **skipped, never grounded on**. Degrade gracefully: a missing project-docs directory is not an error; the run proceeds on whatever sections exist and on stated repo conventions. Cite a project-docs-grounded decision as `.project/<doc>.md#<section>` when carrying it forward.
 
+While reading, **also assemble a grounding digest** — a compact, ordered set of `.project/<doc>.md#<section>` *slices* (each = the section anchor in the citation form above, paired with that section's body text), built **once** here and reused by the downstream briefs instead of re-reading the directory whole-file. Select slices with the **same filter already in force** — exactly the sections that exist, absent / `[TBD]` skipped (the line above and Step 3's "only the sections that exist (absent / `[TBD]` skipped)"); introduce **no new** selection or skip rule. The digest is a **superset that supplements**, never a replacement: (1) **superset** — it carries *every* implicated existing section, so handing the digest downstream in place of the directory never drops grounding; (2) **supplement** — it adds to, and does not close, the agents' on-demand Read/grep path: the architect and issue-author still independently Read/grep to verify any citation before recording it (each agent's own rigor gate stays mandatory — the architect cites its grounding / verifies a sibling `file:line` before recording it, and the issue-author "grep[s] before [it] cite[s]"). Degrade exactly as the line above does: a missing `projectDocs` directory (this repo has none), all-absent/`[TBD]` sections, or a read/parse failure → an **empty/minimal digest and no error**; the run proceeds best-effort on stated repo conventions. This step only **produces** the digest; the Step-3 architect brief and Step-4 issue-author brief that consume it are wired by issues #96/#97 and are not altered here.
+
 Resolve the **shared keys** the architect and issue-author need for grounding, from the driver config (`docs/profile-schema.md` shared-keys chain):
 
 1. `.milestone-config/driver.json` (primary).
@@ -79,7 +81,7 @@ Separate the two classes of decision the brief implies (`SPEC.md` §2, §6 Step 
 | **Product decision** | No conventional default — what to build, or user-facing behavior the project docs / a stated convention does not answer | Record to `productGaps[]`. **Never guessed.** |
 | **Design / implementation decision** | The project docs or a stated repo convention supplies the answer | Resolved — proceed; cite the grounding (`.project/<doc>.md#<section>` or a sibling `file:line`). |
 
-If a product gap is severe enough that the candidate set **cannot even be formed** without it (the brief's core scope is undecided), **STOP**: write the "needs product input" report (Step 7 format) and end the run — do not dispatch the architect against an undecided scope. The report is the local file `.milestone-feeder/needs-product-input-<slug>.md`. (No issues exist on a Step 2 STOP, so only the report is written; nothing else is produced.) Otherwise carry `productGaps[]` forward: the pipeline proceeds with the decidable work, and the gaps surface in the plan + report at Step 7.
+If a product gap is severe enough that the candidate set **cannot even be formed** without it (the brief's core scope is undecided), **STOP**: write the "needs product input" report (Step 7 format) and end the run — do not dispatch the architect against an undecided scope. The report is the local file `.milestone-feeder/needs-product-input-<slug>.md`. Because this STOP can be the run's **first** write under `.milestone-feeder/`, ensure the scratch dir self-ignores before writing the report (Step 7's "Make the scratch git-invisible from the first write" — create `.milestone-feeder/` if absent and ensure `.milestone-feeder/.gitignore` contains `*`). (No issues exist on a Step 2 STOP, so only the report is written; nothing else is produced.) Otherwise carry `productGaps[]` forward: the pipeline proceeds with the decidable work, and the gaps surface in the plan + report at Step 7.
 
 ### Step 3 — Dispatch the architect (once)
 
@@ -88,7 +90,7 @@ Dispatch the agent named in `architectAgent` (default `milestone-feeder:architec
 **Brief it with** (matches `agents/architect.md` → "What you receive"):
 
 - The **normalized brief** from Step 1 (`{ goal, in-scope, out-of-scope, surfaces }`).
-- The **filled project-docs sections** from Step 0 — only the sections that exist (absent / `[TBD]` skipped).
+- The **resolved grounding digest** from Step 0 — the `.project/<doc>.md#<section>` slices assembled there — as the architect's project-docs grounding. The digest is what is handed in; an **empty digest** (no `.project/`, or all sections absent / `[TBD]`) is passed through unchanged and is **not an error** (degrade exactly as Step 0 does — "a missing project-docs directory is not an error"). The digest **supplements, never replaces** the architect's on-demand Read/grep citation-verification path: the architect still reads the repo on demand to verify any citation per its rigor gate (`agents/architect.md` Rigor gate — "Every design default cites its grounding"), so where a slice is insufficient it falls back to reading source. (The digest's slice shape and absent-/`[TBD]`-skip rule are defined in Step 0; not restated here.)
 - The **resolved shared keys** — the *values* for `sourceGlobs`, `uiSurfaceGlobs`, `integrationBranch`.
 - `issueSize` when set; else the default (~1 PR each, independently buildable).
 - The `productGaps[]` carried from Step 2.
@@ -158,7 +160,7 @@ For **EACH** candidate returned at Step 3 **that was not pre-parked (or dropped)
 **Brief each with** (matches `agents/issue-author.md` → "What you receive"):
 
 - The **candidate** — its tag, title, surface/risk hint, and sketch (from Step 3).
-- The **brief + project docs** — the grounding sources from Steps 0–1.
+- The **brief** (the grounding source carrying *what to build*, in product terms) **and the resolved grounding digest** from Step 0 — the `.project/<doc>.md#<section>` slices assembled there — as the author's project-docs grounding. The digest is what is handed in; an **empty digest** (no `.project/`, or all sections absent / `[TBD]`) is passed through unchanged and is **not an error** (degrade exactly as Step 0 does — "a missing project-docs directory is not an error"). The digest **supplements, never replaces** the author's on-demand Read/grep citation-verification path: the author still greps the live repo to verify any citation before recording it per its rigor gate (`agents/issue-author.md` Rigor gate — "grep before you cite"), and may grep for anything not in the digest — the digest is not an allowlist. (The digest's slice shape and absent-/`[TBD]`-skip rule are defined in Step 0; not restated here.)
 - The **resolved shared keys** — `sourceGlobs`, `uiSurfaceGlobs`, `integrationBranch`.
 - The **edges naming this candidate** — the architect edges that touch this tag, to record verbatim (the author transcribes; it does not invent edges or reorder Waves).
 - Any `productGaps[]` **scoped to this candidate**.
@@ -329,7 +331,21 @@ After §6.6, the surviving issue set has either all-PASS (or all-Advisory-only) 
 
 By the time this step runs, the self-check gate (Step 6) has already produced the **surviving issue set** — the gate-clean (PASS / Advisory-only), **non-parked, non-dropped** issues from §6.6. Parked (product-gap / needs-human-direction) and dropped-dependent issues are **never carried as buildable**; they go to the report (parked) or are simply omitted (dropped). This step writes a single reviewable plan file. **No GitHub writes occur — `plan` writes only local scratch files.**
 
-Write the reviewable **plan file** to a gitignored per-run scratch path: `.milestone-feeder/plan-<slug>.md`. The `<slug>` is a **deterministic** kebab-case slug of the milestone **goal**, so the same brief always resolves to the same path and `create` / `update` can locate it. Derive `<slug>` deterministically: take the one-line milestone goal, lowercase it, replace every run of non-alphanumeric characters with a single hyphen, then strip any leading/trailing hyphens (cap the length at a reasonable bound, trimming a trailing hyphen if the cut lands on one). `.milestone-feeder*` **should be gitignored** (per-clone runtime scratch, like the driver's `.milestone-driver-*`); if the repo's `.gitignore` does not yet carry that pattern, the skill writes the file there **regardless** — the path is per-run scratch the user reviews, then deploys via `create`.
+Write the reviewable **plan file** to a gitignored per-run scratch path: `.milestone-feeder/plan-<slug>.md`. The `<slug>` is a **deterministic** kebab-case slug of the milestone **goal**, so the same brief always resolves to the same path and `create` / `update` can locate it. Derive `<slug>` deterministically: take the one-line milestone goal, lowercase it, replace every run of non-alphanumeric characters with a single hyphen, then strip any leading/trailing hyphens (cap the length at a reasonable bound, trimming a trailing hyphen if the cut lands on one).
+
+**Make the scratch git-invisible from the first write (zero user setup).** `.milestone-feeder/` is pure per-run scratch — the plan file and any reports the user reviews, then deploys via `create` — with no tracked config of its own (per-clone runtime scratch, like the driver's `.milestone-driver-*`). **Before writing any file under `.milestone-feeder/`, FIRST ensure the directory self-ignores:** create `.milestone-feeder/` if absent, and ensure `.milestone-feeder/.gitignore` exists containing a single `*` line. A `*` inside that folder makes the whole folder (and the `.gitignore` itself) invisible to `git status` in **any** consumer repo, without touching the consumer's root `.gitignore`. Do this on the first write of every run so a freshly-cloned consumer is clean from the very first `plan`:
+
+```bash
+# bash — ensure the scratch dir self-ignores BEFORE the first write under it.
+mkdir -p .milestone-feeder
+[ -f .milestone-feeder/.gitignore ] || printf '*\n' > .milestone-feeder/.gitignore
+```
+
+```powershell
+# PowerShell 7+ — same ensure-self-ignore before the first write.
+New-Item -ItemType Directory -Force -Path .milestone-feeder | Out-Null
+if (-not (Test-Path .milestone-feeder/.gitignore)) { Set-Content -LiteralPath .milestone-feeder/.gitignore -Value '*' -Encoding utf8NoBOM }
+```
 
 **The plan-file contract.** The plan file is the load-bearing build artifact: `create` and `update` read it and write GitHub from it — they regenerate nothing. It MUST carry every field below, unambiguously (`SPEC.md` §3):
 
@@ -418,7 +434,7 @@ Milestone number (GitHub): <n>   # OPTIONAL sibling header line — carried forw
 This plan file is the build artifact — run `/milestone-feeder:create` to deploy it to GitHub (it ensures the labels, creates-or-adopts the milestone by the exact title above, opens each surviving issue, rewrites the slug references to real issue numbers, and patches the milestone description with the Wave order). `plan` wrote no GitHub state.
 ```
 
-If `productGaps[]` is **non-empty** OR the self-check parked any issue as **needs-human-direction** (§6.5), also write a **"needs product input" report** to `.milestone-feeder/needs-product-input-<slug>.md` (same deterministic slug). The report carries a **Kind** column so the human can tell a product decision (no conventional default — decide and record it) from a non-converging self-check Blocker (the candidate's design is likely wrong — redirect it):
+If `productGaps[]` is **non-empty** OR the self-check parked any issue as **needs-human-direction** (§6.5), also write a **"needs product input" report** to `.milestone-feeder/needs-product-input-<slug>.md` (same deterministic slug). The scratch dir already self-ignores by now (the plan-file write above ensured `.milestone-feeder/.gitignore` contains `*`), so this report is git-invisible too. The report carries a **Kind** column so the human can tell a product decision (no conventional default — decide and record it) from a non-converging self-check Blocker (the candidate's design is likely wrong — redirect it):
 
 ```markdown
 🔴 Needs human input — <milestone goal, one line>
