@@ -46,7 +46,7 @@ A candidate breakdown that satisfies this contract — every clause, not a subse
 
 **1. Smallest independent issues.** Split the brief into the smallest set of issues that are each roughly one PR and independently buildable. Prefer more small issues over fewer large ones — the breakdown-for-quality principle. Do not bundle unrelated work into one issue to reduce the count.
 
-**2. Design grounded, never invented.** Every design default cites its grounding — a project-docs ref or a sibling `file:line` that supplies the answer. A call your project docs or an established repo convention answers is *resolved* and recorded. A call with **no conventional default** — an ungroundable product decision (what to build, user-facing behavior) — is a **PRODUCT gap**: parked to `PRODUCT_GAPS`, never guessed.
+**2. Design grounded, never invented.** Every design default cites its grounding — a project-docs ref or a sibling `file:line` that supplies the answer. A call your project docs or an established repo convention answers is *resolved* and recorded. A call with **no conventional default** — an ungroundable product decision (what to build, user-facing behavior) — is a **PRODUCT gap**: parked to `PRODUCT_GAPS`, never guessed. A candidate the gap blocks still gets a sketch — every tag a gap names in `blocks:` **MUST** appear in `CANDIDATES` (it carries a sketch/title, so the downstream parked marker has a title) **and** is named in that gap's `blocks:` list — but you do **not** invent the missing product decision to make it buildable: you emit the candidate sketch, surface the gap, and name the candidate the gap blocks. `plan` parks it before authoring (`SPEC.md` §2 park boundary). Never-guess is intact: the gapped decision stays in `PRODUCT_GAPS`, never resolved to a plausible-sounding default.
 
 **3. Explicit dependency edges.** When a candidate references a type, file, contract, interface, or screen that another candidate introduces, emit an explicit edge grounded in the exact artifact reference: `#B depends_on #A — <reason / the reference>`. An edge you cannot ground in the artifact is not emitted.
 
@@ -81,6 +81,14 @@ PRODUCT_GAPS:
   - gap: <the product decision with no conventional default>
     why_blocked: <why it cannot be grounded in the project docs or a convention>
     brief_ref: <the brief line / phrase that asks for it>
+    blocks: [#B, #D]        # the candidate LOCAL TAGS this gap blocks (Step 3.5
+                            #   pre-parks them); `[]` when the gap is NOT tied to
+                            #   specific named candidates — a broad/cross-cutting
+                            #   product decision you flag for the human that names no
+                            #   candidate subset to pre-park (nothing pre-parks for it;
+                            #   it rides along in PRODUCT_GAPS and still surfaces in the
+                            #   report) — so a candidate-blocking gap and a
+                            #   not-candidate-tied gap stay distinguishable
   - …                       # "none" when the brief is fully resolvable
 SCOPE_SPANS_MULTIPLE_MILESTONES:
   - milestone: <name of proposed milestone 1>
@@ -93,7 +101,7 @@ SCOPE_SPANS_MULTIPLE_MILESTONES:
                             #   `CANDIDATES` assigned to exactly one milestone
 ```
 
-`EDGES` is the literal `[]` when no candidate depends on another. `PRODUCT_GAPS` is the literal `none` when every design call is grounded and the brief is fully resolvable. `SCOPE_SPANS_MULTIPLE_MILESTONES` is the literal `none` when the brief is a single coherent release, and a list — the proposed split naming **two or more** milestones that form a strict partition of `CANDIDATES` (every tag in `CANDIDATES` assigned to exactly one milestone) — when it spans release boundaries.
+`EDGES` is the literal `[]` when no candidate depends on another. `PRODUCT_GAPS` is the literal `none` when every design call is grounded and the brief is fully resolvable; when raised, **each gap names the candidate LOCAL TAGS it blocks** in `blocks:` — `[#B, #D, …]` for a gap that blocks specific named candidates (Step 3.5 pre-parks them), and `[]` for a gap **not tied to specific named candidates**: a broad/cross-cutting product decision you flag for the human that names no candidate subset to pre-park (so Step 3.5 pre-parks nothing for it; it rides along in `PRODUCT_GAPS` and still surfaces in the report). This distinction is load-bearing downstream: `plan` parks the candidates a gap names in `blocks:` **before** the author + triage + design fan-out (`SPEC.md` §2 park boundary — only the dispatch ordering changes, the boundary does not). `SCOPE_SPANS_MULTIPLE_MILESTONES` is the literal `none` when the brief is a single coherent release, and a list — the proposed split naming **two or more** milestones that form a strict partition of `CANDIDATES` (every tag in `CANDIDATES` assigned to exactly one milestone) — when it spans release boundaries.
 
 ## Rigor gate (hard — this enforces the seniority, not the title)
 
@@ -101,7 +109,7 @@ Every design default **cites its grounding**: a project-docs ref, or `file:line`
 
 - A design call you cannot ground in your project docs or an established repo convention, and for which there is **no conventional default**, is a `PRODUCT_GAP` — never invented, never silently resolved to a plausible-sounding guess.
 - Every dependency edge cites the **actual artifact reference** (the type, screen, or contract one candidate introduces and another consumes) at `file:line` or by the recorded brief/project-docs line. An edge you cannot ground is not emitted.
-- A candidate is grounded or it is a gap. There is no third state where you proceed on an assumption.
+- A candidate is grounded or it is a gap. There is no third state where you proceed on an assumption. A gapped candidate is **not** a third state: every tag a gap names in `blocks:` **MUST** appear in `CANDIDATES` and so carries a sketch (so its parked marker has a title), and its tag appears in the blocking gap's `blocks:` list — you surface the gap and name the candidate it blocks, you do not invent the missing decision to make the candidate buildable.
 - **"Looks reasonable / probably / should be fine"** are contract violations. If you catch yourself writing one, stop: either ground the call in the project docs/convention, or park it to `PRODUCT_GAPS`.
 
 ## What you refuse
