@@ -131,7 +131,11 @@ SCOPE_SPANS_MULTIPLE_MILESTONES:
 
 ### Step 4 — Dispatch issue-author per candidate (parallelizable)
 
-For **EACH** candidate returned at Step 3, dispatch the agent named in `issueAuthorAgent` (default `milestone-feeder:issue-author`). Dispatches are **parallelizable** — run them concurrently when the tool environment supports it (`SPEC.md` §6 Step 4).
+For **EACH** candidate returned at Step 3, dispatch the agent named in `issueAuthorAgent` (default `milestone-feeder:issue-author`). **Dispatch all N authors concurrently as background agents** — one `Agent(run_in_background: true)` per candidate — **with no more than 4 in flight at once**. If N > 4, use a **rolling window / batches** so the in-flight count never exceeds 4 (as one author returns, dispatch the next). When N ≤ 4 this rule is a no-op — dispatch all of them, no rolling window is needed (and N = 0 / N = 1 are trivial). Cap 4 is a safe, conservative default, mirroring the driver's worker fan-out (`milestone-driver` plugin `skills/solve-milestone/SKILL.md` Phase 1 step 2: "no more than 4 workers running at once… rolling window / batches so the in-flight count never exceeds 4"). **Quality hold:** issue-authors are stateless and write no shared state, so running them concurrently cannot change any issue body — the output is identical to a serial fan-out.
+
+**Barrier at Step 5.** **Await ALL author completions before Step 5 (Assemble graph) begins** — Step 5 consumes every returned issue, so the whole fan-out must have returned before it can start. Authors that return concurrently are collected at this join; a returned `STATUS: PRODUCT_GAP` routes to `productGaps[]` at the join exactly as the serial path does (see the routing rule below), and the rolling window keeps refilling until every candidate has returned.
+
+**Cap ownership (SKILL ↔ SPEC lockstep).** This SKILL carries the **operational** detail — the cap W = 4 and the rolling window above. `SPEC.md` §6 Step 4 remains the looser normative statement ("per candidate (parallelizable)"); it does not name a cap. SKILL.md owns the cap; SPEC.md is intentionally not made more specific here.
 
 **Brief each with** (matches `agents/issue-author.md` → "What you receive"):
 
