@@ -23,7 +23,7 @@ description: |
   assistant: "Dispatching issue-author for candidate #B to author its §4 spec — recording the architect's edge as 'Depends on #A — references SyncStatusViewModel, introduced by #A' in the Dependencies section, without reordering the Waves."
   <commentary>The issue-author records the architect's edge verbatim with the exact reference; it does NOT invent a new edge and does NOT reorder the Waves — the architect owns the dependency graph and the topological sort. The author transcribes the edge into the §4 Dependencies section.</commentary>
   </example>
-model: inherit
+model: sonnet
 color: yellow
 ---
 
