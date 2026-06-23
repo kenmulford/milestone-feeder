@@ -3,6 +3,31 @@
 Release notes for milestone-feeder. Each tagged release is also published on the
 [GitHub Releases page](https://github.com/kenmulford/milestone-feeder/releases).
 
+## v0.4.3 — Feeder-first scratch self-heal & discovery path
+
+**Theme:** The feeder now establishes the suite's committed scratch-ignore on its own — so a repo that runs the feeder before any driver run no longer leaves per-clone scratch un-ignored or `feeder.json` untracked — and it adds a standing rule that every new feature ships a path for existing users to discover the change.
+
+### ✨ Feeder-first self-heal & existing-user discovery
+
+| Issue | PR | What |
+|---|---|---|
+| #120 Self-heal `.milestone-config/.gitignore` from setup Phase 3 | #125 | `setup` Phase 3 now writes the nested `.milestone-config/.gitignore` (create-only, never clobbers) so a feeder-first repo gets the committed scratch-ignore with zero user setup, instead of waiting for a driver run. Mirrors the driver's canonical block (bash + PowerShell 7+). |
+| #121 Self-heal `.milestone-config/.gitignore` from plan Step 0 | #126 | `plan` Step 0 self-heals the same nested gitignore on an already-configured repo (where `setup` doesn't re-run) — covering the legacy case where `feeder.json` exists but the gitignore was never written. |
+| #122 KEEP-IN-SYNC markers at the feeder self-heal blocks | — | The cross-suite sync markers above the two self-heal blocks; delivered inline with #120/#121 (closed as completed, no separate PR). |
+| #123 Detect a legacy root `.milestone-config/*` `.gitignore` blanket + one-time notice | #128 | `setup` and `plan` read-only-detect a legacy root `.gitignore` blanket (which silently hides `feeder.json` and the nested gitignore) and print a one-time by-hand-fix notice — never editing your root `.gitignore`. |
+| #124 Encode the existing-user discovery/migration-path principle | #127 | `SPEC.md` + the §4 / `plan` §6.4 quality criteria now require every new feature, config key, or behavior change to ship an existing-user discovery path; the feeder's own self-check enforces it (internal backend). |
+
+### Consumer notes (upgrading from v0.4.2)
+
+- **Feeder-first adoption now just works.** If you run `/milestone-feeder:setup` or `/milestone-feeder:plan` before ever running milestone-driver, the feeder now writes the committed `.milestone-config/.gitignore` itself — create-only, so it never touches a file you've edited — keeping per-clone scratch out of `git status` while `driver.json`/`feeder.json` stay tracked, with zero setup.
+- **Legacy-blanket repos get a one-time heads-up.** If your repo's root `.gitignore` carries an old `.milestone-config/*` blanket (from older driver setups), `setup`/`plan` print a one-time 🔴 notice explaining that the blanket leaves `feeder.json` untracked, plus the one-line by-hand fix. The feeder **never edits your root `.gitignore`** — detection is read-only; you apply the fix.
+- **No schema changes** to `.milestone-config/feeder.json`. Same commands (`plan` / `create` / `update`), same plan-file output.
+- **New quality bar:** the spec now requires every new feature to ship an existing-user discovery path (non-breaking is necessary but not sufficient). The feeder's self-check enforces it on the internal backend; full default-path (driver `triage-reviewer`) enforcement is tracked as companion milestone-driver work (v1.12.2).
+
+### ⚖️ Post-run audit trail
+
+Judgment-call PRs for this release: none
+
 ## v0.4.2 — Release hygiene
 
 **Theme:** Pure housekeeping — nothing about how the feeder works changes. The
