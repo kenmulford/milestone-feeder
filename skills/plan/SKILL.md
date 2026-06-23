@@ -71,6 +71,88 @@ try {
 } catch {}
 ```
 
+**Detect a legacy-blanket root `.gitignore` and print a one-time by-hand-fix notice (read-only; NEVER auto-edit the root).** The self-heal above writes the *nested* `.milestone-config/.gitignore`, but it cannot help a consumer whose **root** `.gitignore` carries a legacy blanket for the config dir — `.milestone-config/`, `.milestone-config/*`, or bare `.milestone-config` (with or without a leading `/`). A root blanket hides everything under `.milestone-config/` from git — `feeder.json`, `driver.json`, and the nested `.gitignore` we just wrote — so the tracked config is silently dropped from version control and the self-heal is void for exactly those repos. **Detection is read-only — it writes NOTHING to the root `.gitignore` under any condition; the root file is the consumer's and may hold unrelated rules, so the fix is the user's to apply** (this skill already scopes its own scratch self-ignore to the nested `.milestone-config/.gitignore` "without touching the consumer's root `.gitignore`", `skills/plan/SKILL.md:336`). Mirrors the driver's one-time marker-gated notice pattern (`milestone-driver/skills/solve-milestone/SKILL.md` preflight / Trello notice: detect → print verbatim → drop a per-clone marker; `milestone-driver/skills/solve-issue/SKILL.md` first-run preflight notice).
+
+Gate: print the 🔴 notice **verbatim** ONLY when a root blanket is detected **AND** the per-clone marker `.milestone-config/.runtime/legacy-blanket-notice` is **absent**. On print, ensure `.runtime/` exists (`mkdir -p .milestone-config/.runtime` / `New-Item -ItemType Directory -Force`), then create the marker. Stay **silent** if the marker already exists OR no blanket is detected. The marker lives under `.runtime/`, which the nested `.milestone-config/.gitignore` (written above) already ignores — so the marker is git-invisible with **no new gitignore line** (verified: `git check-ignore .milestone-config/.runtime/legacy-blanket-notice` resolves against the nested `.runtime/` entry). **Blanket-clearing rule:** a blanket counts as present UNLESS it is paired with a **broad** un-ignore that actually re-exposes tracked config (`!.milestone-config`, `!.milestone-config/`, or `!.milestone-config/*`). A lone single-file un-ignore such as `!.milestone-config/driver.json` does **NOT** clear it — `feeder.json` and the nested `.gitignore` stay hidden — so it still counts as a blanket and the notice fires. **Both forms below are best-effort: swallow any failure (unwritable dir, permission error, missing git) and continue the `plan` run — a failed detect/marker must never abort `plan`. Neither form ever writes to the root `.gitignore`.**
+
+<!-- KEEP THIS DETECTION + NOTICE BLOCK IN SYNC with setup Phase 3 (skills/setup/SKILL.md). Read-only on the root .gitignore; marker is .milestone-config/.runtime/legacy-blanket-notice. -->
+```text
+🔴 Legacy blanket detected in your root .gitignore
+
+| What | Your root .gitignore ignores the whole .milestone-config/ directory
+|      | (a line like `.milestone-config/`, `.milestone-config/*`, or
+|      | `.milestone-config`). That hides this suite's TRACKED config —
+|      | feeder.json, driver.json, and the nested .milestone-config/.gitignore —
+|      | from git, so your config is silently dropped from version control.
+| Fix  | Edit your root .gitignore BY HAND and delete the `.milestone-config`
+|      | blanket line. The nested .milestone-config/.gitignore (already
+|      | written) then keeps per-run scratch invisible while feeder.json /
+|      | driver.json / the nested .gitignore stay tracked. We never edit your
+|      | root .gitignore for you — it is yours and may hold unrelated rules.
+| Note | This notice shows at most once per clone.
+```
+
+```bash
+# bash — read-only detect + one-time notice; NEVER writes the root .gitignore; never aborts plan.
+# printf '%s\n' (NOT a heredoc): the same indent-safe construct the setup site uses, so both sites
+# emit one consistent form. The notice text is the quoted args, so it prints flush-left —
+# byte-identical to the setup site.
+marker=".milestone-config/.runtime/legacy-blanket-notice"
+if [ ! -f "$marker" ] && [ -f ".gitignore" ] \
+   && grep -Eq '^[[:space:]]*/?\.milestone-config(/\*?)?[[:space:]]*$' .gitignore \
+   && ! grep -Eq '^[[:space:]]*!/?\.milestone-config(/\*?)?[[:space:]]*$' .gitignore; then
+  printf '%s\n' \
+    '🔴 Legacy blanket detected in your root .gitignore' \
+    '' \
+    '| What | Your root .gitignore ignores the whole .milestone-config/ directory' \
+    '|      | (a line like `.milestone-config/`, `.milestone-config/*`, or' \
+    '|      | `.milestone-config`). That hides this suite'"'"'s TRACKED config —' \
+    '|      | feeder.json, driver.json, and the nested .milestone-config/.gitignore —' \
+    '|      | from git, so your config is silently dropped from version control.' \
+    '| Fix  | Edit your root .gitignore BY HAND and delete the `.milestone-config`' \
+    '|      | blanket line. The nested .milestone-config/.gitignore (already' \
+    '|      | written) then keeps per-run scratch invisible while feeder.json /' \
+    '|      | driver.json / the nested .gitignore stay tracked. We never edit your' \
+    '|      | root .gitignore for you — it is yours and may hold unrelated rules.' \
+    '| Note | This notice shows at most once per clone.'
+  mkdir -p .milestone-config/.runtime 2>/dev/null && : > "$marker" 2>/dev/null || true
+fi
+```
+
+```powershell
+# PowerShell 7+ — same read-only detect + one-time notice; NEVER writes the root .gitignore; never aborts plan.
+try {
+  $marker = Join-Path '.milestone-config' (Join-Path '.runtime' 'legacy-blanket-notice')
+  if ((-not (Test-Path $marker)) -and (Test-Path '.gitignore')) {
+    $lines = Get-Content -LiteralPath '.gitignore'
+    $blanket   = $lines | Where-Object { $_ -match '^\s*/?\.milestone-config(/\*?)?\s*$' }
+    $unignored = $lines | Where-Object { $_ -match '^\s*!/?\.milestone-config(/\*?)?\s*$' }
+    if ($blanket -and -not $unignored) {
+      # Indent-safe array-join (the #120/#121 self-heal construct) — NOT a here-string: an
+      # @'…'@ closing terminator must sit at column 0, which breaks when nested under indented
+      # markdown. The text below is byte-identical to the bash printf args and the setup site.
+      Write-Host (@(
+        '🔴 Legacy blanket detected in your root .gitignore'
+        ''
+        '| What | Your root .gitignore ignores the whole .milestone-config/ directory'
+        '|      | (a line like `.milestone-config/`, `.milestone-config/*`, or'
+        '|      | `.milestone-config`). That hides this suite''s TRACKED config —'
+        '|      | feeder.json, driver.json, and the nested .milestone-config/.gitignore —'
+        '|      | from git, so your config is silently dropped from version control.'
+        '| Fix  | Edit your root .gitignore BY HAND and delete the `.milestone-config`'
+        '|      | blanket line. The nested .milestone-config/.gitignore (already'
+        '|      | written) then keeps per-run scratch invisible while feeder.json /'
+        '|      | driver.json / the nested .gitignore stay tracked. We never edit your'
+        '|      | root .gitignore for you — it is yours and may hold unrelated rules.'
+        '| Note | This notice shows at most once per clone.'
+      ) -join "`n")
+      New-Item -ItemType Directory -Force -Path (Join-Path '.milestone-config' '.runtime') | Out-Null
+      New-Item -ItemType File -Force -Path $marker | Out-Null
+    }
+  }
+} catch {}
+```
+
 Extract the feeder's own keys with their bundled defaults (`docs/profile-schema.md`, absent-means-default):
 
 | Key | Default | Use |
