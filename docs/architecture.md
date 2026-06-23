@@ -8,7 +8,7 @@ stack, the conventions, and the design defaults the engine grounds the breakdown
 
 ## Plugin contents
 
-The as-built v0.3.0 components. `plan` previews to a plan file, `create` deploys the
+The as-built components. `plan` previews to a plan file, `create` deploys the
 approved plan, and `update` reconciles a refreshed plan onto an existing milestone
 (see [The reviewer gate](#the-reviewer-gate) and [The plan procedure](#the-plan-procedure)).
 The plan file is the **build artifact** (see [The plan file as build artifact](#the-plan-file-as-build-artifact)).
