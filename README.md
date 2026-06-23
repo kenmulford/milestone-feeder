@@ -100,7 +100,7 @@ Full setup walkthrough: [docs/consumer-setup.md](docs/consumer-setup.md). Every 
 
 ## Status
 
-v0.3.1 — name your milestone with a version up front and the feeder hands it cleanly to `milestone-driver`: explicit, versioned milestone naming; `update` finds and renames the right milestone even after a title change; and a heads-up when your brief looks like several milestones. Self-hosted: the feeder was planned as its own milestone and built by milestone-driver.
+v0.4.2 — the live surface (`plan` / `create` / `update`, no flags, plan-file-as-contract): name your milestone with a version up front and the feeder hands it cleanly to `milestone-driver`; `plan` reads your house docs once up front and parks real product gaps before it fans out; and you get a heads-up when your brief looks like several milestones. v0.4.2 itself is a docs-hygiene release — no behavior change. Self-hosted: the feeder is planned as its own milestone and built by milestone-driver.
 
 ## Docs
 

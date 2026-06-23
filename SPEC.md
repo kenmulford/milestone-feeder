@@ -1,8 +1,8 @@
-# milestone-feeder — as-built spec (v0.3.1)
+# milestone-feeder — as-built spec (v0.4.2)
 
 A Claude Code plugin that turns a feature brief into a **GitHub milestone + small, well-formed issues** that `milestone-driver` can build with no human clarification. The direct predecessor of the driver.
 
-Sibling of `milestone-driver`, same design DNA (see the suite plan: [`../dev-tools/SUITE-PLAN.md`](../dev-tools/SUITE-PLAN.md) §1). Separate plugin, separate config. Status: **as-built spec for v0.3.1** — the live surface (verbs `plan` / `create` / `update` / `setup`, no flags, plan-file-as-contract), now with **user-owned, versioned milestone identity** (the semver lives in the milestone title), **`update` retargeting by deploy receipt + bounded rename-in-place**, and a **non-blocking multi-milestone advisory**.
+Sibling of `milestone-driver`, same design DNA (see the suite plan: [`../dev-tools/SUITE-PLAN.md`](../dev-tools/SUITE-PLAN.md) §1). Separate plugin, separate config. Status: **as-built spec for v0.4.2** — the live surface (verbs `plan` / `create` / `update` / `setup`, no flags, plan-file-as-contract), now with **user-owned, versioned milestone identity** (the semver lives in the milestone title), **`update` retargeting by deploy receipt + bounded rename-in-place**, and a **non-blocking multi-milestone advisory**.
 
 Decisions already locked: name `milestone-feeder`; config at `.milestone-config/feeder.json`; separate plugin in its own repo (suite/marketplace linkage deferred). Decisions taken as sensible defaults below are marked **Decision (default)** — veto any.
 
