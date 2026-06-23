@@ -3,6 +3,40 @@
 Release notes for milestone-feeder. Each tagged release is also published on the
 [GitHub Releases page](https://github.com/kenmulford/milestone-feeder/releases).
 
+## v0.4.2 — Release hygiene
+
+**Theme:** Pure housekeeping — nothing about how the feeder works changes. The
+docs had drifted behind the real plugin version: the as-built spec header, the
+README status line, and a leftover label in the architecture doc all still named
+an older version. This release re-syncs them to the source of truth and adds a
+short release checklist so they stay in step from here on.
+
+### 🧹 Hygiene — keep the version references honest
+
+| Change | PR | What |
+|---|---|---|
+| Re-sync the spec header to the real version | #75 (#115) | `SPEC.md`'s as-built header (line 1 and the status line) still read `v0.3.1` while the plugin had already moved several releases ahead. It's now re-synced to `.claude-plugin/plugin.json`'s `version` — the single source of truth. |
+| Add a release checklist so it can't drift again | #113 (#114) | Added a short "Release checklist" to `docs/architecture.md` — when the plugin version is bumped, re-sync the spec header to match — and tidied the version note above it, dropping the now-contradictory "only" and the stale "(currently `0.3.0`)" aside. |
+
+### Consumer notes (upgrading from v0.4.1)
+
+- **Pure housekeeping — nothing breaks, nothing changes for you.** Same commands
+  (`plan` / `create` / `update`), same config file, same plan-file output. Only
+  internal docs were touched — including the README `## Status` line and a stale
+  `v0.3.0` label in the architecture doc, both refreshed to the current version.
+- **Nested-app support isn't here — it moved to the bootstrapper.** This milestone
+  was originally scoped to also add a configurable app-root for repos whose code
+  lives in a subfolder. That work belongs in `milestone-bootstrapper` (v0.2.0): its
+  new `appRoots` setting bakes each nested path into the `sourceGlobs` /
+  `uiSurfaceGlobs` it scaffolds, while keeping the shared config and `.project/`
+  docs at the repo root — so the feeder already works on a nested-app repo with
+  **no feeder-side change**. The feeder issue was closed as superseded.
+- **No config-key or schema changes** to `.milestone-config/feeder.json`.
+
+### ⚖️ Post-run audit trail
+
+Judgment-call PRs for this release: none
+
 ## v0.4.1 — Read your house docs once, not once per helper
 
 **Theme:** This release stops `plan` from paying to read the same project docs over
