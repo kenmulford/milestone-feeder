@@ -21,6 +21,56 @@ Say this to the user before doing any work:
 
 Read `.milestone-config/feeder.json`. **Absent → invoke `milestone-feeder:setup`** (it bootstraps the profile, aligns the label taxonomy, and returns control), then continue — the user does not re-run the command (`skills/setup/SKILL.md` Phase 5).
 
+**Self-heal the scratch-ignore (best-effort, create-only — never clobber).** On the **already-configured** path — `feeder.json` is present, so `setup` is NOT auto-invoked above — nothing else establishes the nested scratch-ignore, so a legacy-blanket repo (config present but `.milestone-config/.gitignore` never written) would leak per-run scratch into `git status`. Ensure the `.milestone-config/` directory exists (`mkdir -p .milestone-config`), then write a **committed** `.milestone-config/.gitignore` so per-clone scratch (`preflight-notice`, `trello-notice`, `triage-cache.json`, `tests-stamp`, plus the `.runtime/` and `worktrees/` dirs) is git-invisible in the consumer repo with zero user setup — while tracked config (`driver.json`, `feeder.json` — intentionally NOT listed) stays tracked. **Write the file only when it is absent** (`[ ! -f ]` / `-not (Test-Path …)`), so a user-edited `.gitignore` is never overwritten, appended to, or truncated, and a re-run is a no-op. The write is **best-effort**: swallow any failure and continue the `plan` run — a failed self-heal must never abort `plan`. This mirrors the driver's canonical block verbatim (`milestone-driver/hooks/tests-green.sh` / `tests-green.ps1`) and the same block in feeder `setup` (`skills/setup/SKILL.md` Phase 3); keep the three in sync.
+
+<!-- KEEP THIS BLOCK IN SYNC with the committed .milestone-config/.gitignore in this repo and with feeder setup, driver solve-issue / solve-milestone / triage. -->
+```gitignore
+# milestone-driver / milestone-feeder per-clone scratch — git-invisible by default.
+# Committed so per-run scratch stays out of `git status` with zero user setup.
+# Patterns are relative to this .milestone-config/ directory. Tracked config
+# (driver.json, feeder.json) is intentionally NOT listed, so it stays tracked.
+preflight-notice
+trello-notice
+triage-cache.json
+tests-stamp
+.runtime/
+worktrees/
+```
+
+```bash
+# bash — create-only self-heal; never clobbers a user-edited file, never aborts plan.
+mkdir -p .milestone-config 2>/dev/null || true
+ignore_path=".milestone-config/.gitignore"
+if [ ! -f "$ignore_path" ]; then
+  printf '%s\n' \
+    '# milestone-driver / milestone-feeder per-clone scratch — git-invisible by default.' \
+    '# Committed so per-run scratch stays out of `git status` with zero user setup.' \
+    '# Patterns are relative to this .milestone-config/ directory. Tracked config' \
+    '# (driver.json, feeder.json) is intentionally NOT listed, so it stays tracked.' \
+    'preflight-notice' 'trello-notice' 'triage-cache.json' 'tests-stamp' \
+    '.runtime/' 'worktrees/' > "$ignore_path" 2>/dev/null || true
+fi
+```
+
+```powershell
+# PowerShell 7+ — same create-only self-heal; no-BOM UTF-8; never clobbers, never aborts.
+try {
+  New-Item -ItemType Directory -Force -Path '.milestone-config' | Out-Null
+  $ignorePath = Join-Path '.milestone-config' '.gitignore'
+  if (-not (Test-Path $ignorePath)) {
+    $ignoreBody = @(
+      '# milestone-driver / milestone-feeder per-clone scratch — git-invisible by default.'
+      '# Committed so per-run scratch stays out of `git status` with zero user setup.'
+      '# Patterns are relative to this .milestone-config/ directory. Tracked config'
+      '# (driver.json, feeder.json) is intentionally NOT listed, so it stays tracked.'
+      'preflight-notice'; 'trello-notice'; 'triage-cache.json'; 'tests-stamp'
+      '.runtime/'; 'worktrees/'
+    ) -join "`n"
+    [System.IO.File]::WriteAllText($ignorePath, $ignoreBody + "`n", [System.Text.UTF8Encoding]::new($false))
+  }
+} catch {}
+```
+
 Extract the feeder's own keys with their bundled defaults (`docs/profile-schema.md`, absent-means-default):
 
 | Key | Default | Use |
