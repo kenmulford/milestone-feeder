@@ -59,12 +59,27 @@ file, not regenerated.
 
 ## Plugin version
 
-The plugin version lives only in `.claude-plugin/plugin.json` (currently `0.3.0`)
-as the single source of truth. There is **no per-PR version machinery** — the
+The plugin version's single source of truth is `.claude-plugin/plugin.json`.
+There is **no per-PR version machinery** — the
 feeder opens no PRs and touches no branches, so the driver's bump-rides-the-PR
 mechanism has nothing to ride. The version is bumped by hand when a release is cut.
 `.claude-plugin/marketplace.json` carries no `version` field (Claude Code resolves
 `plugin.json` first).
+
+### Release checklist
+
+When a release is cut and the plugin version is bumped, re-sync these
+version-bearing locations together so they all name the same version:
+
+1. `.claude-plugin/plugin.json` `version` — the single source of truth. Bump this
+   first; everything else is re-synced to match it.
+2. `SPEC.md` as-built header — line 1 (`# milestone-feeder — as-built spec
+   (vX.Y.Z)`) and the line-5 status reference (`Status: **as-built spec for
+   vX.Y.Z**`). Re-sync both to the new `plugin.json` version.
+
+Any other hand-maintained in-doc version reference should be re-synced to match
+as well. A future releaser — a human, or the driver's per-release docs-sweep
+issue — should run this re-sync as part of cutting the release.
 
 ## Pipeline position
 
