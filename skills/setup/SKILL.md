@@ -72,6 +72,54 @@ Present keys in these tiers: **Core → Agents → Sizing**, plus the self-prote
 The canonical profile location is `<repo-root>/.milestone-config/feeder.json`.
 
 - Create the `.milestone-config/` directory if absent (`mkdir -p .milestone-config`).
+- **Self-heal the scratch-ignore (best-effort, create-only — never clobber).** With the directory now ensured, write a **committed** `.milestone-config/.gitignore` so per-clone scratch (`preflight-notice`, `trello-notice`, `triage-cache.json`, `tests-stamp`, plus the `.runtime/` and `worktrees/` dirs) is git-invisible in the consumer repo from the first write, with zero user setup — while tracked config (`driver.json`, `feeder.json` — intentionally NOT listed) stays tracked. A feeder-first adopter (setup runs before any milestone-driver hook has fired) would otherwise have no scratch-ignore until a driver run happens; this closes that gap. **Write the file only when it is absent** (`[ ! -f ]` / `-not (Test-Path …)`), so a user-edited `.gitignore` is never overwritten, appended to, or truncated, and a re-run is a no-op. The write is **best-effort**: swallow any failure and continue to write `feeder.json` and return control — a failed self-heal must never abort setup. This mirrors the driver's canonical block verbatim (`milestone-driver/hooks/tests-green.sh` / `tests-green.ps1`); keep the two in sync.
+
+  <!-- KEEP THIS BLOCK IN SYNC with the committed .milestone-config/.gitignore in this repo and with feeder plan, driver solve-issue / solve-milestone / triage. -->
+  ```gitignore
+  # milestone-driver / milestone-feeder per-clone scratch — git-invisible by default.
+  # Committed so per-run scratch stays out of `git status` with zero user setup.
+  # Patterns are relative to this .milestone-config/ directory. Tracked config
+  # (driver.json, feeder.json) is intentionally NOT listed, so it stays tracked.
+  preflight-notice
+  trello-notice
+  triage-cache.json
+  tests-stamp
+  .runtime/
+  worktrees/
+  ```
+
+  ```bash
+  # bash — create-only self-heal; never clobbers a user-edited file, never aborts setup.
+  ignore_path=".milestone-config/.gitignore"
+  if [ ! -f "$ignore_path" ]; then
+    printf '%s\n' \
+      '# milestone-driver / milestone-feeder per-clone scratch — git-invisible by default.' \
+      '# Committed so per-run scratch stays out of `git status` with zero user setup.' \
+      '# Patterns are relative to this .milestone-config/ directory. Tracked config' \
+      '# (driver.json, feeder.json) is intentionally NOT listed, so it stays tracked.' \
+      'preflight-notice' 'trello-notice' 'triage-cache.json' 'tests-stamp' \
+      '.runtime/' 'worktrees/' > "$ignore_path" 2>/dev/null || true
+  fi
+  ```
+
+  ```powershell
+  # PowerShell 7+ — same create-only self-heal; no-BOM UTF-8; never clobbers, never aborts.
+  try {
+    $ignorePath = Join-Path '.milestone-config' '.gitignore'
+    if (-not (Test-Path $ignorePath)) {
+      $ignoreBody = @(
+        '# milestone-driver / milestone-feeder per-clone scratch — git-invisible by default.'
+        '# Committed so per-run scratch stays out of `git status` with zero user setup.'
+        '# Patterns are relative to this .milestone-config/ directory. Tracked config'
+        '# (driver.json, feeder.json) is intentionally NOT listed, so it stays tracked.'
+        'preflight-notice'; 'trello-notice'; 'triage-cache.json'; 'tests-stamp'
+        '.runtime/'; 'worktrees/'
+      ) -join "`n"
+      [System.IO.File]::WriteAllText($ignorePath, $ignoreBody + "`n", [System.Text.UTF8Encoding]::new($false))
+    }
+  } catch {}
+  ```
+
 - Assemble the profile object from the keys the user accepted or edited. **Omit any key left at its bundled default** (absent-means-default, `docs/profile-schema.md`): writing the default explicitly adds noise and drifts when the default changes. `versioning` has **no** default, so a skipped `versioning` is likewise **omitted** — never written as a placeholder; its absent state means `plan` infers-or-asks. A minimal feeder-own-repo profile carries only the self-protection `sourceGlobs`; an empty `{}` is valid.
 - Write the assembled object to `.milestone-config/feeder.json`. **Always write the file**, even when the result is `{}` — config-presence is the signal `plan`'s Step 0 reads to decide whether to auto-invoke setup, so an absent file and an empty file are deliberately distinct.
 - Print the final file contents so the user can verify.
