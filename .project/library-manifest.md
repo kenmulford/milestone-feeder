@@ -9,7 +9,7 @@ headings stable — they are citation anchors.
 
 ## Runtime & frameworks
 The platform/runtime and primary frameworks, with versions. (Mirror these into milestone-driver `nonNegotiables` where they're hard constraints.)
-Claude Code plugin: markdown **skills** (frontmatter triggers) + markdown **agents** + **hooks** shipped as cross-platform **bash (`jq`) and PowerShell 7+** twins, BOM-free, LF line endings. No compiled runtime. Hard dependency: the `superpowers` plugin (declared in `.claude-plugin/plugin.json`). The plugin version is pinned in `.claude-plugin/plugin.json` (`version: 0.4.5`). Mirror into `milestone-driver` `nonNegotiables` — already present: "Claude Code plugin: markdown skills + bash-first/pwsh-fallback hooks"; "Cross-platform: bash (jq) and PowerShell 7+". (Grounded in `.claude-plugin/plugin.json`; `.milestone-config/driver.json` nonNegotiables; `.gitattributes`; stack detection.)
+Claude Code plugin: markdown **skills** (frontmatter triggers) + markdown **agents** + **hooks** shipped as cross-platform **bash (`jq`) and PowerShell 7+** twins, BOM-free, LF line endings. No compiled runtime. Hard dependency: the `superpowers` plugin (declared in `.claude-plugin/plugin.json`). The plugin version is pinned in `.claude-plugin/plugin.json` (`version: 0.4.6`). Mirror into `milestone-driver` `nonNegotiables` — already present: "Claude Code plugin: markdown skills + bash-first/pwsh-fallback hooks"; "Cross-platform: bash (jq) and PowerShell 7+". (Grounded in `.claude-plugin/plugin.json`; `.milestone-config/driver.json` nonNegotiables; `.gitattributes`; stack detection.)
 
 ## Approved libraries (by purpose)
 One approved choice per purpose, so a redundant alternative is easy to spot.
