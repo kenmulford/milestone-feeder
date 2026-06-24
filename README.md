@@ -2,11 +2,11 @@
 
 Turn a rough idea into a build-ready GitHub milestone — a tidy list of small, well-formed issues, in the order they should be built.
 
-milestone-feeder is a Claude Code plugin. You hand it a brief — a file, a few lines of text, or a GitHub epic issue — and it writes a reviewable plan: each piece of work as its own issue, with a full spec, the decisions an engineer would otherwise have to invent, and a build order. You read the plan, then tell it to build the milestone on GitHub. Its sibling plugin, [`milestone-driver`](https://github.com/kenmulford/milestone-driver), can then pick the issues up and build them with no further clarification.
+milestone-feeder is a Claude Code plugin. You hand it a brief — a file, a few lines of text, or a GitHub epic issue — and it writes a reviewable plan: each piece of work as its own issue, with a full spec, the decisions an engineer would otherwise have to invent, and a build order. You read the plan, then tell it to build the milestone on GitHub. Its sibling plugin, [`milestone-driver`](https://github.com/kenmulford/milestone-driver), can then pick the issues up and build them with no further clarification. Once a change is built, [`milestone-coherence-reviewer`](https://github.com/kenmulford/milestone-coherence-reviewer) reviews the result and, if it drifted far from intent, hands a follow-up brief back to the feeder.
 
 **Install it** — either marketplace below pulls in the required `superpowers` plugin. Restart Claude Code afterward so the plugin's hook loads.
 
-**Recommended — the milestone-suite marketplace.** One marketplace carries all three milestone plugins (`milestone-bootstrapper`, `milestone-feeder`, `milestone-driver`), so you add it once and install whichever you want:
+**Recommended — the milestone-suite marketplace.** One marketplace carries all four milestone plugins (`milestone-bootstrapper`, `milestone-feeder`, `milestone-driver`, `milestone-coherence-reviewer`), so you add it once and install whichever you want:
 
 ```
 /plugin marketplace add kenmulford/milestone-suite
@@ -100,7 +100,7 @@ Full setup walkthrough: [docs/consumer-setup.md](docs/consumer-setup.md). Every 
 
 ## Status
 
-v0.4.2 — the live surface (`plan` / `create` / `update`, no flags, plan-file-as-contract): name your milestone with a version up front and the feeder hands it cleanly to `milestone-driver`; `plan` reads your house docs once up front and parks real product gaps before it fans out; and you get a heads-up when your brief looks like several milestones. v0.4.2 itself is a docs-hygiene release — no behavior change. Self-hosted: the feeder is planned as its own milestone and built by milestone-driver.
+v0.4.2 — the live surface (`plan` / `create` / `update`, no flags, plan-file-as-contract): name your milestone with a version up front and the feeder hands it cleanly to `milestone-driver`; after the build, `milestone-coherence-reviewer` reviews the result and hands a follow-up brief back to the feeder when a change drifted far from intent; `plan` reads your house docs once up front and parks real product gaps before it fans out; and you get a heads-up when your brief looks like several milestones. v0.4.2 itself is a docs-hygiene release — no behavior change. Self-hosted: the feeder is planned as its own milestone and built by milestone-driver.
 
 ## Docs
 
