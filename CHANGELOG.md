@@ -3,6 +3,25 @@
 Release notes for milestone-feeder. Each tagged release is also published on the
 [GitHub Releases page](https://github.com/kenmulford/milestone-feeder/releases).
 
+## v0.4.5 — bootstrap nudge honors configurable projectDocs
+
+**Theme:** The v0.4.4 bootstrap nudge now honors your configurable `projectDocs` path instead of a hardcoded `.project/`, so a custom standing-docs directory no longer triggers a false "your grounding will be weak" warning.
+
+### 🔧 Fixes
+
+| Issue | PR | What |
+|---|---|---|
+| #137 Make plan Step 0 bootstrap-nudge honor the resolved projectDocs path | #139 | The `plan` bootstrap nudge resolves the configurable `projectDocs` key (default `.project/`) from `feeder.json` and uses the resolved path in both the detection and the notice text — so a consumer who points `projectDocs` at a custom directory (e.g. `docs/standards/`) and is fully bootstrapped no longer gets a false "grounding is weak" nudge. Default-config repos are byte-identical to v0.4.4. Resolution is cross-platform-parity-hardened (string-type guard, strip-all-trailing-slashes, empty-after-normalize fallback) so degenerate values (`"/"`, doubled slashes, non-string) resolve identically in the bash and PowerShell 7+ forms. Non-blocking / best-effort / read-only preserved. |
+
+### Consumer notes (upgrading from v0.4.4)
+
+- If you set a custom `projectDocs` in `.milestone-config/feeder.json` (anything other than the default `.project/`), the bootstrap nudge now checks *that* path. Previously it checked the literal `.project/`, so a bootstrapped custom-`projectDocs` repo saw a false nudge — that's fixed. Default-config repos (`projectDocs` unset) see no change.
+- **No schema changes** to `.milestone-config/driver.json` or `.milestone-config/feeder.json` — `projectDocs` is an existing key; this release only makes the nudge honor it.
+
+### ⚖️ Post-run audit trail
+
+Judgment-call PRs for this release: #139 (accepted three exotic-config edge cases — whitespace-only / outside-repo / mixed-path `\| Fix \|` line — as deliberate non-goals; see the PR's Code Review section).
+
 ## v0.4.4 — bootstrap nudge on unbootstrapped repos
 
 **Theme:** When `plan` runs in a repo that was never bootstrapped, it now tells the user once that grounding will be weak and points them at `milestone-bootstrapper` — instead of silently proceeding on thin inferred conventions.
