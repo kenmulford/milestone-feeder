@@ -66,20 +66,20 @@ mechanism has nothing to ride. The version is bumped by hand when a release is c
 `.claude-plugin/marketplace.json` carries no `version` field (Claude Code resolves
 `plugin.json` first).
 
+When this repo is itself built by `milestone-driver`, the driver bumps
+`plugin.json` on the milestone's first PR — its standard behavior; the by-hand
+bump above is for a release cut outside a driver run.
+
 ### Release checklist
 
-When a release is cut and the plugin version is bumped, re-sync these
-version-bearing locations together so they all name the same version:
+When a release is cut, bump `.claude-plugin/plugin.json` `version` — the single
+source of truth. The `SPEC.md` as-built header carries no version, so there is
+nothing to re-sync there.
 
-1. `.claude-plugin/plugin.json` `version` — the single source of truth. Bump this
-   first; everything else is re-synced to match it.
-2. `SPEC.md` as-built header — line 1 (`# milestone-feeder — as-built spec
-   (vX.Y.Z)`) and the line-5 status reference (`Status: **as-built spec for
-   vX.Y.Z**`). Re-sync both to the new `plugin.json` version.
-
-Any other hand-maintained in-doc version reference should be re-synced to match
-as well. A future releaser — a human, or the driver's per-release docs-sweep
-issue — should run this re-sync as part of cutting the release.
+Any other hand-maintained in-doc version reference (e.g. the `README.md` status
+line) should be re-synced to match `plugin.json`. A future releaser — a human, or
+the driver's per-release docs-sweep issue — should run this re-sync as part of
+cutting the release.
 
 ## Pipeline position
 
@@ -156,6 +156,35 @@ invariant holds) performs the GitHub writes in a fixed order. Only the
 Idempotent re-run relies on stable, exact, open issue titles: the adopt +
 match-by-title path reuses existing issues rather than duplicating them, and pass
 (d) is a no-op against already-numeric bodies/descriptions.
+
+After the write sequence (a–e), `create` runs a top-level **Step 4 — the driver
+handoff**. It is **not** a GitHub write and is **not** part of the pass-(d)
+idempotent-re-run guarantee — it is a post-deploy skill invocation; see
+[The create → driver handoff](#the-create--driver-handoff).
+
+### The create → driver handoff
+
+After a **clean** deploy, `create` can hand the milestone straight to
+`milestone-driver` to start building — invoking
+`/milestone-driver:solve-milestone "<exact milestone title>"`, the title `create`
+deployed. This is a **post-deploy skill invocation, not a GitHub write** — it
+authors nothing on GitHub; it kicks off the driver. Because it is not a write, it
+is **not** part of the pass-(d) idempotent-re-run guarantee: re-running `create`
+after a handoff fired would **re-offer** (or, under `"auto"`, re-fire) the handoff,
+not no-op. It is modelled as `create`'s top-level **Step 4**, run after the pass
+a–e write sequence, not as a sixth write pass.
+
+The `autoHandoff` own-key (default `"prompt"`) governs it: `"prompt"`
+asks first, `"auto"` kicks off immediately, `"off"` never offers. Three gates must
+all hold: the run is **clean** — no product gap, nothing parked/dropped (the
+`## Needs human input` pointer is "none") **AND** the self-check actually ran (the
+plan file's `Self-check:` verdict is a real `PASS` / `INTERNAL`, **not**
+`SKIPPED(reviewer:false)` — a `reviewer: false` run skips the gate, leaving its
+issues unvetted, so it is a clean-run fail even with a "none" pointer); the driver
+resolves in this session (absent → **silently skipped**, no prompt / no error); and
+the handoff is **build-kickoff only** — `solve-milestone` merges to the integration
+branch and `develop → main` stays a manual human call. It never auto-merges to a
+protected branch and never removes the release gate.
 
 ## The reviewer gate
 

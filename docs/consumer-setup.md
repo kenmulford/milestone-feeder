@@ -128,7 +128,7 @@ fully autonomous creation. End to end:
 |---|---|---|
 | 1. Plan | `/milestone-feeder:plan <brief>` | Runs the full pipeline including the reviewer gate and stops at a **plan file** (`.milestone-feeder/plan-<slug>.md`). **No GitHub state is written** — no milestone, no issue, no label, no comment. |
 | 2. Review | *(read the plan file)* | Read the milestone description (Wave order), every gate-surviving issue body, and the "needs product input" report. Resolve any parked product gaps and re-run the plan until it is right. |
-| 3. Create | `/milestone-feeder:create <brief>` | Deploys **exactly the plan you approved** — reads the plan file (running `plan` first only if none exists yet), then creates the GitHub artifacts: ensures the four labels, **creates-or-adopts the milestone by title** (reopening it if closed, never deleting), opens each gate-surviving issue, rewrites the slug references to real issue numbers in the issue bodies and the milestone description, and files the needs-product-input report (a comment on the epic for a GitHub-epic brief, else a local file). |
+| 3. Create | `/milestone-feeder:create <brief>` | Deploys **exactly the plan you approved** — reads the plan file (running `plan` first only if none exists yet), then creates the GitHub artifacts: ensures the four labels, **creates-or-adopts the milestone by title** (reopening it if closed, never deleting), opens each gate-surviving issue, rewrites the slug references to real issue numbers in the issue bodies and the milestone description, and files the needs-product-input report (a comment on the epic for a GitHub-epic brief, else a local file). On a **clean** run, if `milestone-driver` is installed, `create` can then **offer to hand the milestone straight to the driver to start building** — see the handoff note below. |
 
 `create` is **idempotent on re-run**: it adopts the existing milestone and matches
 issues by exact title, so re-running reuses what exists rather than duplicating it.
@@ -137,6 +137,28 @@ feeder makes invisible to git automatically — on its first write it drops a
 `.gitignore` containing `*` inside that folder, so the scratch never shows up in
 your `git status` and you need to set nothing up. The plan file is the build
 artifact `create` deploys — review it before you run `create`.
+
+### Handing the milestone to milestone-driver to start building
+
+If you have `milestone-driver` installed, `create` can hand the finished milestone
+**straight to it** to start building — so you don't have to switch tools and run
+the driver yourself. The `autoHandoff` setting in your `feeder.json` controls this:
+
+- `"prompt"` (the default) — after a clean `create`, the feeder asks *"milestone-driver
+  is installed — start building this milestone now, or review it first?"* Say yes to
+  start the build; say no to stop and review.
+- `"auto"` — the feeder starts the build immediately, no question asked.
+- `"off"` — the feeder never offers; `create` just finishes, as it did before this
+  feature existed.
+
+Three things have to be true for the offer to appear: the run must be **clean** (no
+product gaps, nothing flagged for your decision — a run with gaps surfaces them
+instead of offering to build), `milestone-driver` must be **installed** (if it
+isn't, `create` just finishes quietly — no prompt, no error), and the handoff only
+**starts the build**. The driver builds onto your integration branch (e.g.
+`develop`); it never merges to your protected branch (e.g. `main`) — releasing stays
+your manual call, exactly as it is when you run the driver yourself. To keep the
+pre-handoff behavior (`create` finishes and stops), set `autoHandoff` to `"off"`.
 
 ## Updating an existing milestone
 
