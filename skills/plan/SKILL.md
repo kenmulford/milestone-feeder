@@ -153,11 +153,12 @@ try {
 } catch {}
 ```
 
-**Detect an un-bootstrapped repo and print a one-time non-blocking grounding-is-weak notice (read-only; NEVER auto-run the bootstrapper, NEVER scaffold config).** Grounding is strongest when this repo has both the `.project/` standing docs (the project constitution `plan` grounds issue design on) and a driver profile (`.milestone-config/driver.json`, the shared-keys source). When the repo is missing one or both — `.project/` absent or empty (no readable files), **OR** `.milestone-config/driver.json` missing — `plan` still runs, but falls back to thin inferred conventions, so the issues it writes are weaker. This notice tells the user that, points them at `milestone-bootstrapper`, and carries on. **It is purely advisory: never a hard block, never a prompt; it does NOT run `milestone-bootstrapper`, and it writes NOTHING to `.project/` or `driver.json` — its only writes are the `.runtime/` dir and the marker.** This trigger is **independent of** the `feeder.json`-absent → `setup` branch (`skills/plan/SKILL.md:22`) and of the driver-config absent-default resolution (the key-extraction table and the "Resolve the shared keys" steps below) — neither is altered, and a present `feeder.json` with an absent `driver.json` still nudges here while resolving driver keys by absent-default below. Mirrors the driver's one-time marker-gated notice pattern, the same family as the legacy-blanket sibling above (detect → print verbatim → drop a per-clone marker).
+**Detect an un-bootstrapped repo and print a one-time non-blocking grounding-is-weak notice (read-only; NEVER auto-run the bootstrapper, NEVER scaffold config).** Grounding is strongest when this repo has both the project's standing docs (the project constitution `plan` grounds issue design on, found under the configurable `projectDocs` path — default `.project/`) and a driver profile (`.milestone-config/driver.json`, the shared-keys source). **The standing-docs path is the resolved `projectDocs` value, not a hardcoded `.project/`** — a consumer with a custom `projectDocs` (e.g. `docs/standards/`) that *is* bootstrapped must not get a false nudge. So this block resolves `projectDocs` in-place **before** the detect (the key-extraction table below has not run yet), reading `.milestone-config/feeder.json` directly with the **same default (`.project/`) the table uses** so the two reads cannot diverge; a missing file / malformed JSON / missing `jq` falls back to `.project/`. When the repo is missing one or both — the resolved `projectDocs` path absent or empty (no readable files), **OR** `.milestone-config/driver.json` missing — `plan` still runs, but falls back to thin inferred conventions, so the issues it writes are weaker. This notice tells the user that, names the resolved `projectDocs` path, points them at `milestone-bootstrapper`, and carries on. **It is purely advisory: never a hard block, never a prompt; it does NOT run `milestone-bootstrapper`, and it writes NOTHING to `.project/` or `driver.json` — its only writes are the `.runtime/` dir and the marker.** This trigger is **independent of** the `feeder.json`-absent → `setup` branch (`skills/plan/SKILL.md:22`) and of the driver-config absent-default resolution (the key-extraction table and the "Resolve the shared keys" steps below) — neither is altered, and a present `feeder.json` with an absent `driver.json` still nudges here while resolving driver keys by absent-default below. Mirrors the driver's one-time marker-gated notice pattern, the same family as the legacy-blanket sibling above (detect → print verbatim → drop a per-clone marker).
 
-Gate: print the 🟡 notice **verbatim** ONLY when the repo is un-bootstrapped (`.project/` absent-or-no-readable-files **OR** `.milestone-config/driver.json` missing) **AND** the per-clone marker `.milestone-config/.runtime/bootstrap-nudge-notice` is **absent**. On print, ensure `.runtime/` exists (`mkdir -p .milestone-config/.runtime` / `New-Item -ItemType Directory -Force`), then create the marker. Stay **silent** if the marker already exists OR the repo is bootstrapped (both `.project/` has a readable file AND `driver.json` is present). The marker lives under `.runtime/`, which the nested `.milestone-config/.gitignore` (written above) already ignores — so the marker is git-invisible with **no new gitignore line**. **Both forms below are best-effort: swallow any failure (unwritable dir, permission error) and continue the `plan` run — a failed detect/notice/marker must never abort `plan`. Neither form ever writes to `.project/` or `driver.json`, and neither runs the bootstrapper.**
+Gate: print the 🟡 notice **verbatim** ONLY when the repo is un-bootstrapped (resolved `projectDocs` path absent-or-no-readable-files **OR** `.milestone-config/driver.json` missing) **AND** the per-clone marker `.milestone-config/.runtime/bootstrap-nudge-notice` is **absent**. On print, ensure `.runtime/` exists (`mkdir -p .milestone-config/.runtime` / `New-Item -ItemType Directory -Force`), then create the marker. Stay **silent** if the marker already exists OR the repo is bootstrapped (both the resolved `projectDocs` path has a readable file AND `driver.json` is present). The marker lives under `.runtime/`, which the nested `.milestone-config/.gitignore` (written above) already ignores — so the marker is git-invisible with **no new gitignore line**. **Both forms below are best-effort: swallow any failure (unwritable dir, permission error, malformed feeder.json, missing `jq`) and continue the `plan` run — a failed resolve/detect/notice/marker must never abort `plan`. Neither form ever writes to `projectDocs` / `.project/` or `driver.json`, and neither runs the bootstrapper.**
 
-<!-- KEEP THIS DETECTION + NOTICE BLOCK IN SYNC across the plan/setup one-time-notice family. plan Step 0 only (no setup twin). Read-only on .project/ and driver.json; never runs milestone-bootstrapper; marker is .milestone-config/.runtime/bootstrap-nudge-notice. -->
+<!-- KEEP THIS DETECTION + NOTICE BLOCK IN SYNC across the plan/setup one-time-notice family. plan Step 0 only (no setup twin). Read-only on projectDocs/.project/ and driver.json; never runs milestone-bootstrapper; marker is .milestone-config/.runtime/bootstrap-nudge-notice. -->
+<!-- This text block shows the DEFAULT-config rendering (projectDocs = .project/). The runnable bash/PowerShell forms below interpolate the RESOLVED projectDocs path into the "| What |" line — so a custom projectDocs (e.g. docs/standards/) prints "...no docs/standards/ standing docs..." while the default stays byte-identical to this template. Do not make this template dynamic. -->
 ```text
 🟡 This repo isn't bootstrapped — your plan's grounding will be weak
 
@@ -174,16 +175,24 @@ Gate: print the 🟡 notice **verbatim** ONLY when the repo is un-bootstrapped (
 ```
 
 ```bash
-# bash — read-only detect + one-time notice; NEVER writes .project/ or driver.json, NEVER runs the bootstrapper; never aborts plan.
+# bash — read-only detect + one-time notice; NEVER writes projectDocs/.project/ or driver.json, NEVER runs the bootstrapper; never aborts plan.
 # printf '%s\n' (NOT a heredoc): the same indent-safe construct the sibling legacy-blanket block uses, so both
 # sites emit one consistent form. The notice text is the quoted args, so it prints flush-left.
+# Resolve projectDocs in-block (the key-extraction table below has not run yet) with the SAME default the table uses,
+# so the two reads can't diverge; a non-string projectDocs (number/array), missing file / malformed JSON / missing jq
+# all fall back to .project/. Strip ALL trailing slashes for the detect operand; an empty result (e.g. "/") falls back
+# to .project so bash and PowerShell agree; the notice re-adds a single "/" so the printed path always ends in "/".
+pd="$(jq -r 'if (.projectDocs | type) == "string" then .projectDocs else ".project/" end' .milestone-config/feeder.json 2>/dev/null || echo ".project/")"
+[ -z "$pd" ] && pd=".project/"
+while [ "$pd" != "${pd%/}" ]; do pd="${pd%/}"; done
+[ -z "$pd" ] && pd=".project"
 marker=".milestone-config/.runtime/bootstrap-nudge-notice"
 if [ ! -f "$marker" ] \
-   && { [ -z "$(find -L .project -type f 2>/dev/null | head -1)" ] || [ ! -f ".milestone-config/driver.json" ]; }; then
+   && { [ -z "$(find -L "$pd" -type f 2>/dev/null | head -1)" ] || [ ! -f ".milestone-config/driver.json" ]; }; then
   printf '%s\n' \
     '🟡 This repo isn'"'"'t bootstrapped — your plan'"'"'s grounding will be weak' \
     '' \
-    '| What | This repo has no .project/ standing docs and/or no' \
+    "| What | This repo has no ${pd}/ standing docs and/or no" \
     '|      | .milestone-config/driver.json. Without them, plan has no project' \
     '|      | constitution to ground issue design on and no driver profile to' \
     '|      | resolve shared keys from, so it falls back to thin inferred' \
@@ -198,19 +207,27 @@ fi
 ```
 
 ```powershell
-# PowerShell 7+ — same read-only detect + one-time notice; NEVER writes .project/ or driver.json, NEVER runs the bootstrapper; never aborts plan.
+# PowerShell 7+ — same read-only detect + one-time notice; NEVER writes projectDocs/.project/ or driver.json, NEVER runs the bootstrapper; never aborts plan.
 try {
+  # Resolve projectDocs in-block (the key-extraction table below has not run yet) with the SAME default the table uses,
+  # so the two reads can't diverge; a non-string projectDocs (number/array), missing file / malformed JSON all fall
+  # back to .project/. Strip ALL trailing slashes for the detect operand; an empty result (e.g. "/") falls back to
+  # .project so PowerShell and bash agree; the notice re-adds a single "/" so the printed path always ends in "/".
+  $pd = '.project/'
+  try { $pdRaw = (Get-Content -Raw -LiteralPath (Join-Path '.milestone-config' 'feeder.json') -ErrorAction Stop | ConvertFrom-Json).projectDocs; if ($pdRaw -is [string]) { $pd = $pdRaw } } catch {}
+  $pd = $pd -replace '/+$',''
+  if (-not $pd) { $pd = '.project' }
   $marker = Join-Path '.milestone-config' (Join-Path '.runtime' 'bootstrap-nudge-notice')
-  $projectEmpty = -not (Test-Path '.project') -or -not (Get-ChildItem -LiteralPath '.project' -File -Recurse -Force -ErrorAction SilentlyContinue | Select-Object -First 1)
+  $projectEmpty = -not (Test-Path $pd) -or -not (Get-ChildItem -LiteralPath $pd -File -Recurse -Force -ErrorAction SilentlyContinue | Select-Object -First 1)
   $driverMissing = -not (Test-Path (Join-Path '.milestone-config' 'driver.json'))
   if ((-not (Test-Path $marker)) -and ($projectEmpty -or $driverMissing)) {
     # Indent-safe array-join (the #120/#121 self-heal construct) — NOT a here-string: an
     # @'…'@ closing terminator must sit at column 0, which breaks when nested under indented
-    # markdown. The text below is byte-identical to the bash printf args.
+    # markdown. The text below is byte-identical to the bash printf args (same resolved $pd).
     Write-Host (@(
       '🟡 This repo isn''t bootstrapped — your plan''s grounding will be weak'
       ''
-      '| What | This repo has no .project/ standing docs and/or no'
+      "| What | This repo has no ${pd}/ standing docs and/or no"
       '|      | .milestone-config/driver.json. Without them, plan has no project'
       '|      | constitution to ground issue design on and no driver profile to'
       '|      | resolve shared keys from, so it falls back to thin inferred'
