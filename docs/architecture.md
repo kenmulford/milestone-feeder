@@ -66,20 +66,20 @@ mechanism has nothing to ride. The version is bumped by hand when a release is c
 `.claude-plugin/marketplace.json` carries no `version` field (Claude Code resolves
 `plugin.json` first).
 
+When this repo is itself built by `milestone-driver`, the driver bumps
+`plugin.json` on the milestone's first PR — its standard behavior; the by-hand
+bump above is for a release cut outside a driver run.
+
 ### Release checklist
 
-When a release is cut and the plugin version is bumped, re-sync these
-version-bearing locations together so they all name the same version:
+When a release is cut, bump `.claude-plugin/plugin.json` `version` — the single
+source of truth. The `SPEC.md` as-built header carries no version, so there is
+nothing to re-sync there.
 
-1. `.claude-plugin/plugin.json` `version` — the single source of truth. Bump this
-   first; everything else is re-synced to match it.
-2. `SPEC.md` as-built header — line 1 (`# milestone-feeder — as-built spec
-   (vX.Y.Z)`) and the line-5 status reference (`Status: **as-built spec for
-   vX.Y.Z**`). Re-sync both to the new `plugin.json` version.
-
-Any other hand-maintained in-doc version reference should be re-synced to match
-as well. A future releaser — a human, or the driver's per-release docs-sweep
-issue — should run this re-sync as part of cutting the release.
+Any other hand-maintained in-doc version reference (e.g. the `README.md` status
+line) should be re-synced to match `plugin.json`. A future releaser — a human, or
+the driver's per-release docs-sweep issue — should run this re-sync as part of
+cutting the release.
 
 ## Pipeline position
 

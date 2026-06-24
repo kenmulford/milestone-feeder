@@ -100,7 +100,7 @@ Full setup walkthrough: [docs/consumer-setup.md](docs/consumer-setup.md). Every 
 
 ## Status
 
-v0.4.2 — the live surface (`plan` / `create` / `update`, no flags, plan-file-as-contract): name your milestone with a version up front and the feeder hands it cleanly to `milestone-driver`; after the build, `milestone-coherence-reviewer` reviews the result and hands a follow-up brief back to the feeder when a change drifted far from intent; `plan` reads your house docs once up front and parks real product gaps before it fans out; and you get a heads-up when your brief looks like several milestones. v0.4.2 itself is a docs-hygiene release — no behavior change. Self-hosted: the feeder is planned as its own milestone and built by milestone-driver.
+v0.4.6 — the live surface (`plan` / `create` / `update`, no flags, plan-file-as-contract): name your milestone with a version up front and the feeder hands it cleanly to `milestone-driver`; after the build, `milestone-coherence-reviewer` reviews the result and hands a follow-up brief back to the feeder when a change drifted far from intent; `plan` reads your house docs once up front and parks real product gaps before it fans out; and you get a heads-up when your brief looks like several milestones. v0.4.6 is a grounding-and-coverage release: the repo now carries its own `.project/` standing docs and a nested-layout (siteroot/{web,api}) end-to-end test scenario; the `plan` / `create` / `update` surface is unchanged. Self-hosted: the feeder is planned as its own milestone and built by milestone-driver.
 
 ## Docs
 
