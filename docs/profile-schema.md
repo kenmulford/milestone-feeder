@@ -45,6 +45,7 @@ optional in the file. Every key except `versioning` has a bundled default;
 |---|---|---|---|
 | `projectDocs` | string | `.project/` | Where your project's standing docs live. |
 | `reviewer` | `"milestone-driver" \| "internal" \| false` | `"milestone-driver"` | Which reviewer checks each issue before it's created; `false` = off. |
+| `autoHandoff` | `"prompt" \| "auto" \| "off"` | `"prompt"` | After `create` builds a milestone, whether the feeder offers to hand it to milestone-driver to start building (prompt = ask; auto = start immediately; off = never). |
 | `architectAgent` | string | `milestone-feeder:architect` | Override the breakdown agent (default-filled). |
 | `issueAuthorAgent` | string | `milestone-feeder:issue-author` | Override the authoring agent (default-filled). |
 | `issueSize` | string | *(none)* | Optional natural-language sizing rule (e.g. "≤1 PR, ≤1 new screen"). |
@@ -62,6 +63,46 @@ the keystone that prevents the feeder from authoring issues it cannot itself
 substantiate. `"milestone-driver"` (default) backs the review with the driver's
 review agents; `"internal"` uses the feeder's own reviewer; `false` turns the
 review off.
+
+**`autoHandoff`.** After `create` finishes building a milestone and its issues,
+this key decides whether the feeder offers to hand the milestone **straight to
+`milestone-driver`** to start building — instead of ending the run and leaving you
+to invoke the driver yourself. It is **build-kickoff only**: it invokes
+`/milestone-driver:solve-milestone "<milestone title>"`. Three values:
+
+- `"prompt"` (**default**) — on a clean run, `create` asks *"milestone-driver is
+  installed — start building this milestone now, or review it first?"*; **yes**
+  starts the build, **no** stops.
+- `"auto"` — on a clean run, `create` kicks off the driver **immediately**, with no
+  prompt (a one-line notice for legibility).
+- `"off"` — `create` **never** offers the handoff and never prompts (exactly
+  today's no-handoff behavior).
+
+**Three gates — all must hold for the handoff to be offered:** (1) **clean run
+only — no gaps/parks AND the self-check actually ran** — the run produced no
+product gap and parked / dropped nothing (the plan file's needs-input pointer is
+"none") **and** its `Self-check:` verdict is a real `PASS` / `INTERNAL`, **not**
+`SKIPPED(reviewer:false)`; a `reviewer: false` run skips the self-check gate
+entirely, leaving its issues unvetted against the driver's entry gate, so it is a
+clean-run fail even with a "none" pointer. A gapped **or** unvetted run surfaces
+its gaps / 🔴 reviewer-skipped warning as today and offers no handoff; (2) **driver
+installed, else silent skip** — `create` detects
+whether `/milestone-driver:solve-milestone` resolves in this session and, if it
+does **not**, silently skips with no prompt and no error (the same way the optional
+`milestone-driver` soft-dependency degrades silently elsewhere); (3) **never
+crosses `develop → main`** — the handoff is build-kickoff only; the driver builds
+to the integration branch and the release (`develop → main`) stays a manual human
+call, never auto-merged.
+
+An **invalid or unrecognized value** (anything that is not exactly `"prompt"`,
+`"auto"`, or `"off"`) is treated as the **default `"prompt"`** — `create` never
+errors on the key (mirrors how `versioning` treats an invalid value as absent). The
+key is **optional and follows the
+[absent-means-default discipline](#absent-means-default-discipline)** (omit it on
+skip; the default applies at runtime). Note the default is a **new behavior**:
+absent `autoHandoff` means `create` offers the prompt on a clean run when the
+driver is installed — to keep exactly today's no-handoff behavior, set
+`"off"`.
 
 **`architectAgent` / `issueAuthorAgent`.** Default-filled agent identifiers
 (`milestone-feeder:architect`, `milestone-feeder:issue-author`). Auto-filled;
