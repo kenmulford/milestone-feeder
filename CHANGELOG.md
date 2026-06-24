@@ -3,6 +3,26 @@
 Release notes for milestone-feeder. Each tagged release is also published on the
 [GitHub Releases page](https://github.com/kenmulford/milestone-feeder/releases).
 
+## v0.4.4 — bootstrap nudge on unbootstrapped repos
+
+**Theme:** When `plan` runs in a repo that was never bootstrapped, it now tells the user once that grounding will be weak and points them at `milestone-bootstrapper` — instead of silently proceeding on thin inferred conventions.
+
+### ✨ Bootstrap discovery path
+
+| Issue | PR | What |
+|---|---|---|
+| #132 Add a one-time non-blocking bootstrap-nudge notice in plan Step 0 | #134 | `plan` Step 0 now prints a one-time, non-blocking notice when the repo has no `.project/` standing docs and/or no `.milestone-config/driver.json` — warning that issue grounding will be weak and recommending `milestone-bootstrapper`, then carrying on. Shows at most once per clone, reads only (never writes `.project/` or `driver.json`), never runs the bootstrapper, and never stops `plan`. Ships as both a bash and a PowerShell 7+ form. |
+
+### Consumer notes (upgrading from v0.4.3)
+
+- New one-time notice in `plan` Step 0 for un-bootstrapped repos — those with no `.project/` docs and/or no `.milestone-config/driver.json`. It is purely advisory: `plan` still runs with best-effort grounding, and config stays optional by design. The notice shows at most once per clone, gated by a git-invisible `.milestone-config/.runtime/bootstrap-nudge-notice` marker (no new `.gitignore` line — the existing `.runtime/` entry covers it).
+- Known limitation: the notice checks the literal `.project/` path, not a custom `projectDocs` override. Tracked as #133.
+- **No schema changes** to `.milestone-config/driver.json` or `.milestone-config/feeder.json`.
+
+### ⚖️ Post-run audit trail
+
+Judgment-call PRs for this release: #134 (accepted the literal-`.project/` check over the configurable `projectDocs` key — see #133).
+
 ## v0.4.3 — Feeder-first scratch self-heal & discovery path
 
 **Theme:** The feeder now establishes the suite's committed scratch-ignore on its own — so a repo that runs the feeder before any driver run no longer leaves per-clone scratch un-ignored or `feeder.json` untracked — and it adds a standing rule that every new feature ships a path for existing users to discover the change.
