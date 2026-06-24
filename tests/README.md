@@ -46,6 +46,7 @@ tests/
     04-no-code-refusal/           { ... }
     05-reviewer-backends/         { ... }
     06-cross-cutting-consistency/ { ... }
+    10-nested-layout/             { brief.md, project/, feeder-env.md, expected.md }
   RESULTS.md                      # scorecard + claim→evidence map (the metric)
 ```
 
@@ -72,6 +73,7 @@ loaded as plugin skills.
 | 07 | `create` idempotency | create, then re-run | create-or-adopt by title; idempotent re-run (no dupes); never delete | sandbox follow-up |
 | 08 | update no-op / not-found / patch | clean milestone; missing milestone; gapped issue | update is idempotent (clean → no-op); milestone-not-found → error-and-stop; gapped body patched | sandbox follow-up |
 | 09 | slug→#n at scale | >26 candidates | substring-safe slug rewrite (`#A` not corrupting `#AB`) | sandbox follow-up |
+| 10 | nested layout | a nested monorepo (`siteroot/{web,api}`) where source lives only under app roots, never the repo root | bootstrapper-v0.2.0-baked nested `sourceGlobs` route issue file scope into the nested app roots, never the repo root | ✅ |
 
 ### 06 — the flagship, in detail
 
