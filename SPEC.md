@@ -99,6 +99,18 @@ v0.3.1 is an **additive** release on this surface — no command or config break
 
 - **The multi-milestone guardrail (advisory, non-blocking).** The feeder stays **one brief → one milestone**, but stops being silent about a brief that's really several. When a brief reads as distinct phased deliverables / release boundaries, the architect raises `SCOPE_SPANS_MULTIPLE_MILESTONES` with a proposed split; `plan` still writes a **deployable single-milestone plan** but **prominently flags** *"this looks like ~N milestones"* and shows the split, surfaced up front alongside the versioning step. **Never a hard block, never a silent giant milestone** — the user decides whether to deploy the one milestone or split the brief and re-run. Full `brief → N-milestones` decomposition is deferred to a future release.
 
+### The `create` → driver handoff (build kickoff)
+
+When `create` finishes building a milestone and its issues, it can hand the milestone **straight to `milestone-driver`** to start building — closing the feeder→driver seam — instead of ending the run and leaving the user to invoke the driver. It is **build-kickoff only**: it invokes `/milestone-driver:solve-milestone "<exact milestone title>"` (the title `create` deployed, carrying the user-owned semver), and **never** authors code, merges, or crosses the release boundary itself. Governed by the own-key **`autoHandoff`** (§7) — `"prompt"` (default, ask), `"auto"` (kick off immediately), or `"off"` (never); an unrecognized value is treated as `"prompt"`. (Resolved design: milestone-feeder issue #148; re-homed from milestone-driver #232. Feeder-side minor bump, milestone v0.5.0.)
+
+**Three gates — ALL must hold to offer the handoff:**
+
+1. **Clean run only — no gaps/parks AND the self-check actually ran.** The run produced no product gap and parked / dropped nothing (the plan file's `## Needs human input` pointer is "none" — the same signal `create` pass (e) reads) **AND** the plan file's `Self-check:` verdict is a real `PASS` / `INTERNAL`, **not** `SKIPPED(reviewer:false)`. A `reviewer: false` run skips the self-check gate — its issues are explicitly **not vetted** against the driver's entry gate (§5) — so a `SKIPPED(reviewer:false)` verdict is a clean-run fail even when the pointer is "none" (the run can harbor exactly the unsurfaced gaps the gate exists to catch). A gapped **or** unvetted run surfaces its gaps / 🔴 reviewer-skipped warning as today and offers no handoff — the human stays in the loop on any run with known gaps or skipped vetting.
+2. **Driver installed, else silent skip.** `create` detects whether `/milestone-driver:solve-milestone` resolves in this session; if it does **not**, it silently skips — no prompt, no error — exactly as the optional `milestone-driver` soft-dependency degrades silently elsewhere (`docs/consumer-setup.md` §1).
+3. **Never crosses `develop → main`.** `solve-milestone` merges only to the integration branch; release (`develop → main`), closing the milestone object, and deploy stay manual and human-only (`milestone-driver/skills/solve-milestone/SKILL.md` "Bounded blast radius"). The handoff never auto-merges to a protected branch and never removes the release gate — it preserves the autonomy boundary (`.project/design-philosophy.md#One-way doors`).
+
+**Discovery path (the §3.1 normative principle).** As an additive behavior whose default (`"prompt"`) is a **new** behavior for existing users, `autoHandoff` ships a discovery path: `setup` Phase 2 presents it (a plain-language label + skip-consequence), `docs/profile-schema.md` documents the key (table row + per-key note), and the default is visible. To keep exactly today's no-handoff behavior, a user sets `"off"`.
+
 ---
 
 ## 4. Output contract — the interface to the driver
@@ -200,6 +212,7 @@ Thin and consumer-driven, same discipline as the driver: new keys only when a re
 |---|---|---|---|
 | `projectDocs` | string | `.project/` | Where the project's standing docs live. |
 | `reviewer` | `"milestone-driver" \| "internal" \| false` | `"milestone-driver"` | Who checks each issue before it's created; `false` = off. |
+| `autoHandoff` | `"prompt" \| "auto" \| "off"` | `"prompt"` | After `create` builds a milestone, whether the feeder offers to hand it to `milestone-driver` to start building (`"prompt"` = ask; `"auto"` = start immediately; `"off"` = never). Unrecognized → treated as `"prompt"`. See §3 (the create→driver handoff). |
 | `versioning` | `"semver" \| "none"` | *(none)* — absent is a distinct "infer-or-ask" state | Whether this project is semver-versioned; drives milestone-version resolution at plan time (three-way: `"semver"` = version every milestone, `"none"` = never add a version or prompt, **absent** = infer from repo signals else prompt). |
 | `issueSize` | string | *(none)* | Optional natural-language sizing rule (e.g. "≤1 PR, ≤1 new screen"). |
 | `architectAgent` | string | `milestone-feeder:architect` | Override the breakdown (architect) agent. |

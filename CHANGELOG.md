@@ -3,6 +3,23 @@
 Release notes for milestone-feeder. Each tagged release is also published on the
 [GitHub Releases page](https://github.com/kenmulford/milestone-feeder/releases).
 
+## v0.5.0 — automated feeder → driver handoff
+
+**Theme:** When `create` finishes building a milestone on a clean, vetted run and `milestone-driver` is installed, the feeder can hand the milestone straight to the driver to start building — instead of leaving you to invoke the driver yourself. You stay in control: the default is to ask first, and the handoff never crosses the `develop → main` release boundary.
+
+### ✨ The create → driver handoff
+
+| Issue | PR | What |
+|---|---|---|
+| #148 Automated feeder → driver handoff | #149 | After `create` deploys a milestone and its issues, a new Step 4 can hand the milestone to `milestone-driver` by invoking `/milestone-driver:solve-milestone "<exact title>"`. It is **build-kickoff only** — the driver builds to the integration branch (`develop`); `develop → main` stays a manual human call. The new `feeder.json#autoHandoff` key governs it: `"prompt"` (default — ask "milestone-driver is installed — start building now, or review first?"), `"auto"` (kick off immediately, no prompt), or `"off"` (never offer — exactly today's no-handoff behavior). Three gates must all hold to offer the handoff: the run is **clean** (no product gap, nothing parked/dropped) **and the self-check actually ran** (a `reviewer: false` / `SKIPPED` run is not eligible — its issues were never vetted), the `milestone-driver` skill **resolves in this session** (absent → silently skip, no prompt, no error), and the handoff **never crosses the release boundary**. An unrecognized `autoHandoff` value is treated as the default `"prompt"`. |
+
+### Consumer notes (upgrading from v0.4.6)
+
+- **New behavior on a clean `create` run.** With `autoHandoff` unset, `create` now **prompts** once at the end of a clean, vetted run when `milestone-driver` is installed, offering to start the build. To keep exactly the old behavior (no handoff, no prompt), set `"autoHandoff": "off"` in `.milestone-config/feeder.json`. The new key is presented in `/milestone-feeder:setup` and documented in `docs/profile-schema.md`.
+- **The handoff is build-kickoff only.** It invokes the driver, which merges only to your integration branch (`develop`); it never auto-merges to a protected branch and never removes the release gate — `develop → main` stays a manual human call.
+- **No schema changes** to `.milestone-config/driver.json`. The only config change is the new optional `feeder.json#autoHandoff` own-key (absent-means-default `"prompt"`).
+- v0.4.6 (the prior release, un-noted in this changelog) was a grounding-and-coverage release: the repo bootstrapped its own `.project/` standing docs, added a nested-layout (`siteroot/{web,api}`) end-to-end test scenario, and dropped the version from the SPEC.md as-built header (pointing readers at `plugin.json` as the single source of truth). The `plan` / `create` / `update` runtime surface was unchanged in v0.4.6.
+
 ## v0.4.5 — bootstrap nudge honors configurable projectDocs
 
 **Theme:** The v0.4.4 bootstrap nudge now honors your configurable `projectDocs` path instead of a hardcoded `.project/`, so a custom standing-docs directory no longer triggers a false "your grounding will be weak" warning.

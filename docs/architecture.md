@@ -157,6 +157,35 @@ Idempotent re-run relies on stable, exact, open issue titles: the adopt +
 match-by-title path reuses existing issues rather than duplicating them, and pass
 (d) is a no-op against already-numeric bodies/descriptions.
 
+After the write sequence (a–e), `create` runs a top-level **Step 4 — the driver
+handoff**. It is **not** a GitHub write and is **not** part of the pass-(d)
+idempotent-re-run guarantee — it is a post-deploy skill invocation; see
+[The create → driver handoff](#the-create--driver-handoff).
+
+### The create → driver handoff
+
+After a **clean** deploy, `create` can hand the milestone straight to
+`milestone-driver` to start building — invoking
+`/milestone-driver:solve-milestone "<exact milestone title>"`, the title `create`
+deployed. This is a **post-deploy skill invocation, not a GitHub write** — it
+authors nothing on GitHub; it kicks off the driver. Because it is not a write, it
+is **not** part of the pass-(d) idempotent-re-run guarantee: re-running `create`
+after a handoff fired would **re-offer** (or, under `"auto"`, re-fire) the handoff,
+not no-op. It is modelled as `create`'s top-level **Step 4**, run after the pass
+a–e write sequence, not as a sixth write pass.
+
+The `autoHandoff` own-key (default `"prompt"`) governs it: `"prompt"`
+asks first, `"auto"` kicks off immediately, `"off"` never offers. Three gates must
+all hold: the run is **clean** — no product gap, nothing parked/dropped (the
+`## Needs human input` pointer is "none") **AND** the self-check actually ran (the
+plan file's `Self-check:` verdict is a real `PASS` / `INTERNAL`, **not**
+`SKIPPED(reviewer:false)` — a `reviewer: false` run skips the gate, leaving its
+issues unvetted, so it is a clean-run fail even with a "none" pointer); the driver
+resolves in this session (absent → **silently skipped**, no prompt / no error); and
+the handoff is **build-kickoff only** — `solve-milestone` merges to the integration
+branch and `develop → main` stays a manual human call. It never auto-merges to a
+protected branch and never removes the release gate.
+
 ## The reviewer gate
 
 Before emitting, `plan` vets **every generated issue** with the same gate

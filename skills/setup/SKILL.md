@@ -46,6 +46,7 @@ Present keys in these tiers: **Core → Agents → Sizing**, plus the self-prote
 |---|---|---|
 | `projectDocs` | "Where do your project's standing docs (vision, architecture, conventions) live? `plan` grounds issue authoring in them." | Skip → default `.project/` used at runtime. |
 | `reviewer` | "Which reviewer checks each generated issue before any GitHub write? (Detected: `milestone-driver` if its reviewers resolve, else `internal`.)" | Skip → default `"milestone-driver"` (or `"internal"` when the driver's reviewers don't resolve); `false` disables the gate. |
+| `autoHandoff` | "After `create` builds a milestone, should the feeder offer to hand it straight to milestone-driver to start building? `prompt` (ask), `auto` (start immediately), or `off` (never)." | Skip → default `prompt` — offer only on a clean run when milestone-driver is installed; you decide each time. |
 
 **Tier: Agents** (optional; auto-filled with the bundled defaults — show, confirm, move on)
 
