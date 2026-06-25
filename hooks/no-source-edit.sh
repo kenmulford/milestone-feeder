@@ -31,8 +31,8 @@
 # `name:` of every agents/*.md — enforced by the CI drift-guard in
 # scripts/validate-plugin-structure.py. Machine-parseable literal (one
 # space-separated set on the next line; keep that exact shape for the guard):
-# FEEDER_OWN_AGENTS: architect issue-author roadmap-splitter
-FEEDER_OWN_AGENTS="architect issue-author roadmap-splitter"
+# FEEDER_OWN_AGENTS: architect issue-author roadmap-splitter brief-coverage-verifier
+FEEDER_OWN_AGENTS="architect issue-author roadmap-splitter brief-coverage-verifier"
 
 [ "${CLAUDE_HOOK_DISABLE_NO_SOURCE_EDIT:-}" = "1" ] && exit 0
 
