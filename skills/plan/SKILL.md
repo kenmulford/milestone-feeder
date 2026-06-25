@@ -21,7 +21,7 @@ This procedure has two parts: a **once-per-run outer boundary** (Step 0) and a *
 
 - **Step 0 is the once-per-run OUTER boundary** — read config, auto-invoke `setup` when `feeder.json` is absent, self-heal the scratch-ignore, print the one-time notices, resolve the shared keys, and assemble the grounding digest. It runs **exactly once per run** and is **NOT part of the inner routine**; everything it resolves is handed *into* the routine and is **never re-resolved per invocation**.
 - **Steps 1–7 are the single-milestone inner routine** — a named, callable, parameterized sub-procedure (its contract is stated just below Step 0, before Step 1). It plans exactly one milestone and returns one plan file (plus a needs-input report when anything parked).
-- **The single-brief path is the default and is unchanged: it invokes the inner routine exactly ONCE**, with the whole brief as the lone brief-slice and its sole build-order position. On that path nothing about the emitted plan file changes — the inner routine is the same Steps 1–7 this skill has always run; this refactor only *names and frames* them as a callable unit (it adds no outer loop, fan-out, or roadmap construct). **There is no observable change for existing single-brief users**, so per `SPEC.md` §3.1 the existing-user discovery-path requirement is satisfied **vacuously** — there is nothing to discover or migrate.
+- **The single-brief path is the default and is unchanged: it invokes the inner routine exactly ONCE**, with the whole brief as the lone brief-slice and its sole build-order position. On that path nothing about the emitted plan file changes — the inner routine is the same Steps 1–7 this skill has always run; this *inner-routine refactor* only *names and frames* them as a callable unit (it adds no outer loop or fan-out of its own — the oversized-brief **roadmap route** is added separately at the front-door, Step 3.6, and acts ONLY when the architect raises the multi-milestone signal). **For a normal single-brief (`none`-signal) run nothing about the emitted plan file changes**, so that refactor's existing-user discovery-path obligation is satisfied **vacuously** (nothing to discover or migrate); the **oversized-routing** behavior added at Step 3.6 ships its **own** one-time discovery notice (Step 0) per `SPEC.md` §3.1.
 
 ### Step 0 — Read config + project docs (best-effort) — once-per-run OUTER boundary
 
@@ -250,6 +250,73 @@ try {
 } catch {}
 ```
 
+**Announce the new oversized-brief routing once per clone (read-only, non-blocking, marker-gated).** Existing `plan` users formed a habit before this routing existed: a whole-app brief that spans several releases used to get only a passive *"~N milestones"* advisory they had to act on by hand. Now `plan`'s front-door (Step 3.6) **routes** such a brief into the `build-roadmap` flow. So existing users get a discovery path — a one-time, per-clone notice that announces the new behavior, mirroring the legacy-blanket / bootstrap-nudge siblings above (print verbatim → drop a per-clone marker). **It is purely informational: never a block, never a prompt; its only writes are the `.runtime/` dir and the marker — it reads and changes nothing else.** Grounding: `SPEC.md` §3.1 (every behavior change ships an existing-user discovery path); `.project/design-philosophy.md#One-way doors` (a behavior change ships a discovery / migration path); `.project/conventions.md#Canonical exemplars` (the one-time-notice pattern → `plan` Step 0).
+
+Gate: print the 🟡 notice **verbatim** ONLY when the per-clone marker `.milestone-config/.runtime/roadmap-routing-notice` is **absent**. This notice is **unconditional** — it announces a behavior change, so unlike the two siblings above it carries **no repo-state condition**; the marker is its only gate. On print, ensure `.runtime/` exists (`mkdir -p .milestone-config/.runtime` / `New-Item -ItemType Directory -Force`), then create the marker. Stay **silent** if the marker already exists. The marker lives under `.runtime/`, which the nested `.milestone-config/.gitignore` (written above) already ignores — so the marker is git-invisible with **no new gitignore line**. **Both forms below are best-effort: swallow any failure (unwritable dir, permission error) and continue the `plan` run — a failed notice/marker must never abort `plan`.** This notice is **`plan` Step 0 only** (no setup twin) — the oversized-brief routing is a `plan` behavior.
+
+<!-- KEEP THIS NOTICE BLOCK IN SYNC across the plan one-time-notice family. plan Step 0 only (no setup twin). Read-only; marker is .milestone-config/.runtime/roadmap-routing-notice. -->
+```text
+🟡 New: an oversized brief now routes into a roadmap flow
+
+| What | When you give plan a whole-app brief that spans several
+|      | releases, plan now hands it to a roadmap step first: it
+|      | proposes a sequenced set of milestones and asks you to
+|      | confirm, merge, split, reorder, or reject the split before
+|      | it plans any single milestone.
+| When | Only when the brief reads as several milestones. A normal,
+|      | single-release brief is unchanged — no roadmap step, no
+|      | extra prompt.
+| Note | This notice shows at most once per clone.
+```
+
+```bash
+# bash — one-time roadmap-routing discovery notice; read-only; marker-gated; never aborts plan.
+# printf '%s\n' (NOT a heredoc): the same indent-safe construct the sibling Step-0 notices use,
+# so all three sites emit one consistent form. The notice text is the quoted args — prints flush-left.
+marker=".milestone-config/.runtime/roadmap-routing-notice"
+if [ ! -f "$marker" ]; then
+  printf '%s\n' \
+    '🟡 New: an oversized brief now routes into a roadmap flow' \
+    '' \
+    '| What | When you give plan a whole-app brief that spans several' \
+    '|      | releases, plan now hands it to a roadmap step first: it' \
+    '|      | proposes a sequenced set of milestones and asks you to' \
+    '|      | confirm, merge, split, reorder, or reject the split before' \
+    '|      | it plans any single milestone.' \
+    '| When | Only when the brief reads as several milestones. A normal,' \
+    '|      | single-release brief is unchanged — no roadmap step, no' \
+    '|      | extra prompt.' \
+    '| Note | This notice shows at most once per clone.'
+  mkdir -p .milestone-config/.runtime 2>/dev/null && : > "$marker" 2>/dev/null || true
+fi
+```
+
+```powershell
+# PowerShell 7+ — same one-time roadmap-routing discovery notice; read-only; marker-gated; never aborts plan.
+try {
+  $marker = Join-Path '.milestone-config' (Join-Path '.runtime' 'roadmap-routing-notice')
+  if (-not (Test-Path $marker)) {
+    # Indent-safe array-join (the #120/#121 self-heal construct) — NOT a here-string; byte-identical
+    # to the bash printf args and the text template above.
+    Write-Host (@(
+      '🟡 New: an oversized brief now routes into a roadmap flow'
+      ''
+      '| What | When you give plan a whole-app brief that spans several'
+      '|      | releases, plan now hands it to a roadmap step first: it'
+      '|      | proposes a sequenced set of milestones and asks you to'
+      '|      | confirm, merge, split, reorder, or reject the split before'
+      '|      | it plans any single milestone.'
+      '| When | Only when the brief reads as several milestones. A normal,'
+      '|      | single-release brief is unchanged — no roadmap step, no'
+      '|      | extra prompt.'
+      '| Note | This notice shows at most once per clone.'
+    ) -join "`n")
+    New-Item -ItemType Directory -Force -Path (Join-Path '.milestone-config' '.runtime') | Out-Null
+    New-Item -ItemType File -Force -Path $marker | Out-Null
+  }
+} catch {}
+```
+
 Extract the feeder's own keys with their bundled defaults (`docs/profile-schema.md`, absent-means-default):
 
 | Key | Default | Use |
@@ -378,7 +445,7 @@ SCOPE_SPANS_MULTIPLE_MILESTONES:
 
 `EDGES` is the literal `[]` when no candidate depends on another; `PRODUCT_GAPS` is the literal `none` when the brief is fully resolvable. **Merge** any architect `PRODUCT_GAPS` into `productGaps[]` — they join the gaps found at Step 2 — capturing each gap's `blocks:` tags alongside its `gap` / `why_blocked` / `brief_ref` (a `blocks:` list naming specific candidate tags drives the Step 3.5 early park; `[]` marks a gap not tied to specific named candidates — a broad product decision that names no candidates to pre-park). Step 2 gaps carry no `blocks:` list — they name no specific candidates by construction.
 
-**Capture `SCOPE_SPANS_MULTIPLE_MILESTONES`** exactly parallel to how `PRODUCT_GAPS` is consumed: record it **verbatim** when raised (the list of `{ milestone, tags }` — the architect's proposed split); the literal `none` when absent. `plan` does **NOT** re-partition — it carries the architect's proposed split verbatim (the architect owns the structural read; `plan` only surfaces it). **Non-blocking invariant:** this signal NEVER gates the run, and never changes `CANDIDATES` / `EDGES` / `WAVES` / the surviving issue set / Wave order / milestone identity; `plan` still produces a deployable single-milestone plan on every path. **Edge:** because the signal is sourced from the architect's structural read of `CANDIDATES` (not the surviving issue set), it is carried verbatim and surfaced **even if every candidate is later parked/dropped at Step 6** — it is independent of which issues survive. Grounding: `docs/specs/v0.3.1-driver-handoff.md` §5 (detection + advisory, non-blocking) and §6 (the additive Multi-milestone advisory plan-file field).
+**Capture `SCOPE_SPANS_MULTIPLE_MILESTONES`** exactly parallel to how `PRODUCT_GAPS` is consumed: record it **verbatim** when raised (the list of `{ milestone, tags }` — the architect's proposed split); the literal `none` when absent. `plan` does **NOT** re-partition — it carries the architect's proposed split verbatim (the architect owns the structural read; `plan` only surfaces it). **Non-blocking invariant (scoped to the front-door's path).** This signal NEVER **aborts** the run and is NEVER silently dropped. On the **`none` path** — and on the **oversized-but-degraded** path where the front-door's route falls back (Step 3.6) — it does not gate: `plan` produces today's deployable **single-milestone** plan, unchanged, and never alters `CANDIDATES` / `EDGES` / `WAVES` / the surviving issue set / Wave order / milestone identity. On the **oversized** path, the front-door (Step 3.6) **routes** the brief into `build-roadmap` *before* the Step 4 fan-out — itself a non-blocking, surface-for-confirm checkpoint that **supersedes** the single-milestone pipeline for this brief (a decline or failure degrades back to it); it never hard-blocks. **Edge:** because the signal is sourced from the architect's structural read of `CANDIDATES` (not the surviving issue set), it is carried verbatim and surfaced **even if every candidate is later parked/dropped at Step 6** — it is independent of which issues survive. Grounding: `docs/specs/v0.3.1-driver-handoff.md` §5 (detection + advisory, non-blocking) and §6 (the additive Multi-milestone advisory plan-file field).
 
 ### Step 3.5 — Park candidates blocked by a shared product gap (before the fan-out)
 
@@ -391,6 +458,31 @@ Before the Step 4–6 fan-out, park the candidates the architect already linked 
 **Quality-hold invariant.** The candidates the architect **LINKED** to an unresolved gap park here — the **same** candidates that would have parked at the §6.5 self-check on the identical gap, just **earlier**; this only changes **WHEN** they park (before the fan-out vs at the Step 6 self-check). A candidate the architect linked to a gap would have authored, triaged, and then parked at the §6.5 self-check on that identical product gap; parking it here reaches the **same parked end-state for those candidates** without paying for their doomed author + triage + design dispatches. Surviving (non-blocked) issues are authored, reviewed, and gated exactly as before — quality on them (the gate's verdict on the surviving issues) is **unchanged**. (Acceptance criterion 3: a shared decision blocking ≥2 candidates is detected **ONCE here**, not rediscovered per candidate at Step 6.)
 
 **Complementary, not a replacement — the §6.5/§6.6 late park stays the catch-all.** Step 3.5 is an **early** park for gaps the architect **linked to candidates** via `blocks:`. A gap the architect did **NOT** link to candidates — one that surfaces only later, at the self-check (e.g. an issue-author returns `STATUS: PRODUCT_GAP`, or a reviewer raises a Buildability "no conventional default" Blocker) — STILL parks via §6.5 exactly as today, unchanged. The two paths are complementary: Step 3.5 catches the architect-linked gaps early; §6.5/§6.6 remains the catch-all for everything discovered during the fan-out.
+
+### Step 3.6 — Front-door size/scope check: route an oversized brief into `build-roadmap`
+
+This is the **front-door** size/scope check. It runs after the architect's structural read is fully captured (Step 3) and after the Step-3.5 pre-park, and **before the Step 4 issue-author fan-out**. The architect's `SCOPE_SPANS_MULTIPLE_MILESTONES` signal is its **SOLE arbiter** of "oversized" — the front-door introduces **no second threshold metric of its own**; the borderline call is the architect's, carried verbatim. **Initialize `roadmapRouteTaken = false` HERE, before branching on the signal** — so every path (including `none`, which never enters the route below) leaves the flag in a defined state for Step 7's read, regardless of which branch runs. Branch on the captured signal:
+
+| Captured signal | Front-door action |
+|---|---|
+| **`none`** (single coherent release) | **Do not route.** Fall straight through to Step 4 on the whole brief — today's single-milestone pipeline, **byte-for-byte unchanged**. No `build-roadmap` invocation, no advisory change, no new prompt. |
+| **Raised** (≥2 milestones forming a strict partition of `CANDIDATES`) | **Route into `build-roadmap`** (the internal skill #152 introduced) — see below. |
+
+**The oversized route.** Invoke the `build-roadmap` skill — a Claude Code **skill invocation**, the same way `create` runs `plan` first (`skills/create/SKILL.md:267`); there is **no bash/pwsh form** for the invocation itself. Hand it exactly the inputs its Step 0 expects (`skills/build-roadmap/SKILL.md` Step 0 — "Receive the inputs from `plan`"), **all already in hand — re-resolve nothing** (the resolve-once boundary, `skills/plan/SKILL.md:22`):
+
+- the **oversized whole-app brief** — the Step-1 normalized brief (`{ goal, in-scope, out-of-scope, surfaces, … }`);
+- the **source-brief reference** (`inline` | `file:<path>` | `epic #<n>`) captured at Step 1;
+- the **resolved feeder profile + shared keys** (`sourceGlobs`, `uiSurfaceGlobs`, `integrationBranch`) from Step 0;
+- the **resolved project-docs grounding digest** from Step 0 (an empty digest passes through unchanged — not an error, `.project/design-philosophy.md#Error & failure philosophy`).
+
+`build-roadmap` dispatches the roadmap-splitter once, **surfaces the proposed split for the user to confirm / merge / split / reorder / reject** (it owns that checkpoint — `plan` does not re-surface it), and returns control with **either a confirmed manifest path or none** (`skills/build-roadmap/SKILL.md` Step 4). The `#154 → #155` hand-off **manifest shape is OWNED by `build-roadmap`'s #152 manifest contract** — `plan` forwards the manifest path; it does **not** redefine its shape. Consume the return:
+
+| `build-roadmap` return | Front-door outcome |
+|---|---|
+| **A confirmed manifest path** | **Route taken.** Surface the confirmed roadmap + the manifest path, and hand it to the downstream **per-milestone fan-out (#155)** — which runs the single-milestone inner routine (Steps 1–7) once per milestone the roadmap names, in build order. (Wiring that fan-out is **#155's** scope; **#154** owns detect + route + invoke + surface + hand off.) On this path the single-milestone **Steps 4–7 do NOT run for the whole brief**, so the Step-7 passive *"~N milestones"* advisory is **SUPERSEDED** — the confirmed roadmap was surfaced in its place. |
+| **No manifest path** — `build-roadmap` resolved the brief to a single milestone, the user **rejected** the split, or its own dispatch/return failed; **OR** `build-roadmap` does **not resolve** in this session (optional-skill degrade, mirroring `create`'s silent soft-dependency degrade, `skills/create/SKILL.md:251`) | **Degrade gracefully — never abort, never drop the signal.** Fall through to Step 4 on the whole brief — today's single-milestone pipeline, **unchanged** — and **RETAIN** the passive *"~N milestones"* advisory (Step 7 emits it, since the architect raised the signal). `build-roadmap` surfaces the reason for its own non-manifest outcomes (single-milestone / reject / error) itself; the retained advisory is the non-blocking backstop that keeps the signal from being silently dropped (`.project/design-philosophy.md#Error & failure philosophy`). |
+
+**Route-state flag.** Record `roadmapRouteTaken` = **true** only on the confirmed-manifest outcome; **false** on every other (signal `none`, degrade, decline, single-milestone-after-all). Step 7 reads it to choose **supersede** (true → omit the passive advisory) vs **retain** (false **and** signal raised → emit it). The flag never gates the run; it only selects which surface the user sees.
 
 ### Step 4 — Dispatch issue-author per candidate (parallelizable)
 
@@ -596,7 +688,7 @@ if (-not (Test-Path .milestone-feeder/.gitignore)) { Set-Content -LiteralPath .m
 |---|---|
 | **Milestone title (exact)** | The exact milestone title, on its own labeled line — **distinct** from the one-line goal. Now **user-owned** and carrying the resolved **semver inside the string** (no separate version field), resolved at Step 5.1 by the version ladder and **surfaced for the user to confirm or override BEFORE `create`** (`docs/specs/v0.3.1-driver-handoff.md` §3, §6). `create` / `update` still resolve the milestone by this exact title (creating it if absent, adopting it if it already exists), and the driver parses the version from it — this remains the load-bearing identity field; the one-line goal is descriptive only. |
 | **Version provenance** | One line, one of `explicit` \| `declaration` \| `inferred from <tag/milestone>` \| `prompted` (the Step 5.1 ladder rung that resolved the title — `docs/specs/v0.3.1-driver-handoff.md` §6 "Version provenance" row). It makes the surfaced default **legible** so the user can trust or correct it. |
-| **Multi-milestone advisory** | **ADDITIVE and OPTIONAL** — present **ONLY** when the architect raised `SCOPE_SPANS_MULTIPLE_MILESTONES` (Step 3). Carries the flag + the proposed split (milestone names + their candidate tags) **VERBATIM** from the architect — `plan` does not re-partition. **OMITTED entirely** when the signal is `none`, so a single-milestone plan is byte-for-byte unchanged. **Non-blocking** — it does not change what gets deployed; the plan stays a deployable single-milestone plan. Sourced from the architect's structural read of `CANDIDATES`, so it is written even if every candidate is parked/dropped (Step 6). Grounding: `docs/specs/v0.3.1-driver-handoff.md` §6 (the additive plan-file field) and §5. |
+| **Multi-milestone advisory** | **ADDITIVE and OPTIONAL** — present **ONLY** on the **retained** path: the architect raised `SCOPE_SPANS_MULTIPLE_MILESTONES` (Step 3) **AND** the front-door (Step 3.6) did **NOT** route this brief into `build-roadmap` (`roadmapRouteTaken` false — the signal was raised but the route degraded, was declined, or resolved to a single milestone). On that path it carries the flag + the proposed split (milestone names + their candidate tags) **VERBATIM** from the architect — `plan` does not re-partition. **OMITTED entirely** when the signal is `none` (single-milestone plan byte-for-byte unchanged) **OR** when the front-door **took the route** (`roadmapRouteTaken` true — the confirmed roadmap was surfaced in its place, so this passive advisory is **SUPERSEDED**; on the route path the single-milestone Steps 4–7 do not run for the whole brief anyway). **Non-blocking** — it does not change what gets deployed; the plan stays a deployable single-milestone plan. Sourced from the architect's structural read of `CANDIDATES`, so on the retained path it is written even if every candidate is parked/dropped (Step 6). Grounding: `docs/specs/v0.3.1-driver-handoff.md` §6 (the additive plan-file field) and §5. |
 | **One-line goal** | The milestone goal in one line — the header. |
 | **Milestone description (Wave order)** | The Step 5 build-order / Wave description, verbatim, with local slugs (`#A`/`#B`). This is what `create` PATCHes onto the milestone after issue numbers exist. |
 | **Per surviving issue** | For each surviving (gate-clean / Advisory-only) issue: its slug, title, the FULL §4 `ISSUE_BODY` verbatim, its labels, and its surface/risk. `create` reads these — no regeneration. |
@@ -607,7 +699,7 @@ if (-not (Test-Path .milestone-feeder/.gitignore)) { Set-Content -LiteralPath .m
 
 **Surface the resolved identity for confirm/override.** Both the resolved `Milestone title (exact)` (carrying the semver per the Step 5.1 ladder) **and** its `Version provenance` line are written to the plan file and **surfaced for the user to confirm or override BEFORE running `create`** — `plan` never silently finalizes a milestone identity the user cannot see or change (`docs/specs/v0.3.1-driver-handoff.md` §2, §3, §6). On an infer rung the title carries the **reference version verbatim**, and this surfaced line is **where the user adjusts the patch / minor / major bump** before `create` deploys it.
 
-**Surface the multi-milestone advisory — ONLY when raised — alongside the same identity moment.** When the architect raised `SCOPE_SPANS_MULTIPLE_MILESTONES` (Step 3), surface its advisory **prominently UP FRONT, at the same confirm/override moment** the user already sees the milestone identity above (NOT a separate prompt, NOT a hard block): a clear *"this looks like ~N milestones — deploy the one big milestone, or split the brief and re-run"* message plus the proposed split (the milestone names + their candidate tags, verbatim from the architect). It is **advisory only** — the user decides; `plan` still produced a deployable single-milestone plan and changes nothing about what `create` deploys. Surface it **ONLY when the signal is raised**; when the signal is `none`, surface **nothing** — no advisory line, no message — and the surfaced moment is exactly as before (`docs/specs/v0.3.1-driver-handoff.md` §5).
+**Surface the multi-milestone advisory — ONLY on the retained path — alongside the same identity moment.** When the architect raised `SCOPE_SPANS_MULTIPLE_MILESTONES` (Step 3) **and the front-door (Step 3.6) did NOT take the roadmap route** (`roadmapRouteTaken` false — retained path), surface its advisory **prominently UP FRONT, at the same confirm/override moment** the user already sees the milestone identity above (NOT a separate prompt, NOT a hard block): a clear *"this looks like ~N milestones — deploy the one big milestone, or split the brief and re-run"* message plus the proposed split (the milestone names + their candidate tags, verbatim from the architect). It is **advisory only** — the user decides; `plan` still produced a deployable single-milestone plan and changes nothing about what `create` deploys. Surface it **ONLY on the retained path**; when the signal is `none`, surface **nothing** — no advisory line, no message — and the surfaced moment is exactly as before. When the front-door **took the route** (`roadmapRouteTaken` true), the confirmed roadmap was already surfaced by `build-roadmap` (Step 3.6), so this passive advisory is **superseded** — surface nothing here (`docs/specs/v0.3.1-driver-handoff.md` §5).
 
 **Preserve an existing deploy receipt on re-plan.** The plan file may already carry a `Milestone number (GitHub): <n>` line — the **deploy receipt** `create` writes back post-deploy (the create-side write block at `skills/create/SKILL.md:99-135`; the exact field shape at `skills/create/SKILL.md:104`). It is the stable handle `update` resolves by, so a re-plan must NOT drop it: **before overwriting** `.milestone-feeder/plan-<slug>.md`, **read the PRIOR file at that same path** (if one exists) and **carry its receipt line forward, verbatim**, into the freshly-written plan file — as a sibling header line in the same position `create` writes it (after `Source brief:`). The receipt is **additive and READ-ONLY here**: `plan` never resolves a number or writes one (it has no milestone number — it writes only local slugs); it merely **preserves** the line `create` already recorded. **No prior file, OR a prior file with no receipt line → OMIT it, NO error** — a plan with no receipt is valid and deployable (`docs/specs/v0.3.1-driver-handoff.md` §6: *"A v0.3.0 plan file lacking them still parses (the consumers degrade gracefully)"*; the additive-fields row: *"`plan` preserves it on re-plan"*). Read the prior receipt line before the overwrite:
 
@@ -661,7 +753,7 @@ Milestone number (GitHub): <n>   # OPTIONAL sibling header line — carried forw
 
 ### … (one block per surviving candidate, in Wave order; only PASS / Advisory-only issues carry a full body)
 
-## Multi-milestone advisory   <!-- OPTIONAL section — written ONLY when the architect raised SCOPE_SPANS_MULTIPLE_MILESTONES (Step 3); OMITTED ENTIRELY when the signal is `none`, leaving the file byte-for-byte the pre-#61 shape. Advisory only — does not change what gets deployed; the plan stays a deployable single-milestone plan. -->
+## Multi-milestone advisory   <!-- OPTIONAL section — written ONLY on the retained path: the architect raised SCOPE_SPANS_MULTIPLE_MILESTONES (Step 3) AND the front-door did NOT route into build-roadmap (Step 3.6, roadmapRouteTaken false). OMITTED ENTIRELY when the signal is `none` (file byte-for-byte the pre-#61 shape) OR when the front-door took the route (roadmapRouteTaken true — superseded by the confirmed roadmap). Advisory only — does not change what gets deployed; the plan stays a deployable single-milestone plan. -->
 🔴 This brief looks like ~<N> milestones. Deploy the one big milestone below, or split the brief and re-run. Proposed split (carried verbatim from the architect):
 - <proposed milestone 1 name>: #A, #C
 - <proposed milestone 2 name>: #B
