@@ -17,7 +17,13 @@ Say this to the user before doing any work:
 
 ## Procedure
 
-### Step 0 — Read config + project docs (best-effort)
+This procedure has two parts: a **once-per-run outer boundary** (Step 0) and a **callable single-milestone inner routine** (Steps 1–7).
+
+- **Step 0 is the once-per-run OUTER boundary** — read config, auto-invoke `setup` when `feeder.json` is absent, self-heal the scratch-ignore, print the one-time notices, resolve the shared keys, and assemble the grounding digest. It runs **exactly once per run** and is **NOT part of the inner routine**; everything it resolves is handed *into* the routine and is **never re-resolved per invocation**.
+- **Steps 1–7 are the single-milestone inner routine** — a named, callable, parameterized sub-procedure (its contract is stated just below Step 0, before Step 1). It plans exactly one milestone and returns one plan file (plus a needs-input report when anything parked).
+- **The single-brief path is the default and is unchanged: it invokes the inner routine exactly ONCE**, with the whole brief as the lone brief-slice and its sole build-order position. On that path nothing about the emitted plan file changes — the inner routine is the same Steps 1–7 this skill has always run; this refactor only *names and frames* them as a callable unit (it adds no outer loop, fan-out, or roadmap construct). **There is no observable change for existing single-brief users**, so per `SPEC.md` §3.1 the existing-user discovery-path requirement is satisfied **vacuously** — there is nothing to discover or migrate.
+
+### Step 0 — Read config + project docs (best-effort) — once-per-run OUTER boundary
 
 Read `.milestone-config/feeder.json`. **Absent → invoke `milestone-feeder:setup`** (it bootstraps the profile, aligns the label taxonomy, and returns control), then continue — the user does not re-run the command (`skills/setup/SKILL.md` Phase 5).
 
@@ -268,7 +274,21 @@ The shared keys are exactly three: `sourceGlobs`, `uiSurfaceGlobs`, `integration
 
 Resolve `nonNegotiables` **separately**, down the **same chain** (`.milestone-config/driver.json` → root `milestone-driver.json` → absent → **OMITTED**, never invented): it is **not** a fourth shared key but an **additional reviewer-profile input the self-check gate (Step 6) passes through** — the framework/platform/version constraints the driver's triage-reviewer expects on the profile and gates against (§6.2). An absent `nonNegotiables` is OMITTED (the reviewer simply has no version/platform constraints to check). **Degradation:** when `uiSurfaceGlobs` is absent (neither driver file carries it), treat every candidate as **logic** (no UI surface can be matched, so no design-lens distinction is drawn) and **state the degradation** in the plan file's grounding section. The pipeline still runs.
 
-### Step 1 — Ingest the brief
+### The single-milestone inner routine (Steps 1–7) — callable contract
+
+Steps 1–7 below are **one named, callable routine** — the single-milestone planner. The outer boundary (Step 0) resolves its inputs once and invokes it; on the single-brief path it is called **exactly once** (see the two-part note under `## Procedure`). Its contract:
+
+**Parameters (three):**
+
+1. **`briefSlice`** — one milestone's brief in the **Step-1 normalized shape** (`{ goal, in-scope, out-of-scope, surfaces, epicIssueNumber?, milestoneLine? }`, Step 1). On the single-brief path this **is** the whole brief.
+2. **`resolved`** — the once-per-run **config + shared-keys bundle** Step 0 produced and hands in: the feeder keys (`projectDocs`, `reviewer`, `architectAgent`, `issueAuthorAgent`, `issueSize`), the assembled **grounding digest** (built once at Step 0), the resolved **shared keys** (`sourceGlobs`, `uiSurfaceGlobs`, `integrationBranch`) and `nonNegotiables`. **The grounding digest and the shared-key resolution are resolved once at Step 0 and passed in — the routine NEVER re-assembles the digest or re-resolves a shared key per invocation.** (The `versioning` declaration is **not** part of this Step-0 bundle — Step 0's key table does not resolve it; the Step-5.1 version ladder reads it fresh from `.milestone-config/feeder.json` at rung 2. It is `feeder.json` config the routine consults there, not a Step-0 output.)
+3. **`buildOrderPosition`** — this milestone's position in the run's build order. On the single-brief path it is the **sole** position and **does not alter the rendered single-milestone plan file**.
+
+**Returns:** one plan file at `.milestone-feeder/plan-<slug>.md` (Step 7) — **plus** the needs-product-input report at `.milestone-feeder/needs-product-input-<slug>.md` when anything parked. Every in-routine failure exit is **part of the routine** and surfaces to the caller unchanged: the Step 2 product-gap STOP and the Step 6 self-check Blocker park/retry (§6.5) fire from inside the routine, not from the boundary. A `briefSlice` that yields **zero surviving buildable issues** (the parked/dropped path) still routes **entirely** through the routine and emits the same empty/parked plan-file markers and needs-product-input report as today.
+
+The routine body is Steps 1–7, exactly as written below — unchanged by this refactor.
+
+### Step 1 — Ingest the brief (inner routine — begins)
 
 The brief arrives in one of three forms. **Detect** which:
 
@@ -550,7 +570,7 @@ A parked issue is **not emitted** in the milestone (§6.6 handles it and its dep
 
 After §6.6, the surviving issue set has either all-PASS (or all-Advisory-only) verdicts, or the run is `SKIPPED` (`reviewer:false`). Carry the gate outcome forward to the Step 7 verdict line.
 
-### Step 7 — Write the plan file
+### Step 7 — Write the plan file (inner routine — ends; returns the plan file)
 
 By the time this step runs, the self-check gate (Step 6) has already produced the **surviving issue set** — the gate-clean (PASS / Advisory-only), **non-parked, non-dropped** issues from §6.6. Parked (product-gap / needs-human-direction) and dropped-dependent issues are **never carried as buildable**; they go to the report (parked) or are simply omitted (dropped). This step writes a single reviewable plan file. **No GitHub writes occur — `plan` writes only local scratch files.**
 
