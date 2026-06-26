@@ -317,6 +317,91 @@ try {
 } catch {}
 ```
 
+**Announce the optional project-specific implied surfaces once per clone (read-only, marker-gated, non-blocking).** The implied-surfaces feature adds an optional project-local overlay file at the fixed path `.milestone-config/implied-surfaces.md`, which the architect reads alongside the plugin's bundled implied-surfaces reference (`docs/implied-surfaces.md` → "Project-local overlay") when it breaks your brief into issues. Because it is a new optional surface, existing `plan` users need a way to discover it — so `plan` prints a one-time, per-clone notice that names the overlay, explains its additive merge, and shows how to add one. Mirrors the legacy-blanket / bootstrap-nudge / roadmap-routing siblings above (detect → print verbatim → drop a per-clone marker). It shares its 🟡 printed text **verbatim** and its per-clone marker with the `update` Step-0 twin (`skills/update/SKILL.md` Step 0, #183) — the two notices print the **same** notice text and gate on the **same** marker `.milestone-config/.runtime/implied-surfaces-notice` (the blocks differ only in their verb-specific lead comment — `never aborts plan` vs `never aborts update`), so the notice shows **at most once per clone across both verbs** (whichever of `plan` / `update` runs first prints it and drops the marker; the other then stays silent). Grounding: `SPEC.md` §3.1 (every new optional surface ships an existing-user discovery path); `.project/design-philosophy.md#One-way doors` (a behavior change ships a discovery / migration path); `.project/conventions.md#Canonical exemplars` (the one-time-notice pattern). **The overlay itself is resolved + merged at Step 0 by #181 — this notice only announces it; resolving it is out of scope here.**
+
+Gate: print the 🟡 notice **verbatim** ONLY when the overlay `.milestone-config/implied-surfaces.md` is **absent** AND the per-clone marker `.milestone-config/.runtime/implied-surfaces-notice` is **absent**. On print, ensure `.runtime/` exists (`mkdir -p .milestone-config/.runtime` / `New-Item -ItemType Directory -Force`), then create the marker. Stay **silent** if the marker already exists OR the overlay file exists (a project that already has an overlay knows about it). The marker lives under `.runtime/`, which the nested `.milestone-config/.gitignore` (written above) already ignores — so the marker is git-invisible with **no new gitignore line**. **Both forms below are best-effort: swallow any failure (unwritable dir, permission error, missing `jq`) and continue the `plan` run — a failed detect/notice/marker must never abort `plan`. Read-only except the `.runtime/` dir + the marker; it never writes the overlay.**
+
+<!-- KEEP THIS DETECTION + NOTICE BLOCK IN SYNC with the implied-surfaces notice in skills/update/SKILL.md Step 0 (#183), shared marker .milestone-config/.runtime/implied-surfaces-notice -->
+```text
+🟡 Optional: add project-specific implied surfaces
+
+| What | You can add an optional overlay file at
+|      | .milestone-config/implied-surfaces.md. The architect reads it
+|      | alongside the plugin's bundled implied-surfaces reference when it
+|      | breaks your brief into issues.
+| Why  | The bundled reference is universal, so it can't carry capability
+|      | clusters specific to your domain (a church app's "giving", say).
+|      | Your overlay merges in additively — it can add a new capability
+|      | and extend an existing one, but never removes a surface the
+|      | bundled reference already defines.
+| How  | Create .milestone-config/implied-surfaces.md and write one
+|      | capability per ## heading with its implied surfaces beneath — the
+|      | same shape as the bundled reference. Leave it out and the bundled
+|      | reference is used as-is; an absent overlay is never an error.
+| Note | This notice shows at most once per clone.
+```
+
+```bash
+# bash — read-only detect + one-time notice; NEVER writes the overlay; never aborts plan.
+# printf '%s\n' (NOT a heredoc): indent-safe under this list item — a heredoc terminator must sit
+# at column 0, but this block is nested, so an indented EOF would be a syntax error. Mirrors the
+# plan Step-0 bootstrap-nudge form. The notice text is the quoted args, so it prints flush-left.
+marker=".milestone-config/.runtime/implied-surfaces-notice"
+if [ ! -f "$marker" ] && [ ! -f ".milestone-config/implied-surfaces.md" ]; then
+  printf '%s\n' \
+    '🟡 Optional: add project-specific implied surfaces' \
+    '' \
+    '| What | You can add an optional overlay file at' \
+    '|      | .milestone-config/implied-surfaces.md. The architect reads it' \
+    '|      | alongside the plugin'"'"'s bundled implied-surfaces reference when it' \
+    '|      | breaks your brief into issues.' \
+    '| Why  | The bundled reference is universal, so it can'"'"'t carry capability' \
+    '|      | clusters specific to your domain (a church app'"'"'s "giving", say).' \
+    '|      | Your overlay merges in additively — it can add a new capability' \
+    '|      | and extend an existing one, but never removes a surface the' \
+    '|      | bundled reference already defines.' \
+    '| How  | Create .milestone-config/implied-surfaces.md and write one' \
+    '|      | capability per ## heading with its implied surfaces beneath — the' \
+    '|      | same shape as the bundled reference. Leave it out and the bundled' \
+    '|      | reference is used as-is; an absent overlay is never an error.' \
+    '| Note | This notice shows at most once per clone.'
+  mkdir -p .milestone-config/.runtime 2>/dev/null && : > "$marker" 2>/dev/null || true
+fi
+```
+
+```powershell
+# PowerShell 7+ — same read-only detect + one-time notice; NEVER writes the overlay; never aborts plan.
+try {
+  $marker = Join-Path '.milestone-config' (Join-Path '.runtime' 'implied-surfaces-notice')
+  $overlay = Join-Path '.milestone-config' 'implied-surfaces.md'
+  if ((-not (Test-Path $marker)) -and (-not (Test-Path $overlay))) {
+    # Indent-safe array-join (the #120/#121 self-heal construct) — NOT a here-string: an
+    # @'…'@ closing terminator must sit at column 0, which breaks when nested under this
+    # indented markdown list item. The text below is byte-identical to the bash printf args.
+    Write-Host (@(
+      '🟡 Optional: add project-specific implied surfaces'
+      ''
+      '| What | You can add an optional overlay file at'
+      '|      | .milestone-config/implied-surfaces.md. The architect reads it'
+      '|      | alongside the plugin''s bundled implied-surfaces reference when it'
+      '|      | breaks your brief into issues.'
+      '| Why  | The bundled reference is universal, so it can''t carry capability'
+      '|      | clusters specific to your domain (a church app''s "giving", say).'
+      '|      | Your overlay merges in additively — it can add a new capability'
+      '|      | and extend an existing one, but never removes a surface the'
+      '|      | bundled reference already defines.'
+      '| How  | Create .milestone-config/implied-surfaces.md and write one'
+      '|      | capability per ## heading with its implied surfaces beneath — the'
+      '|      | same shape as the bundled reference. Leave it out and the bundled'
+      '|      | reference is used as-is; an absent overlay is never an error.'
+      '| Note | This notice shows at most once per clone.'
+    ) -join "`n")
+    New-Item -ItemType Directory -Force -Path (Join-Path '.milestone-config' '.runtime') | Out-Null
+    New-Item -ItemType File -Force -Path $marker | Out-Null
+  }
+} catch {}
+```
+
 Extract the feeder's own keys with their bundled defaults (`docs/profile-schema.md`, absent-means-default):
 
 | Key | Default | Use |
@@ -330,6 +415,8 @@ Extract the feeder's own keys with their bundled defaults (`docs/profile-schema.
 Read the project docs under `projectDocs` **best-effort** (`SPEC.md` §6 Step 0). Honor the `.project/` contract: a section that is absent or marked `[TBD]` is treated as **not present** — it is **skipped, never grounded on**. Degrade gracefully: a missing project-docs directory is not an error; the run proceeds on whatever sections exist and on stated repo conventions. Cite a project-docs-grounded decision as `.project/<doc>.md#<section>` when carrying it forward.
 
 While reading, **also assemble a grounding digest** — a compact, ordered set of `.project/<doc>.md#<section>` *slices* (each = the section anchor in the citation form above, paired with that section's body text), built **once** here and reused by the downstream briefs instead of re-reading the directory whole-file. Select slices with the **same filter already in force** — exactly the sections that exist, absent / `[TBD]` skipped (the line above and Step 3's "only the sections that exist (absent / `[TBD]` skipped)"); introduce **no new** selection or skip rule. The digest is a **superset that supplements**, never a replacement: (1) **superset** — it carries *every* implicated existing section, so handing the digest downstream in place of the directory never drops grounding; (2) **supplement** — it adds to, and does not close, the agents' on-demand Read/grep path: the architect and issue-author still independently Read/grep to verify any citation before recording it (each agent's own rigor gate stays mandatory — the architect cites its grounding / verifies a sibling `file:line` before recording it, and the issue-author "grep[s] before [it] cite[s]"). Degrade exactly as the line above does: a missing `projectDocs` directory (this repo has none), all-absent/`[TBD]` sections, or a read/parse failure → an **empty/minimal digest and no error**; the run proceeds best-effort on stated repo conventions. This step only **produces** the digest; the Step-3 architect brief and Step-4 issue-author brief that consume it are wired by issues #96/#97 and are not altered here.
+
+**Also resolve the global implied-surfaces reference (best-effort, once-per-run).** Alongside the digest, resolve the **plugin-bundled GLOBAL** implied-surfaces reference: read `${CLAUDE_PLUGIN_ROOT}/docs/implied-surfaces.md` (the plugin-root convention this repo uses for bundled assets — `hooks/hooks.json`) into the **resolved content this run hands downstream**. It is the reasoning prompt the architect's implied-surfaces clause consults (`agents/architect.md` → "What you receive" → *the resolved implied-surfaces reference*; clause 8). Resolve it **ONCE here**, at the same boundary as the digest, and pass it into the inner routine — the routine **NEVER re-resolves it per invocation** (the same resolve-once parity the grounding digest holds). **Degrade exactly as the digest does:** an **absent / unreadable / malformed** reference resolves to an **empty / minimal pass-through — no error, no abort** (`.project/design-philosophy.md#Error & failure philosophy`); the run proceeds best-effort on stated repo conventions and the architect's clause-8 consult becomes a **no-op**. **Scope: the GLOBAL reference ONLY.** The project-local **overlay** (`.milestone-config/implied-surfaces.md`) is resolved + merged at this same Step-0 point by #181 — it is intentionally **out of scope here**, so its absence is by design, not an omission. This step only **resolves** the reference; the Step-3 architect brief that hands it in is wired at Step 3 below.
 
 Resolve the **shared keys** the architect and issue-author need for grounding, from the driver config (`docs/profile-schema.md` shared-keys chain):
 
@@ -348,7 +435,7 @@ Steps 1–7 below are **one named, callable routine** — the single-milestone p
 **Parameters (three required + two optional):**
 
 1. **`briefSlice`** — one milestone's brief in the **Step-1 normalized shape** (`{ goal, in-scope, out-of-scope, surfaces, epicIssueNumber?, milestoneLine? }`, Step 1). On the single-brief path this **is** the whole brief.
-2. **`resolved`** — the once-per-run **config + shared-keys bundle** Step 0 produced and hands in: the feeder keys (`projectDocs`, `reviewer`, `architectAgent`, `issueAuthorAgent`, `issueSize`), the assembled **grounding digest** (built once at Step 0), the resolved **shared keys** (`sourceGlobs`, `uiSurfaceGlobs`, `integrationBranch`) and `nonNegotiables`. **The grounding digest and the shared-key resolution are resolved once at Step 0 and passed in — the routine NEVER re-assembles the digest or re-resolves a shared key per invocation.** (The `versioning` declaration is **not** part of this Step-0 bundle — Step 0's key table does not resolve it; the Step-5.1 version ladder reads it fresh from `.milestone-config/feeder.json` at rung 2. It is `feeder.json` config the routine consults there, not a Step-0 output.)
+2. **`resolved`** — the once-per-run **config + shared-keys bundle** Step 0 produced and hands in: the feeder keys (`projectDocs`, `reviewer`, `architectAgent`, `issueAuthorAgent`, `issueSize`), the assembled **grounding digest** (built once at Step 0), the **resolved implied-surfaces reference** (global, the plugin-bundled `docs/implied-surfaces.md` content, resolved once at Step 0), the resolved **shared keys** (`sourceGlobs`, `uiSurfaceGlobs`, `integrationBranch`) and `nonNegotiables`. **The grounding digest, the implied-surfaces reference, and the shared-key resolution are resolved once at Step 0 and passed in — the routine NEVER re-assembles the digest, re-resolves the implied-surfaces reference, or re-resolves a shared key per invocation.** (The `versioning` declaration is **not** part of this Step-0 bundle — Step 0's key table does not resolve it; the Step-5.1 version ladder reads it fresh from `.milestone-config/feeder.json` at rung 2. It is `feeder.json` config the routine consults there, not a Step-0 output.)
 3. **`buildOrderPosition`** — this milestone's position in the run's build order. On the single-brief path it is the **sole** position and **does not alter the rendered single-milestone plan file**.
 
 The roadmap fan-out (Step 3.7) supplies **two OPTIONAL parameters**; **both are ABSENT on the single-brief path**, so the routine behaves **exactly as today** when they are not provided (Step 5.1 runs the version ladder; Step 7 derives the slug from the goal):
@@ -406,6 +493,7 @@ Dispatch the agent named in `architectAgent` (default `milestone-feeder:architec
 
 - The **normalized brief** from Step 1 (`{ goal, in-scope, out-of-scope, surfaces }`).
 - The **resolved grounding digest** from Step 0 — the `.project/<doc>.md#<section>` slices assembled there — as the architect's project-docs grounding. The digest is what is handed in; an **empty digest** (no `.project/`, or all sections absent / `[TBD]`) is passed through unchanged and is **not an error** (degrade exactly as Step 0 does — "a missing project-docs directory is not an error"). The digest **supplements, never replaces** the architect's on-demand Read/grep citation-verification path: the architect still reads the repo on demand to verify any citation per its rigor gate (`agents/architect.md` Rigor gate — "Every design default cites its grounding"), so where a slice is insufficient it falls back to reading source. (The digest's slice shape and absent-/`[TBD]`-skip rule are defined in Step 0; not restated here.)
+- The **resolved implied-surfaces reference** from Step 0 — the global, plugin-bundled `docs/implied-surfaces.md` content — as the architect's **implied-surfaces grounding** (matches `agents/architect.md` → "What you receive" → *the resolved implied-surfaces reference*). Handed in the **same way as the digest above**; an **empty/absent reference** (no readable `docs/implied-surfaces.md`, or a malformed one) is passed through unchanged and is **not an error** — the architect's clause-8 implied-surfaces consult is then a **no-op** and the breakdown proceeds exactly as today. (Only the **global** reference is handed in here; the project-local overlay is merged at Step 0 by #181.)
 - The **resolved shared keys** — the *values* for `sourceGlobs`, `uiSurfaceGlobs`, `integrationBranch`.
 - `issueSize` when set; else the default (~1 PR each, independently buildable).
 - The `productGaps[]` carried from Step 2.
@@ -419,6 +507,9 @@ CANDIDATES:
     surface: ui | logic
     risk: light | heavy
     sketch: <what this issue does + the project-docs ref / sibling file:line grounding its design>
+    disposition: grounded | implied   # optional, default/omitted = grounded; `implied` (architect
+                                       #   clause 8) marks a conventional companion surface proposed
+                                       #   for review — "implied — review / trim / augment"
   - … (one per candidate)
 EDGES:
   - "#B depends_on #A — <reason / the exact artifact reference>"
@@ -449,6 +540,8 @@ SCOPE_SPANS_MULTIPLE_MILESTONES:
 ```
 
 `EDGES` is the literal `[]` when no candidate depends on another; `PRODUCT_GAPS` is the literal `none` when the brief is fully resolvable. **Merge** any architect `PRODUCT_GAPS` into `productGaps[]` — they join the gaps found at Step 2 — capturing each gap's `blocks:` tags alongside its `gap` / `why_blocked` / `brief_ref` (a `blocks:` list naming specific candidate tags drives the Step 3.5 early park; `[]` marks a gap not tied to specific named candidates — a broad product decision that names no candidates to pre-park). Step 2 gaps carry no `blocks:` list — they name no specific candidates by construction.
+
+**Capture each candidate's optional `disposition`** (`grounded` | `implied`) verbatim alongside its `tag` / `title` / `surface` / `risk` / `sketch` — **default/omitted = `grounded`** (`agents/architect.md` → the optional `disposition` field). It is **additive**: a candidate the architect did not mark `implied` carries no `disposition` and is recorded exactly as today. `plan` threads this field into the Step-4 issue-author brief and renders `implied` candidates distinctly at Step 7 (below); it invents no disposition and overrides none.
 
 **Capture `SCOPE_SPANS_MULTIPLE_MILESTONES`** exactly parallel to how `PRODUCT_GAPS` is consumed: record it **verbatim** when raised (the list of `{ milestone, tags }` — the architect's proposed split); the literal `none` when absent. `plan` does **NOT** re-partition — it carries the architect's proposed split verbatim (the architect owns the structural read; `plan` only surfaces it). **Non-blocking invariant (scoped to the front-door's path).** This signal NEVER **aborts** the run and is NEVER silently dropped. On the **`none` path** — and on the **oversized-but-degraded** path where the front-door's route falls back (Step 3.6) — it does not gate: `plan` produces today's deployable **single-milestone** plan, unchanged, and never alters `CANDIDATES` / `EDGES` / `WAVES` / the surviving issue set / Wave order / milestone identity. On the **oversized** path, the front-door (Step 3.6) **routes** the brief into `build-roadmap` *before* the Step 4 fan-out — itself a non-blocking, surface-for-confirm checkpoint that **supersedes** the single-milestone pipeline for this brief (a decline or failure degrades back to it); it never hard-blocks. **Edge:** because the signal is sourced from the architect's structural read of `CANDIDATES` (not the surviving issue set), it is carried verbatim and surfaced **even if every candidate is later parked/dropped at Step 6** — it is independent of which issues survive. Grounding: `docs/specs/v0.3.1-driver-handoff.md` §5 (detection + advisory, non-blocking) and §6 (the additive Multi-milestone advisory plan-file field).
 
@@ -589,7 +682,7 @@ For **EACH** candidate returned at Step 3 **that was not pre-parked (or dropped)
 
 **Brief each with** (matches `agents/issue-author.md` → "What you receive"):
 
-- The **candidate** — its tag, title, surface/risk hint, and sketch (from Step 3).
+- The **candidate** — its tag, title, surface/risk hint, sketch, **and the architect's optional `disposition: grounded | implied`** (from Step 3). Enumerate `disposition` alongside the other fields so the issue-author **receives it at runtime** — the field `agents/issue-author.md` → "What you receive" consumes (made aware by #182). **Default/omitted = `grounded`**: a candidate the architect did not mark `implied` carries **no** `disposition` field in the brief, byte-for-byte as today. This thread is **load-bearing** — it closes the architect→plan→issue-author chain (#179 emits the field on `CANDIDATES`, #182 reads it on the author side); without handing it in here the author never receives it and the implied-surfaces feature stays inert.
 - The **brief** (the grounding source carrying *what to build*, in product terms) **and the resolved grounding digest** from Step 0 — the `.project/<doc>.md#<section>` slices assembled there — as the author's project-docs grounding. The digest is what is handed in; an **empty digest** (no `.project/`, or all sections absent / `[TBD]`) is passed through unchanged and is **not an error** (degrade exactly as Step 0 does — "a missing project-docs directory is not an error"). The digest **supplements, never replaces** the author's on-demand Read/grep citation-verification path: the author still greps the live repo to verify any citation before recording it per its rigor gate (`agents/issue-author.md` Rigor gate — "grep before you cite"), and may grep for anything not in the digest — the digest is not an allowlist. (The digest's slice shape and absent-/`[TBD]`-skip rule are defined in Step 0; not restated here.)
 - The **resolved shared keys** — `sourceGlobs`, `uiSurfaceGlobs`, `integrationBranch`.
 - The **edges naming this candidate** — the architect edges that touch this tag, to record verbatim (the author transcribes; it does not invent edges or reorder Waves).
@@ -788,7 +881,7 @@ if (-not (Test-Path .milestone-feeder/.gitignore)) { Set-Content -LiteralPath .m
 | **Multi-milestone advisory** | **ADDITIVE and OPTIONAL** — present **ONLY** on the **retained** path: the architect raised `SCOPE_SPANS_MULTIPLE_MILESTONES` (Step 3) **AND** the front-door (Step 3.6) did **NOT** route this brief into `build-roadmap` (`roadmapRouteTaken` false — the signal was raised but the route degraded, was declined, or resolved to a single milestone). On that path it carries the flag + the proposed split (milestone names + their candidate tags) **VERBATIM** from the architect — `plan` does not re-partition. **OMITTED entirely** when the signal is `none` (single-milestone plan byte-for-byte unchanged) **OR** when the front-door **took the route** (`roadmapRouteTaken` true — the confirmed roadmap was surfaced in its place, so this passive advisory is **SUPERSEDED**; on the route path the single-milestone Steps 4–7 do not run for the whole brief anyway). **Non-blocking** — it does not change what gets deployed; the plan stays a deployable single-milestone plan. Sourced from the architect's structural read of `CANDIDATES`, so on the retained path it is written even if every candidate is parked/dropped (Step 6). Grounding: `docs/specs/v0.3.1-driver-handoff.md` §6 (the additive plan-file field) and §5. |
 | **One-line goal** | The milestone goal in one line — the header. |
 | **Milestone description (Wave order)** | The Step 5 build-order / Wave description, verbatim, with local slugs (`#A`/`#B`). This is what `create` PATCHes onto the milestone after issue numbers exist. |
-| **Per surviving issue** | For each surviving (gate-clean / Advisory-only) issue: its slug, title, the FULL §4 `ISSUE_BODY` verbatim, its labels, and its surface/risk. `create` reads these — no regeneration. |
+| **Per surviving issue** | For each surviving (gate-clean / Advisory-only) issue: its slug, title, the FULL §4 `ISSUE_BODY` verbatim, its labels, and its surface/risk. `create` reads these — no regeneration. An `implied` candidate (architect `disposition: implied`) additionally carries the `[implied — review / trim / augment]` marker on its issue heading (the `## Issues` template below); a grounded candidate renders without it. |
 | **Parked issues** | Each parked issue: slug, title, and kind (`product-gap` \| `needs-human-direction`). Marked, never created. |
 | **Dropped issues** | Each dropped issue: slug, title, and the parked dependency that dropped it. Marked, never created. |
 | **Self-check verdict line** | The Step 6 outcome (PASS / INTERNAL / PARKED / SKIPPED(reviewer:false)). `create` trusts it; no re-vet. |
@@ -798,6 +891,8 @@ if (-not (Test-Path .milestone-feeder/.gitignore)) { Set-Content -LiteralPath .m
 **Surface the resolved identity for confirm/override.** Both the resolved `Milestone title (exact)` (carrying the semver per the Step 5.1 ladder) **and** its `Version provenance` line are written to the plan file and **surfaced for the user to confirm or override BEFORE running `create`** — `plan` never silently finalizes a milestone identity the user cannot see or change (`docs/specs/v0.3.1-driver-handoff.md` §2, §3, §6). On an infer rung the title carries the **reference version verbatim**, and this surfaced line is **where the user adjusts the patch / minor / major bump** before `create` deploys it.
 
 **Surface the multi-milestone advisory — ONLY on the retained path — alongside the same identity moment.** When the architect raised `SCOPE_SPANS_MULTIPLE_MILESTONES` (Step 3) **and the front-door (Step 3.6) did NOT take the roadmap route** (`roadmapRouteTaken` false — retained path), surface its advisory **prominently UP FRONT, at the same confirm/override moment** the user already sees the milestone identity above (NOT a separate prompt, NOT a hard block): a clear *"this looks like ~N milestones — deploy the one big milestone, or split the brief and re-run"* message plus the proposed split (the milestone names + their candidate tags, verbatim from the architect). It is **advisory only** — the user decides; `plan` still produced a deployable single-milestone plan and changes nothing about what `create` deploys. Surface it **ONLY on the retained path**; when the signal is `none`, surface **nothing** — no advisory line, no message — and the surfaced moment is exactly as before. When the front-door **took the route** (`roadmapRouteTaken` true), the confirmed roadmap was already surfaced by `build-roadmap` (Step 3.6), so this passive advisory is **superseded** — surface nothing here (`docs/specs/v0.3.1-driver-handoff.md` §5).
+
+**Surface the implied-surfaces review prompt — ONLY when the plan carries one or more implied candidates — alongside the same identity moment.** When one or more surviving candidates carry the architect's `disposition: implied` (conventional companion surfaces proposed for review — `agents/architect.md` clause 8, the optional `disposition` field), fire the structural **anti-fixation prompt** at the **same confirm/override moment** the user already sees the milestone identity above (NOT a separate prompt, NOT a hard block), with the **verbatim** string `this is a starting set for YOUR app — what's missing?` (the reasoning prompt from `docs/implied-surfaces.md`). It is **advisory and non-blocking** — it never gates the run; the user **reviews / trims / augments** the implied candidates before running `create` (the plan stays fully deployable as-is). The plan also renders each implied candidate **distinctly** in `## Issues` below — carrying the `[implied — review / trim / augment]` marker on its heading. **When NO candidate is implied, surface NOTHING here — no anti-fixation prompt, no marker — byte-for-byte as today.** Grounding: `docs/implied-surfaces.md` (the reasoning-prompt floor); `agents/architect.md` clause 8 (the `implied` disposition).
 
 **Preserve an existing deploy receipt on re-plan.** The plan file may already carry a `Milestone number (GitHub): <n>` line — the **deploy receipt** `create` writes back post-deploy (the create-side write block at `skills/create/SKILL.md` Step 3 pass (b) — "Write the deploy receipt"; the exact field shape at `skills/create/SKILL.md` Step 3 pass (b) — the `Milestone number (GitHub):` field shape). It is the stable handle `update` resolves by, so a re-plan must NOT drop it: **before overwriting** `.milestone-feeder/plan-<slug>.md`, **read the PRIOR file at that same path** (if one exists) and **carry its receipt line forward, verbatim**, into the freshly-written plan file — as a sibling header line in the same position `create` writes it (after `Source brief:`). The receipt is **additive and READ-ONLY here**: `plan` never resolves a number or writes one (it has no milestone number — it writes only local slugs); it merely **preserves** the line `create` already recorded. **No prior file, OR a prior file with no receipt line → OMIT it, NO error** — a plan with no receipt is valid and deployable (`docs/specs/v0.3.1-driver-handoff.md` §6: *"A v0.3.0 plan file lacking them still parses (the consumers degrade gracefully)"*; the additive-fields row: *"`plan` preserves it on re-plan"*). Read the prior receipt line before the overwrite:
 
@@ -856,6 +951,9 @@ Milestone number (GitHub): <n>   # OPTIONAL sibling header line — carried forw
 ### #A — <title>   [<ui|logic>, <risk:*>]   [self-check: PASS]
 <the full §4 ISSUE_BODY for #A>
 
+### #F — <title>   [<ui|logic>, <risk:*>]   [self-check: PASS]   [implied — review / trim / augment]
+<the full §4 ISSUE_BODY for #F — a `disposition: implied` candidate (architect clause 8) renders DISTINCTLY, carrying the `[implied — review / trim / augment]` marker (the verbatim words `implied — review / trim / augment` inside the brackets) alongside the [ui|logic, risk:*] / self-check tags; a grounded candidate (#A above) omits the marker and renders exactly as today>
+
 ### #B — <title>   [parked — needs product input]
 <marker only; no fabricated body — see the needs-product-input report>
 
@@ -865,7 +963,7 @@ Milestone number (GitHub): <n>   # OPTIONAL sibling header line — carried forw
 ### #D — <title>   [dropped — depends on parked #B]
 <marker only; a dependent of a parked issue cannot build, so it is not carried (Step 6 §6.6)>
 
-### … (one block per surviving candidate, in Wave order; only PASS / Advisory-only issues carry a full body)
+### … (one block per surviving candidate, in Wave order; only PASS / Advisory-only issues carry a full body; a `disposition: implied` candidate additionally carries the `[implied — review / trim / augment]` marker on its heading, as #F above)
 
 ## Multi-milestone advisory   <!-- OPTIONAL section — written ONLY on the retained path: the architect raised SCOPE_SPANS_MULTIPLE_MILESTONES (Step 3) AND the front-door did NOT route into build-roadmap (Step 3.6, roadmapRouteTaken false). OMITTED ENTIRELY when the signal is `none` (file byte-for-byte the pre-#61 shape) OR when the front-door took the route (roadmapRouteTaken true — superseded by the confirmed roadmap). Advisory only — does not change what gets deployed; the plan stays a deployable single-milestone plan. -->
 🔴 This brief looks like ~<N> milestones. Deploy the one big milestone below, or split the brief and re-run. Proposed split (carried verbatim from the architect):
