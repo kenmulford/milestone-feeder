@@ -204,9 +204,9 @@ by exact title, the rest deployed).
 deploy loop (single-plan Step 3 / roadmap Step 1R) and before the optional Step-4
 handoff, `create` reads **every** deployed milestone + issue back from live GitHub
 and dispatches `brief-coverage-verifier` once against the **original** brief
-(resolved in-session, else from the persisted `## Original brief` copy — the roadmap
-manifest on a roadmap run, the plan file otherwise; else a non-blocking "original
-brief unavailable" notice, never a fabricated brief). It surfaces a coverage
+(resolved in-session, else from the persisted `## Original brief` … `## End original
+brief` copy — the roadmap manifest on a roadmap run, the plan file otherwise; else a
+non-blocking "original brief unavailable" notice, never a fabricated brief). It surfaces a coverage
 punch-list — uncovered / duplicated / distorted brief parts, plus any read-errors —
 routed exactly like the needs-input report. It is **always-on** (every `create`,
 single-milestone included) and **best-effort / non-blocking**: it never blocks

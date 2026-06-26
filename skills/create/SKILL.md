@@ -55,7 +55,7 @@ Before resolving a plan file, check whether `plan`'s roadmap flow left a **roadm
 | **iii. Deploy it** | **Step 3 passes a–e**, entirely unchanged — ensure labels (a) / create-or-adopt the milestone by exact title (b) / create-or-reuse each surviving issue by exact title (c) / slug→`#n` rewrite + Wave-description PATCH (d) / route the needs-input report (e). Per-milestone idempotency is the existing **create-or-adopt**, inherited per iteration: never delete a milestone or issue, never duplicate a same-title open issue. |
 | **iv. Record the build-order line** | When pass (d) PATCHes this milestone's description, include the canonical `build order: milestone X of N` line in the PATCHed description, alongside the `## Waves` block (see "The build-order line" below). |
 
-After the loop deploys all N, report each milestone's deploy receipt (`#`) and the recorded build order, then continue to **Step 3V** (verify the deploy covers the whole-app brief — reading the manifest's `## Original brief`) and **Step 4** (its multi-milestone note).
+After the loop deploys all N, report each milestone's deploy receipt (`#`) and the recorded build order, then continue to **Step 3V** (verify the deploy covers the whole-app brief — reading between the manifest's paired `## Original brief` … `## End original brief` markers) and **Step 4** (its multi-milestone note).
 
 **The build-order line (the cross-milestone metadata).** Pin **one** canonical literal — `build order: milestone X of N` — where **X** is this milestone's `Build-order position` (1..N) and **N** is the manifest's milestone count. It extends the Wave-order-in-description convention (`SPEC.md` §4): the description already encodes the *intra*-milestone Wave order (`## Waves`); this single line encodes the *cross*-milestone position the driver reads to build the roadmap in sequence. Place it as a standalone line directly under the one-paragraph milestone goal and above the `## Waves` block, so milestone X's PATCHed description reads:
 
@@ -317,8 +317,55 @@ After the deploy loop completes — **single-plan path:** Step 3 passes a–e; *
 | Rung | Source |
 |---|---|
 | **1. In-session** | The original brief `create` already holds — the `create` argument (resolved to text if it is a `file:<path>` / `epic #<n>` reference `create` can still read). |
-| **2. Persisted durable copy** | The `## Original brief` section of the persisted artifact: the **roadmap manifest** (`.milestone-feeder/roadmap-<slug>.md`, `skills/build-roadmap/SKILL.md` "Manifest format") on a **roadmap run**; the **plan file** (`.milestone-feeder/plan-<slug>.md` — the `## Original brief` section `plan` persists, `skills/plan/SKILL.md` Step 7) on a **single-milestone run**. |
+| **2. Persisted durable copy** | The `## Original brief` … `## End original brief` delimited section of the persisted artifact: the **roadmap manifest** (`.milestone-feeder/roadmap-<slug>.md`, `skills/build-roadmap/SKILL.md` "Manifest format") on a **roadmap run**; the **plan file** (`.milestone-feeder/plan-<slug>.md` — the `## Original brief` section `plan` persists, `skills/plan/SKILL.md` Step 7) on a **single-milestone run**. Extract the lines **strictly between** the paired markers (the extractor below) so a brief containing its own `## ` headings is read intact, not truncated at its first internal `## `. |
 | **3. Fallback** | Neither resolved (e.g. a `file:<path>` brief that no longer resolves and no persisted copy exists) → emit the non-blocking notice `original brief unavailable — coverage not verified`, **never fabricate a brief**, and let `create` complete. |
+
+**Extract the rung-2 copy between the paired delimiters.** The persisted `## Original brief` section is bounded by a paired end-marker: both producers emit a literal `## End original brief` line immediately after the brief text (`skills/build-roadmap/SKILL.md` "Manifest format"; `skills/plan/SKILL.md` Step 7). Capture the lines **strictly between** `## Original brief` and the first following `## End original brief` — both delimiter lines excluded — so a brief that contains its own `## ` headings is read **intact**, never truncated at its first internal `## `. **Graceful fallback:** if the opening `## Original brief` is present but no closing `## End original brief` exists (e.g. an older scratch artifact written before the paired-delimiter convention), degrade to the prior naive behavior — read from `## Original brief` to the next top-level `## ` heading or EOF — yielding a usable, non-empty result rather than nothing. (This prior read may truncate a brief that has its own internal `## ` headings — the very reason the paired delimiter is preferred — but it never returns empty for a non-empty brief.) Step 3V already degrades gracefully on an absent copy, so it degrades gracefully on a delimiter-less one too. Extract with the artifact path in `$art` (both shells):
+
+```bash
+# bash — resolve the persisted original brief from the artifact at "$art".
+art=".milestone-feeder/<roadmap|plan>-<slug>.md"
+if grep -qxF '## End original brief' "$art"; then
+  # Primary: the lines STRICTLY BETWEEN `## Original brief` and the first following
+  # `## End original brief` (both delimiter lines excluded) — robust to a brief that
+  # contains its OWN `## ` headings; it is NOT truncated at the first internal `## `.
+  brief="$(awk '
+    $0 == "## End original brief" { inblk=0 }
+    inblk                         { print }
+    $0 == "## Original brief"     { inblk=1 }
+  ' "$art")"
+else
+  # Graceful fallback (no closing delimiter): read from `## Original brief` to the next
+  # top-level `## ` heading or EOF — the prior behavior. A usable result, never empty.
+  brief="$(awk '
+    inblk && /^## /           { inblk=0 }
+    inblk                     { print }
+    $0 == "## Original brief" { inblk=1 }
+  ' "$art")"
+fi
+```
+
+```powershell
+# PowerShell 7+ — same resolution from the artifact at $art.
+$art = ".milestone-feeder/<roadmap|plan>-<slug>.md"
+$lines = @(Get-Content -LiteralPath $art -ErrorAction SilentlyContinue)
+$start = [array]::IndexOf($lines, '## Original brief')
+$brief = ''
+if ($start -ge 0) {
+  $end = [array]::IndexOf($lines, '## End original brief', $start + 1)
+  if ($end -ge 0) {
+    # Primary: the lines STRICTLY BETWEEN the paired markers (both excluded) —
+    # robust to a brief containing its own `## ` headings.
+    if ($end -gt $start + 1) { $brief = ($lines[($start + 1)..($end - 1)] -join "`n") }
+  } else {
+    # Graceful fallback (no closing delimiter): to the next top-level `## ` heading or
+    # EOF — the prior behavior. A usable result, never empty.
+    for ($k = $start + 1; $k -lt $lines.Count -and $lines[$k] -notmatch '^## '; $k++) {
+      $brief += $lines[$k] + "`n"
+    }
+  }
+}
+```
 
 **2. Read back every deployed target — the #158→#156 input contract (`create` does the reads, #156 does none).** `create` performs the live-GitHub read-back of **every** deployed target via the **same cross-platform `gh` surface it already uses** (the milestone read of Step 3 pass b; the issue handles from pass c/d) — for **each** created milestone its title + description, and for **each** created issue its title + body. The milestone number(s) and issue numbers are already in hand from the deploy (pass b's resolved `.number`, pass c/d's slug→`#n` map; on a roadmap run, each milestone's own deploy). For **each** target record a per-target **STATUS** — the content, **or** a `read-error: <reason>` marker if its read fails — so #156 populates `READ_ERRORS` **purely from these markers** and runs **no** `gh` read of its own (`agents/brief-coverage-verifier.md` — it runs NO `gh` reads, taking provided read-back content; `.project/design-philosophy.md#Layering & boundaries` — skills do the GitHub ops, the read-only agent audits provided text). Read each target (both shells; on a non-zero `gh` exit, record the marker instead of content):
 
@@ -413,5 +460,5 @@ Be concise — report status and outcomes flatly, no wall-of-text. Present steps
 - **Authors no code, opens no PRs, never touches branches.** Creating issues / a milestone / labels / one epic comment is NOT code, a PR, or a branch. The feeder reads code to ground decisions; it never edits a source file, creates a branch, or opens a PR. The GitHub writes are performed by the skill itself via `gh`, not by any dispatched agent.
 - **Every dispatched agent stays read-only — only on the run-`plan`-first fallback.** On the found path `create` dispatches no agent at all (it deploys the recorded plan). On the absent path it runs `plan`, whose architect / issue-author / reviewer dispatches are all read-only against provided text (`skills/plan/SKILL.md` Non-negotiables). The agent-read-only invariant holds on both paths.
 - **The driver handoff is build-kickoff only, gated three ways, and never crosses the release boundary (Step 4).** `create` offers the handoff **only** on a clean run (the `## Needs human input` pointer is "none" **AND** the self-check actually ran — a `SKIPPED(reviewer:false)` verdict is a Gate 1 fail, since its issues were never vetted) **and** only when `/milestone-driver:solve-milestone` resolves in this session (absent → silently skip, no prompt, no error). It invokes `/milestone-driver:solve-milestone "<exact milestone title>"` — which merges only to the integration branch; `develop → main` stays a manual human call. The handoff **never** auto-merges to a protected branch and never removes the release gate. `autoHandoff` (default `"prompt"`) governs prompt / auto / off; an unrecognized value is treated as the default `"prompt"`.
-- **`create` closes by verifying the deploy covers the original brief (Step 3V) — always-on, non-blocking, never auto-fixing.** After the deploy loop (single-plan Step 3 / roadmap Step 1R) and before the optional Step-4 handoff, `create` reads back every deployed milestone + issue via `gh` (bash + PowerShell 7+ twins), dispatches the brief-coverage verifier (#156, `milestone-feeder:brief-coverage-verifier`) against the **original** brief — resolved in-session, else from the persisted `## Original brief` copy (the roadmap manifest on a roadmap run, the plan file on a single-milestone run), else a non-blocking `original brief unavailable` notice (**never a fabricated brief**) — passing each target's content-or-`read-error` marker so #156 runs no `gh` read of its own. It routes the returned punch-list exactly like the needs-input report (epic → comment; file/inline → local git-invisible file + notice; empty → "nothing missed", route nothing). It is **best-effort**: it never blocks `create`'s completion, the Step-4 handoff, or any merge, never auto-fixes / edits / reopens / comments-to-fix any deployed issue or milestone, and skips with a non-blocking notice when nothing was deployed to read back or #156 is not installed.
+- **`create` closes by verifying the deploy covers the original brief (Step 3V) — always-on, non-blocking, never auto-fixing.** After the deploy loop (single-plan Step 3 / roadmap Step 1R) and before the optional Step-4 handoff, `create` reads back every deployed milestone + issue via `gh` (bash + PowerShell 7+ twins), dispatches the brief-coverage verifier (#156, `milestone-feeder:brief-coverage-verifier`) against the **original** brief — resolved in-session, else from the persisted copy bounded by the paired `## Original brief` … `## End original brief` markers (the roadmap manifest on a roadmap run, the plan file on a single-milestone run), which Step 3V reads **strictly between** the markers (graceful fallback to the next `## ` heading when no closing delimiter is present) so a brief carrying its own `## ` headings is read intact, else a non-blocking `original brief unavailable` notice (**never a fabricated brief**) — passing each target's content-or-`read-error` marker so #156 runs no `gh` read of its own. It routes the returned punch-list exactly like the needs-input report (epic → comment; file/inline → local git-invisible file + notice; empty → "nothing missed", route nothing). It is **best-effort**: it never blocks `create`'s completion, the Step-4 handoff, or any merge, never auto-fixes / edits / reopens / comments-to-fix any deployed issue or milestone, and skips with a non-blocking notice when nothing was deployed to read back or #156 is not installed.
 - **A roadmap of N milestones deploys by LOOPING the unchanged per-plan deploy (Step 1R).** When `plan`'s roadmap flow left a roadmap manifest for this brief (`.milestone-feeder/roadmap-<slug>.md`), `create` deploys all N milestones in build order by running **Step 3 passes a–e unchanged** per milestone and recording each one's cross-milestone position as a single canonical `build order: milestone X of N` line in its description (idempotent — pass (d)'s REPLACE-form PATCH overwrites it, so the count never grows). The single-plan path is the **N=1** case and is byte-for-byte unchanged. Create-or-adopt is inherited per iteration: a mid-loop failure **stops and reports**, deletes nothing, and a re-run resumes (already-deployed milestones adopted by exact title, the rest deployed).
