@@ -19,7 +19,7 @@ Say this to the user before doing any work:
 
 ### Step 0 — Receive the inputs from `plan` (no re-resolution)
 
-`plan` hands this skill everything it needs — already resolved once at `plan`'s own Step 0. **This skill re-reads no config and re-resolves nothing** (the resolve-once boundary; `skills/plan/SKILL.md:22`). It receives:
+`plan` hands this skill everything it needs — already resolved once at `plan`'s own Step 0. **This skill re-reads no config and re-resolves nothing** (the resolve-once boundary; `skills/plan/SKILL.md` Step 0 — the once-per-run OUTER boundary). It receives:
 
 | Input | What it is |
 |---|---|
@@ -30,7 +30,7 @@ Say this to the user before doing any work:
 
 ### Step 1 — Dispatch the roadmap-splitter (exactly once)
 
-Dispatch `milestone-feeder:roadmap-splitter` (#151) **exactly once** — it does not itself fan out per-milestone planning (`.project/design-philosophy.md#Layering & boundaries`; the once-per-run dispatch discipline `plan` applies to the architect, `skills/plan/SKILL.md:331`).
+Dispatch `milestone-feeder:roadmap-splitter` (#151) **exactly once** — it does not itself fan out per-milestone planning (`.project/design-philosophy.md#Layering & boundaries`; the once-per-run dispatch discipline `plan` applies to the architect, `skills/plan/SKILL.md` Step 3 — "Dispatch the architect (once)").
 
 **Brief it with** (matches `agents/roadmap-splitter.md` → "What you receive"):
 
@@ -67,7 +67,7 @@ A partition check that the splitter's own contract guarantees is **re-verified h
 
 ### Step 3 — Surface the proposed roadmap for confirm / merge / split / reorder / reject
 
-**Surface the proposed roadmap for the user to confirm BEFORE writing anything** — mirror `plan`'s surface-for-confirm (`skills/plan/SKILL.md:608`, `:610`; `.project/design-philosophy.md#One-way doors` — a one-way door is surfaced for sign-off, never silently finalized). Present the proposal as a table, one row per milestone:
+**Surface the proposed roadmap for the user to confirm BEFORE writing anything** — mirror `plan`'s surface-for-confirm (`skills/plan/SKILL.md` Step 7 — "Surface the resolved identity for confirm/override"; `.project/design-philosophy.md#One-way doors` — a one-way door is surfaced for sign-off, never silently finalized). Present the proposal as a table, one row per milestone:
 
 | # | Milestone | Brief slice | Build-order position | Change-rationale |
 |---|---|---|---|---|
@@ -85,7 +85,7 @@ The user may:
 
 ### Step 4 — Write the roadmap manifest (on confirmation) and return control
 
-**Make the scratch git-invisible from the first write (zero user setup).** `.milestone-feeder/` is pure per-run scratch with no tracked config of its own. **Before writing any file under `.milestone-feeder/`, FIRST ensure the directory self-ignores:** create `.milestone-feeder/` if absent, and ensure `.milestone-feeder/.gitignore` exists containing a single `*` line — which makes the whole folder (and the `.gitignore` itself) invisible to `git status` in **any** consumer repo, without touching the consumer's root `.gitignore` (`.project/environment.md#Data stores` — scratch under `.milestone-feeder/`, gitignored via a `*` drop on first write). This is the same first-write self-ignore `plan` uses (`skills/plan/SKILL.md:579-591`):
+**Make the scratch git-invisible from the first write (zero user setup).** `.milestone-feeder/` is pure per-run scratch with no tracked config of its own. **Before writing any file under `.milestone-feeder/`, FIRST ensure the directory self-ignores:** create `.milestone-feeder/` if absent, and ensure `.milestone-feeder/.gitignore` exists containing a single `*` line — which makes the whole folder (and the `.gitignore` itself) invisible to `git status` in **any** consumer repo, without touching the consumer's root `.gitignore` (`.project/environment.md#Data stores` — scratch under `.milestone-feeder/`, gitignored via a `*` drop on first write). This is the same first-write self-ignore `plan` uses (`skills/plan/SKILL.md` Step 7 — "Make the scratch git-invisible from the first write"):
 
 ```bash
 # bash — ensure the scratch dir self-ignores BEFORE the first write under it.
