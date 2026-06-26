@@ -19,8 +19,5 @@
     "triage",
     "automation",
     "subagent"
-  ],
-  "dependencies": [
-    { "name": "superpowers", "marketplace": "claude-plugins-official" }
   ]
 }

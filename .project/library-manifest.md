@@ -9,7 +9,7 @@ headings stable — they are citation anchors.
 
 ## Runtime & frameworks
 The platform/runtime and primary frameworks, with versions. (Mirror these into milestone-driver `nonNegotiables` where they're hard constraints.)
-Claude Code plugin: markdown **skills** (frontmatter triggers) + markdown **agents** + **hooks** shipped as cross-platform **bash (`jq`) and PowerShell 7+** twins, BOM-free, LF line endings. No compiled runtime. Hard dependency: the `superpowers` plugin (declared in `.claude-plugin/plugin.json`). The plugin version is pinned in `.claude-plugin/plugin.json` (`version: 0.4.6`). Mirror into `milestone-driver` `nonNegotiables` — already present: "Claude Code plugin: markdown skills + bash-first/pwsh-fallback hooks"; "Cross-platform: bash (jq) and PowerShell 7+". (Grounded in `.claude-plugin/plugin.json`; `.milestone-config/driver.json` nonNegotiables; `.gitattributes`; stack detection.)
+Claude Code plugin: markdown **skills** (frontmatter triggers) + markdown **agents** + **hooks** shipped as cross-platform **bash (`jq`) and PowerShell 7+** twins, BOM-free, LF line endings. No compiled runtime. Hard dependency: the `superpowers` plugin — now a required prerequisite the user installs themselves (no longer auto-declared in `.claude-plugin/plugin.json`; see `README.md`). The plugin version is pinned in `.claude-plugin/plugin.json` (`version: 0.4.6`). Mirror into `milestone-driver` `nonNegotiables` — already present: "Claude Code plugin: markdown skills + bash-first/pwsh-fallback hooks"; "Cross-platform: bash (jq) and PowerShell 7+". (Grounded in `.claude-plugin/plugin.json`; `.milestone-config/driver.json` nonNegotiables; `.gitattributes`; stack detection.)
 
 ## Approved libraries (by purpose)
 One approved choice per purpose, so a redundant alternative is easy to spot.
@@ -20,7 +20,7 @@ One approved choice per purpose, so a redundant alternative is easy to spot.
 | JSON parsing in hooks | `jq` (bash path) | The bash hook form; the PowerShell 7+ twin uses native `ConvertFrom-Json`. |
 | Cross-platform shell | bash + PowerShell 7+ | Every hook/script ships as a twin (`.sh` + `.ps1`) via the `run-hook.cmd` polyglot launcher. |
 | Reviewer backend (optional) | `milestone-driver` plugin | Backs `reviewer: "milestone-driver"`; absent → degrades to `"internal"`. |
-| Plan pipeline dependency | `superpowers` plugin | Hard dependency declared in the manifest. |
+| Plan pipeline dependency | `superpowers` plugin | Hard dependency — a required prerequisite the user installs themselves (no longer manifest-declared; see `README.md`). |
 
 ## Adding a dependency (the gate)
 A new dependency is a PAUSE, not an autonomous call. Record what it buys, its license / OSS status, and why nothing approved suffices; a human approves before it's added.
