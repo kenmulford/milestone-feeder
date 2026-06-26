@@ -337,6 +337,40 @@ for _label, hook_path in hook_scripts.items():
                            f"actor-gate drift-guard comment has drifted from the "
                            f"real agent set; add it to keep the safety gate correct")
 
+# --- 5: cross-file SKILL.md line-citation guard -----------------------------
+#
+# Why this exists: the skills cross-reference one another to ground their design
+# decisions. When one skill cites another by ABSOLUTE LINE NUMBER (e.g.
+# `skills/plan/SKILL.md:579-591`), any later insertion into the cited file shifts
+# every line below it and SILENTLY invalidates the citation — it now points at
+# unrelated text, with nothing to flag the drift (issue #154 alone drifted ~10
+# such refs by ~67 lines). A STABLE NAMED ANCHOR — naming the cited target by its
+# Step / section / § heading instead of a line number — does not drift on insert,
+# because the heading text moves together with the content it labels.
+#
+# This guard scans every skills/**/SKILL.md for a `…SKILL.md:NNN` (or `:NNN-MMM`)
+# reference and flags it WHEN the cited path is a DIFFERENT file than the one the
+# citation lives in — a cross-file line citation, the drift-prone kind. This
+# covers in-repo cross-file refs AND cross-repo `<plugin>/skills/.../SKILL.md:NNN`
+# refs (no exemptions). A SELF-REF — the cited path IS the containing file (e.g.
+# `skills/plan/SKILL.md:336` written inside skills/plan/SKILL.md) — is ALLOWED:
+# an intra-file line number is the author's own to keep current and is out of this
+# guard's scope. The fix for a flagged citation is always the same: replace the
+# `:NNN` with the target's stable heading name. stdlib `re` only; scoped to
+# skills/**/SKILL.md (docs / SPEC prose is intentionally NOT scanned).
+
+CROSS_FILE_LINE_CITATION_RE = re.compile(r"([A-Za-z0-9_./-]*SKILL\.md):\d+(?:-\d+)?")
+
+for skill_md in sorted((REPO_ROOT / "skills").rglob("SKILL.md")):
+    text = skill_md.read_text(encoding="utf-8-sig")
+    for m in CROSS_FILE_LINE_CITATION_RE.finditer(text):
+        cited_path = (REPO_ROOT / m.group(1)).resolve()
+        if cited_path != skill_md.resolve():
+            err(skill_md, f"cross-file line citation '{m.group(0)}' — line numbers "
+                          f"drift when the cited file changes, silently invalidating "
+                          f"the reference; cite the target by its stable heading "
+                          f"(its Step / section / § name) instead of a line number")
+
 # --- report -----------------------------------------------------------------
 
 for w in warnings:
