@@ -49,6 +49,7 @@ tests/
     06-cross-cutting-consistency/ { ... }
     10-nested-layout/             { brief.md, project/, feeder-env.md, expected.md }
     11-roadmap-fan-out/           { brief.md, project/, feeder-env.md, expected.md }
+    12-implied-surfaces/          { brief.md, project/, feeder-env.md, expected.md }
   RESULTS.md                      # scorecard + claim→evidence map (the metric)
 ```
 
@@ -77,6 +78,7 @@ loaded as plugin skills.
 | 09 | slug→#n at scale | >26 candidates | substring-safe slug rewrite (`#A` not corrupting `#AB`) | sandbox follow-up |
 | 10 | nested layout | a nested monorepo (`siteroot/{web,api}`) where source lives only under app roots, never the repo root | bootstrapper-v0.2.0-baked nested `sourceGlobs` route issue file scope into the nested app roots, never the repo root | ✅ |
 | 11 | roadmap fan-out | an oversized whole-app brief (auth, data model, invoicing, billing, screens) that spans several milestones, seeded from its own author sections | a whole-app brief routes into `build-roadmap`: **split → confirm → parallel-plan** emits the roadmap manifest + N per-milestone plan files; the **create deploy-loop + brief-coverage verification** deploy and audit them back; single-milestone collapse falls back cleanly; an undecided product call parks one issue and siblings continue | plan-side ✅ now / create-loop + verification sandbox follow-up |
+| 12 | implied surfaces | a terse brief names a capability (admins emailing members) but never spells out its companion surfaces; one companion (suppression/unsubscribe) is a genuine product-call with no conventional default | the architect consults the implied-surfaces reference, fans the conventional companions (delivery-failure log + retry + audit) out as **`implied`-labeled review candidates**, **parks** the genuine product-call to needs-product-input instead of inventing it, and `plan` surfaces the implied set with the verbatim anti-fixation prompt — no auto-dump, no invented scope; a control slice with no capability/entity triggers neither | ✅ |
 
 ### 06 — the flagship, in detail
 

@@ -19,13 +19,14 @@ The plan file is the **build artifact** (see [The plan file as build artifact](#
 | Plan skill | `skills/plan/SKILL.md` | Orchestrator preview: brief → a reviewable plan file. Runs Steps 0–6 (incl. the reviewer gate) and emits at Step 7 — the plan file at `.milestone-feeder/plan-<slug>.md`. **No GitHub writes.** `/milestone-feeder:plan <brief>`. |
 | Create skill | `skills/create/SKILL.md` | Deploys the approved plan: reads the plan file and performs the GitHub writes (labels, create-or-adopt milestone, issues, slug→`#n` rewrite, description PATCH). Runs `plan` first only if no plan file exists. `/milestone-feeder:create <brief>`. See [The create deploy / write order](#the-create-deploy--write-order). |
 | Build-roadmap skill | `skills/build-roadmap/SKILL.md` | **Internal** (invoked by `plan` Step 3.6 on an oversized whole-app brief, never a user command): dispatch `roadmap-splitter` once, surface the proposed split for confirm / merge / split / reorder / reject, and on confirmation write a roadmap manifest to `.milestone-feeder/roadmap-<slug>.md`. **No GitHub writes.** See [The roadmap](#the-roadmap). |
-| Architect agent | `agents/architect.md` | Architect lens: brief + standing docs + repo → candidate issue set + dependency edges + Wave order. One heavy reasoning step, dispatched once. Read-only. Raises `SCOPE_SPANS_MULTIPLE_MILESTONES` — the signal that triggers the roadmap route. |
+| Architect agent | `agents/architect.md` | Architect lens: brief + standing docs + repo → candidate issue set + dependency edges + Wave order. One heavy reasoning step, dispatched once. Read-only. Raises `SCOPE_SPANS_MULTIPLE_MILESTONES` — the signal that triggers the roadmap route. Also consults the implied-surfaces reference and labels each conventional companion surface it proposes with the `disposition: implied` field (see [Implied surfaces](#implied-surfaces)). |
 | Issue-author agent | `agents/issue-author.md` | Per-issue subagent: authors one issue's full spec to the §4 output contract so it passes the driver's triage clean. Read-only; returns issue text, never opens the issue. |
 | Roadmap-splitter agent | `agents/roadmap-splitter.md` | Roadmap lens: an oversized whole-app brief + standing docs → a strict, build-ordered partition into named milestones (the `ROADMAP` block). Dispatched once by `build-roadmap`. Read-only. Supersedes the architect's passive multi-milestone advisory with a real, ordered split. |
 | Brief-coverage-verifier agent | `agents/brief-coverage-verifier.md` | Coverage-audit lens: audits the read-back content of every created milestone + issue against the **original** brief and returns a coverage punch-list. Dispatched once by `create` Step 3V. Read-only; runs no `gh` of its own — `create` does the read-back and hands it the content. See [The create deploy / write order](#the-create-deploy--write-order). |
 | Hook: `no-source-edit` | `hooks/` (`hooks.json`, `run-hook.cmd`, `.sh`, `.ps1`) | `PreToolUse` (`Write`/`Edit`/`MultiEdit`/`NotebookEdit`): unconditionally deny edits to the feeder's own `sourceGlobs`. The only mechanical gate the feeder needs — it authors no code and opens no PRs. See [The mechanical gate](#the-mechanical-gate). |
-| Manifest + registration | `.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`, `hooks/hooks.json` | Plugin metadata (incl. the `superpowers` dependency), marketplace registration, and Claude-side hook registration. |
+| Manifest + registration | `.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`, `hooks/hooks.json` | Plugin metadata (`superpowers` is a documented prerequisite, not a manifest dependency — see `README.md`), marketplace registration, and Claude-side hook registration. |
 | Update skill | `skills/update/SKILL.md` | Plan-driven reconcile against an existing milestone: re-triage live issues through the reviewer gate, patch gapped bodies, fill missing edges, re-render the Wave order. `/milestone-feeder:update <brief>`. Creates and deletes no issues; a clean milestone is a no-op. Reuses the reviewer gate (Step 6) and `create`'s write-primitives by reference. |
+| Implied-surfaces reference | `docs/implied-surfaces.md` | The stack-agnostic implied-surfaces **reasoning reference** the architect consults during breakdown — the standard companion surfaces a capability or a new entity implies, framed as a reviewable floor (a robust start, never a scope-emitting catalog). Also **defines** the project-local overlay shape (`.milestone-config/implied-surfaces.md`, additive-merge: add / extend, never delete a global surface). PR-able; shipped so the capability set grows by community PR. |
 | Reviewer gate | (in `plan`, Step 6 §6.1–§6.6; `SPEC.md` §5) | Dispatches the driver's `triage-reviewer` / `design-reviewer` against each generated issue before any emit; it writes no GitHub state. Three backends — `"milestone-driver"`, `"internal"`, `false`. See [The reviewer gate](#the-reviewer-gate). |
 | `create` GitHub write path | (in `create`, §7-apply deploy sequence) | Ensures the labels idempotently, creates-or-adopts the milestone by title, opens each gate-surviving issue, rewrites slug→`#n` references, PATCHes the Wave-encoded milestone description, and files the needs-product-input report (epic comment for a GitHub-epic brief / local file otherwise). Idempotent re-run via adopt + match-by-title. |
 
@@ -169,6 +170,53 @@ or a brief the splitter resolves to a single milestone, falls straight back to t
 single-milestone plan. **No new config key** — the roadmap reuses the existing
 `projectDocs` grounding; a one-time per-clone notice in `plan` Step 0 announces the
 routing to existing users (`SPEC.md` §3.1, the discovery-path principle).
+
+### Implied surfaces
+
+A brief that names a capability — "add email", "user management", "sync" — or
+introduces a new entity quietly commits to a standard set of companion surfaces
+(screens, endpoints, jobs, settings) it never spells out. So during breakdown the
+architect consults the bundled **implied-surfaces reference**
+([`implied-surfaces.md`](implied-surfaces.md)) — a stack-agnostic *reasoning prompt*,
+not a checklist — and considers the companions each named capability or new entity
+implies. It then sorts each one with the **same grounded-vs-product-gap judgment it
+already applies** (`agents/architect.md` clause 8):
+
+- A **conventional companion** with a conventional default (e.g. email → a
+  delivery-failure log; a Users entity → reset-password) rides `CANDIDATES` with the
+  architect's optional `disposition: implied` field — proposed as a **default-in
+  candidate for review**, never committed scope.
+- A **genuine product-call** with no conventional default (e.g. a suppression /
+  unsubscribe policy) still **parks** via `PRODUCT_GAPS`, never silently
+  pre-included. The never-invent floor (the park boundary) holds for implied
+  surfaces too.
+
+`plan` threads the `disposition` field from the architect (Step 3) through the
+issue-author brief (Step 4) to the plan file (Step 7); a candidate the architect did
+not mark is recorded `grounded`, byte-for-byte as before. At Step 7 `plan` renders
+each `implied` candidate **distinctly** — carrying the
+`[implied — review / trim / augment]` marker on its issue heading — and, **only when
+the plan carries at least one implied candidate**, fires a structural
+**anti-fixation prompt** at the same
+confirm/override moment the user already sees the milestone identity:
+`this is a starting set for YOUR app — what's missing?`. It is advisory and
+non-blocking — the user reviews, trims, or augments the implied candidates before
+running `create`, and every proposed surface lands in a plan reviewed before any
+issue exists. When no candidate is implied, nothing here surfaces — no marker, no
+prompt — exactly as before.
+
+**The reference is a floor, not a ceiling.** It is deliberately short and
+conceptual: it ensures the architect *considers* the conventional set, and never
+guarantees completeness — the anti-fixation prompt is the built-in step that asks
+for what a curated list can't know. A project extends it with an optional
+**project-local overlay** at the fixed path `.milestone-config/implied-surfaces.md`,
+which `plan` Step 0 resolves and merges into the bundled reference **additively** —
+an overlay can add a capability and extend an existing one, but never remove a
+surface the global reference defines (per-run trimming is the plan review's job). The
+overlay is discovered by that fixed path — **no new config key**
+([`profile-schema.md`](profile-schema.md)); an absent overlay (the common case) is
+never an error. A one-time per-clone notice in `plan` / `update` Step 0 announces the
+overlay to existing users (`SPEC.md` §3.1, the discovery-path principle).
 
 ### The create deploy / write order
 

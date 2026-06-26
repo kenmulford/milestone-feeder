@@ -68,6 +68,14 @@ Present keys in these tiers: **Core → Agents → Sizing**, plus the self-prote
 |---|---|---|
 | `sourceGlobs` | "Which path patterns are 'source' that the feeder's own `no-source-edit` hook guards **in this (the feeder's own) repo**? Distinct from the consumer's shared `sourceGlobs`, which is read from the driver config — never duplicated here." | Default `["skills/**","agents/**","hooks/**"]`. Skip → the hook resolves `sourceGlobs` from the driver config, then fail-open (`SPEC.md` §7); set it here to give the hook a primary source in the feeder's own repo. |
 
+**Optional project-local overlay (informational — discovered by a fixed path, NOT a `feeder.json` key, NOT a tier above)**
+
+When `plan` breaks your brief into issues, the architect consults a bundled implied-surfaces reference — the standard companion screens, endpoints, jobs, and settings a capability name quietly implies. Your project can extend that reference with an optional overlay of its own. There is **nothing to set here**: the overlay is **not** a profile key and **not** a new tier — it is discovered by a **fixed path**. Mention it, then move on.
+
+| Overlay (fixed path — not a key) | Plain-language label | Skip-consequence |
+|---|---|---|
+| `.milestone-config/implied-surfaces.md` | "An optional file where you add capability clusters specific to your domain (a church app's 'giving', say). The architect reads it alongside the plugin's bundled reference, and it merges in **additively** — your file can add a new capability and extend an existing one, but it can never remove a surface the bundled reference defines. Write one capability per `##` heading, the same shape as the bundled reference (`docs/implied-surfaces.md` → 'Project-local overlay')." | Skip → no overlay; the bundled reference is used as-is. Nothing to configure, and an absent overlay is never an error. |
+
 ### Phase 3 — Write and confirm
 
 The canonical profile location is `<repo-root>/.milestone-config/feeder.json`.

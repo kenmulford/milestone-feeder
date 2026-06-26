@@ -8,7 +8,6 @@
   "metadata": {
     "description": "Brief-to-milestone feeder for Claude Code — plan your idea into well-formed issues, then create the milestone that milestone-driver builds."
   },
-  "allowCrossMarketplaceDependenciesOn": ["claude-plugins-official"],
   "plugins": [
     {
       "name": "milestone-feeder",
