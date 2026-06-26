@@ -121,7 +121,12 @@ Build order: <milestone 1 name> → <milestone 2 name> → … → <milestone N 
  section the author wrote, in full. This is a MULTI-LINE section, NOT a single
  header line: the downstream brief-coverage verification (#158) reads it to confirm
  the roadmap covers everything the brief asked for. Persisting it here is the manifest
- owner's contract, shared with #158 / #157.>
+ owner's contract, shared with #158 / #157. The brief is delimited by the paired
+ `## Original brief` … `## End original brief` markers (the literal closing line below),
+ so a brief that contains its OWN `## ` headings is captured intact — the consumer reads
+ strictly between the two markers and is NOT truncated at the brief's first internal
+ `## ` heading (`skills/create/SKILL.md` Step 3V, rung 2).>
+## End original brief
 
 ## Milestones (in build order)
 
@@ -156,7 +161,7 @@ Be concise — report status and outcomes flatly, no wall-of-text. Present steps
 - **Surface for confirm — never silently finalize.** The proposed roadmap is always surfaced for the user to confirm / merge / split / reorder / reject before any write. On edits, the manifest records the **user-confirmed** roadmap (edits applied), re-verified as a strict partition; on reject, no manifest is written.
 - **Fewer than two milestones is the single-milestone state, NOT an error.** Write no manifest, tell the user, and return so `plan` proceeds with its existing single-milestone pipeline unchanged.
 - **A failed dispatch, a malformed return, or a non-partition split writes NO partial or corrupt manifest.** The failure is surfaced, not swallowed; control does not advance on a failed split or a failed scratch-write.
-- **The manifest persists the FULL original brief** in a multi-line `## Original brief` section — the manifest is the cross-milestone build artifact, and this skill is its owner (the persisted-brief decision is shared with #158 / #157).
+- **The manifest persists the FULL original brief** delimited by the paired `## Original brief` … `## End original brief` markers — a multi-line section robust to briefs containing their own `## ` headings (the consumer reads strictly between the markers; `skills/create/SKILL.md` Step 3V). The manifest is the cross-milestone build artifact, and this skill is its owner (the persisted-brief decision is shared with #158 / #157).
 - **Each milestone entry reserves a `Plan file:` field, written PENDING.** `build-roadmap` plans no milestone, so it cannot know the disambiguated `assignedSlug` that names each plan file — it leaves the field empty. The roadmap planning fan-out (`plan` Step 3.7) populates it with `.milestone-feeder/plan-<assignedSlug>.md` after it plans that milestone; that recorded path is the handle `create`'s deploy-loop reads (`skills/create/SKILL.md` Step 1R), never a name-derived slug. (Producer↔consumer contract shared with #155 / #157.)
 - **Scratch is git-invisible from the first write** — `.milestone-feeder/.gitignore` is ensured to contain a single `*` before the first write under `.milestone-feeder/`, as bash + PowerShell 7+ twins.
 - **`build-roadmap` writes NO GitHub state and authors no code.** Its entire output is one local scratch manifest. No milestone is created, no issue is opened, no label is applied, no PR is opened, no branch is touched. The downstream `plan` → `create` pipeline is the only thing that writes GitHub state.

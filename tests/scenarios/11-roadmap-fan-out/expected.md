@@ -36,9 +36,13 @@ assertions exist), not executed.
 - The manifest header carries: `Source brief:` (here `inline` or `file:…`),
   `Confirmed: yes` (the user-confirmed split, not the raw proposal), and a
   `Build order: <M1> → <M2> → … → <MN>` line.
-- A **`## Original brief` section persists the FULL whole-app brief, multi-line** —
-  every author section, verbatim or near-verbatim. (This is the durable copy the
-  Step-3V verification reads; persisting it is the manifest's contract.)
+- A **`## Original brief` … `## End original brief` paired-delimiter section persists
+  the FULL whole-app brief, multi-line** — every author section, verbatim or
+  near-verbatim, with the literal `## End original brief` line emitted immediately after
+  the brief text. The brief extracts **intact even when it contains its own `## `
+  headings** — Step 3V reads the lines strictly between the paired markers, so a brief
+  with internal `## ` sections is NOT truncated at its first heading. (This is the
+  durable copy the Step-3V verification reads; persisting it is the manifest's contract.)
 - `## Milestones (in build order)` lists **N ≥ 2** entries forming a **strict
   partition** of the brief's in-scope: every author section assigned to exactly one
   milestone, none dropped, none duplicated, positions running `1..N` with no gaps or
@@ -132,7 +136,8 @@ GitHub writes, excluded from the preview run per `tests/README.md` lines 33–35
 
 `create`'s closing step (Step 3V) reads back **all N** deployed milestones + issues
 and dispatches `milestone-feeder:brief-coverage-verifier` against the manifest's
-`## Original brief`, returning `COVERAGE_VERDICT / UNCOVERED / DUPLICATED /
+brief — the lines between the paired `## Original brief` … `## End original brief`
+markers — returning `COVERAGE_VERDICT / UNCOVERED / DUPLICATED /
 DISTORTED / READ_ERRORS`. Always-on, **non-blocking**, **never auto-fixes**. Two
 asserted outcomes:
 
@@ -174,7 +179,9 @@ asserted outcomes:
   (no manifest, no fan-out) when the brief plainly spans several releases.
 - The manifest is **not a strict partition** (an author section dropped or
   double-assigned; positions with a gap/repeat), or omits the `## Original brief`
-  full persist, or any milestone entry is missing name / slice / position /
+  full persist **or its paired `## End original brief` closing delimiter** (or
+  truncates the brief at an internal `## ` heading instead of wrapping it in the paired
+  markers), or any milestone entry is missing name / slice / position /
   `Plan file:` / change-rationale.
 - Fewer than **N plan files** are emitted (a milestone the manifest names is never
   planned), or a `Plan file:` field is left PENDING after the fan-out for a milestone
