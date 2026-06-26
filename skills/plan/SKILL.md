@@ -17,7 +17,13 @@ Say this to the user before doing any work:
 
 ## Procedure
 
-### Step 0 — Read config + project docs (best-effort)
+This procedure has two parts: a **once-per-run outer boundary** (Step 0) and a **callable single-milestone inner routine** (Steps 1–7).
+
+- **Step 0 is the once-per-run OUTER boundary** — read config, auto-invoke `setup` when `feeder.json` is absent, self-heal the scratch-ignore, print the one-time notices, resolve the shared keys, and assemble the grounding digest. It runs **exactly once per run** and is **NOT part of the inner routine**; everything it resolves is handed *into* the routine and is **never re-resolved per invocation**.
+- **Steps 1–7 are the single-milestone inner routine** — a named, callable, parameterized sub-procedure (its contract is stated just below Step 0, before Step 1). It plans exactly one milestone and returns one plan file (plus a needs-input report when anything parked).
+- **The single-brief path is the default and is unchanged: it invokes the inner routine exactly ONCE**, with the whole brief as the lone brief-slice and its sole build-order position. On that path nothing about the emitted plan file changes — the inner routine is the same Steps 1–7 this skill has always run; this *inner-routine refactor* only *names and frames* them as a callable unit (it adds no outer loop or fan-out of its own — the oversized-brief **roadmap route** is added separately at the front-door, Step 3.6, and acts ONLY when the architect raises the multi-milestone signal). **For a normal single-brief (`none`-signal) run nothing about the emitted plan file changes**, so that refactor's existing-user discovery-path obligation is satisfied **vacuously** (nothing to discover or migrate); the **oversized-routing** behavior added at Step 3.6 ships its **own** one-time discovery notice (Step 0) per `SPEC.md` §3.1.
+
+### Step 0 — Read config + project docs (best-effort) — once-per-run OUTER boundary
 
 Read `.milestone-config/feeder.json`. **Absent → invoke `milestone-feeder:setup`** (it bootstraps the profile, aligns the label taxonomy, and returns control), then continue — the user does not re-run the command (`skills/setup/SKILL.md` Phase 5).
 
@@ -244,6 +250,73 @@ try {
 } catch {}
 ```
 
+**Announce the new oversized-brief routing once per clone (read-only, non-blocking, marker-gated).** Existing `plan` users formed a habit before this routing existed: a whole-app brief that spans several releases used to get only a passive *"~N milestones"* advisory they had to act on by hand. Now `plan`'s front-door (Step 3.6) **routes** such a brief into the `build-roadmap` flow. So existing users get a discovery path — a one-time, per-clone notice that announces the new behavior, mirroring the legacy-blanket / bootstrap-nudge siblings above (print verbatim → drop a per-clone marker). **It is purely informational: never a block, never a prompt; its only writes are the `.runtime/` dir and the marker — it reads and changes nothing else.** Grounding: `SPEC.md` §3.1 (every behavior change ships an existing-user discovery path); `.project/design-philosophy.md#One-way doors` (a behavior change ships a discovery / migration path); `.project/conventions.md#Canonical exemplars` (the one-time-notice pattern → `plan` Step 0).
+
+Gate: print the 🟡 notice **verbatim** ONLY when the per-clone marker `.milestone-config/.runtime/roadmap-routing-notice` is **absent**. This notice is **unconditional** — it announces a behavior change, so unlike the two siblings above it carries **no repo-state condition**; the marker is its only gate. On print, ensure `.runtime/` exists (`mkdir -p .milestone-config/.runtime` / `New-Item -ItemType Directory -Force`), then create the marker. Stay **silent** if the marker already exists. The marker lives under `.runtime/`, which the nested `.milestone-config/.gitignore` (written above) already ignores — so the marker is git-invisible with **no new gitignore line**. **Both forms below are best-effort: swallow any failure (unwritable dir, permission error) and continue the `plan` run — a failed notice/marker must never abort `plan`.** This notice is **`plan` Step 0 only** (no setup twin) — the oversized-brief routing is a `plan` behavior.
+
+<!-- KEEP THIS NOTICE BLOCK IN SYNC across the plan one-time-notice family. plan Step 0 only (no setup twin). Read-only; marker is .milestone-config/.runtime/roadmap-routing-notice. -->
+```text
+🟡 New: an oversized brief now routes into a roadmap flow
+
+| What | When you give plan a whole-app brief that spans several
+|      | releases, plan now hands it to a roadmap step first: it
+|      | proposes a sequenced set of milestones and asks you to
+|      | confirm, merge, split, reorder, or reject the split before
+|      | it plans any single milestone.
+| When | Only when the brief reads as several milestones. A normal,
+|      | single-release brief is unchanged — no roadmap step, no
+|      | extra prompt.
+| Note | This notice shows at most once per clone.
+```
+
+```bash
+# bash — one-time roadmap-routing discovery notice; read-only; marker-gated; never aborts plan.
+# printf '%s\n' (NOT a heredoc): the same indent-safe construct the sibling Step-0 notices use,
+# so all three sites emit one consistent form. The notice text is the quoted args — prints flush-left.
+marker=".milestone-config/.runtime/roadmap-routing-notice"
+if [ ! -f "$marker" ]; then
+  printf '%s\n' \
+    '🟡 New: an oversized brief now routes into a roadmap flow' \
+    '' \
+    '| What | When you give plan a whole-app brief that spans several' \
+    '|      | releases, plan now hands it to a roadmap step first: it' \
+    '|      | proposes a sequenced set of milestones and asks you to' \
+    '|      | confirm, merge, split, reorder, or reject the split before' \
+    '|      | it plans any single milestone.' \
+    '| When | Only when the brief reads as several milestones. A normal,' \
+    '|      | single-release brief is unchanged — no roadmap step, no' \
+    '|      | extra prompt.' \
+    '| Note | This notice shows at most once per clone.'
+  mkdir -p .milestone-config/.runtime 2>/dev/null && : > "$marker" 2>/dev/null || true
+fi
+```
+
+```powershell
+# PowerShell 7+ — same one-time roadmap-routing discovery notice; read-only; marker-gated; never aborts plan.
+try {
+  $marker = Join-Path '.milestone-config' (Join-Path '.runtime' 'roadmap-routing-notice')
+  if (-not (Test-Path $marker)) {
+    # Indent-safe array-join (the #120/#121 self-heal construct) — NOT a here-string; byte-identical
+    # to the bash printf args and the text template above.
+    Write-Host (@(
+      '🟡 New: an oversized brief now routes into a roadmap flow'
+      ''
+      '| What | When you give plan a whole-app brief that spans several'
+      '|      | releases, plan now hands it to a roadmap step first: it'
+      '|      | proposes a sequenced set of milestones and asks you to'
+      '|      | confirm, merge, split, reorder, or reject the split before'
+      '|      | it plans any single milestone.'
+      '| When | Only when the brief reads as several milestones. A normal,'
+      '|      | single-release brief is unchanged — no roadmap step, no'
+      '|      | extra prompt.'
+      '| Note | This notice shows at most once per clone.'
+    ) -join "`n")
+    New-Item -ItemType Directory -Force -Path (Join-Path '.milestone-config' '.runtime') | Out-Null
+    New-Item -ItemType File -Force -Path $marker | Out-Null
+  }
+} catch {}
+```
+
 Extract the feeder's own keys with their bundled defaults (`docs/profile-schema.md`, absent-means-default):
 
 | Key | Default | Use |
@@ -268,7 +341,26 @@ The shared keys are exactly three: `sourceGlobs`, `uiSurfaceGlobs`, `integration
 
 Resolve `nonNegotiables` **separately**, down the **same chain** (`.milestone-config/driver.json` → root `milestone-driver.json` → absent → **OMITTED**, never invented): it is **not** a fourth shared key but an **additional reviewer-profile input the self-check gate (Step 6) passes through** — the framework/platform/version constraints the driver's triage-reviewer expects on the profile and gates against (§6.2). An absent `nonNegotiables` is OMITTED (the reviewer simply has no version/platform constraints to check). **Degradation:** when `uiSurfaceGlobs` is absent (neither driver file carries it), treat every candidate as **logic** (no UI surface can be matched, so no design-lens distinction is drawn) and **state the degradation** in the plan file's grounding section. The pipeline still runs.
 
-### Step 1 — Ingest the brief
+### The single-milestone inner routine (Steps 1–7) — callable contract
+
+Steps 1–7 below are **one named, callable routine** — the single-milestone planner. The outer boundary (Step 0) resolves its inputs once and invokes it; on the single-brief path it is called **exactly once** (see the two-part note under `## Procedure`). Its contract:
+
+**Parameters (three required + two optional):**
+
+1. **`briefSlice`** — one milestone's brief in the **Step-1 normalized shape** (`{ goal, in-scope, out-of-scope, surfaces, epicIssueNumber?, milestoneLine? }`, Step 1). On the single-brief path this **is** the whole brief.
+2. **`resolved`** — the once-per-run **config + shared-keys bundle** Step 0 produced and hands in: the feeder keys (`projectDocs`, `reviewer`, `architectAgent`, `issueAuthorAgent`, `issueSize`), the assembled **grounding digest** (built once at Step 0), the resolved **shared keys** (`sourceGlobs`, `uiSurfaceGlobs`, `integrationBranch`) and `nonNegotiables`. **The grounding digest and the shared-key resolution are resolved once at Step 0 and passed in — the routine NEVER re-assembles the digest or re-resolves a shared key per invocation.** (The `versioning` declaration is **not** part of this Step-0 bundle — Step 0's key table does not resolve it; the Step-5.1 version ladder reads it fresh from `.milestone-config/feeder.json` at rung 2. It is `feeder.json` config the routine consults there, not a Step-0 output.)
+3. **`buildOrderPosition`** — this milestone's position in the run's build order. On the single-brief path it is the **sole** position and **does not alter the rendered single-milestone plan file**.
+
+The roadmap fan-out (Step 3.7) supplies **two OPTIONAL parameters**; **both are ABSENT on the single-brief path**, so the routine behaves **exactly as today** when they are not provided (Step 5.1 runs the version ladder; Step 7 derives the slug from the goal):
+
+4. **`preResolvedVersion?`** — `{ title: <the exact milestone title, semver INSIDE the string>, provenance: <explicit | declaration | inferred from <x> | prompted> }`. Supplied **only on the roadmap path** — the fan-out resolved it **once, on the main thread** (Step 3.7.c), so the interactive rung never runs inside a background subagent. When provided, **Step 5.1 ADOPTS this title + provenance verbatim and runs NO ladder rung and NO prompt** (the ADOPT branch at Step 5.1). **Absent → Step 5.1 runs the ladder exactly as today.**
+5. **`assignedSlug?`** — the disambiguated plan-file slug the fan-out assigned this milestone (the `-m<index>` collision tiebreaker, Step 3.7.d). When provided, **Step 7 writes the plan file to `.milestone-feeder/plan-<assignedSlug>.md`** (the ADOPT branch at Step 7). **Absent → Step 7 derives `<slug>` from the milestone goal exactly as today.**
+
+**Returns:** one plan file at `.milestone-feeder/plan-<slug>.md` (Step 7) — **plus** the needs-product-input report at `.milestone-feeder/needs-product-input-<slug>.md` when anything parked. Every in-routine failure exit is **part of the routine** and surfaces to the caller unchanged: the Step 2 product-gap STOP and the Step 6 self-check Blocker park/retry (§6.5) fire from inside the routine, not from the boundary. A `briefSlice` that yields **zero surviving buildable issues** (the parked/dropped path) still routes **entirely** through the routine and emits the same empty/parked plan-file markers and needs-product-input report as today.
+
+The routine body is Steps **1, 2, 3, 3.5, 4, 5, 6, 7** — exactly as written below. **Steps 3.6 (front-door routing) and 3.7 (the roadmap fan-out) are OUTER, run-level orchestration — NOT part of this per-milestone routine** (like Step 0): a dispatched per-milestone inner routine runs Steps 1 → 2 → 3 → 3.5 → 4 → 5 → 6 → 7 and **never re-enters Step 3.6 or Step 3.7**, so the fan-out cannot recurse into itself. (Step 5.1's ADOPT branch and Step 7's `assignedSlug` branch are the optional-parameter seams the fan-out drives; they live **inside** the routine.) The body is otherwise unchanged by this refactor.
+
+### Step 1 — Ingest the brief (inner routine — begins)
 
 The brief arrives in one of three forms. **Detect** which:
 
@@ -358,7 +450,7 @@ SCOPE_SPANS_MULTIPLE_MILESTONES:
 
 `EDGES` is the literal `[]` when no candidate depends on another; `PRODUCT_GAPS` is the literal `none` when the brief is fully resolvable. **Merge** any architect `PRODUCT_GAPS` into `productGaps[]` — they join the gaps found at Step 2 — capturing each gap's `blocks:` tags alongside its `gap` / `why_blocked` / `brief_ref` (a `blocks:` list naming specific candidate tags drives the Step 3.5 early park; `[]` marks a gap not tied to specific named candidates — a broad product decision that names no candidates to pre-park). Step 2 gaps carry no `blocks:` list — they name no specific candidates by construction.
 
-**Capture `SCOPE_SPANS_MULTIPLE_MILESTONES`** exactly parallel to how `PRODUCT_GAPS` is consumed: record it **verbatim** when raised (the list of `{ milestone, tags }` — the architect's proposed split); the literal `none` when absent. `plan` does **NOT** re-partition — it carries the architect's proposed split verbatim (the architect owns the structural read; `plan` only surfaces it). **Non-blocking invariant:** this signal NEVER gates the run, and never changes `CANDIDATES` / `EDGES` / `WAVES` / the surviving issue set / Wave order / milestone identity; `plan` still produces a deployable single-milestone plan on every path. **Edge:** because the signal is sourced from the architect's structural read of `CANDIDATES` (not the surviving issue set), it is carried verbatim and surfaced **even if every candidate is later parked/dropped at Step 6** — it is independent of which issues survive. Grounding: `docs/specs/v0.3.1-driver-handoff.md` §5 (detection + advisory, non-blocking) and §6 (the additive Multi-milestone advisory plan-file field).
+**Capture `SCOPE_SPANS_MULTIPLE_MILESTONES`** exactly parallel to how `PRODUCT_GAPS` is consumed: record it **verbatim** when raised (the list of `{ milestone, tags }` — the architect's proposed split); the literal `none` when absent. `plan` does **NOT** re-partition — it carries the architect's proposed split verbatim (the architect owns the structural read; `plan` only surfaces it). **Non-blocking invariant (scoped to the front-door's path).** This signal NEVER **aborts** the run and is NEVER silently dropped. On the **`none` path** — and on the **oversized-but-degraded** path where the front-door's route falls back (Step 3.6) — it does not gate: `plan` produces today's deployable **single-milestone** plan, unchanged, and never alters `CANDIDATES` / `EDGES` / `WAVES` / the surviving issue set / Wave order / milestone identity. On the **oversized** path, the front-door (Step 3.6) **routes** the brief into `build-roadmap` *before* the Step 4 fan-out — itself a non-blocking, surface-for-confirm checkpoint that **supersedes** the single-milestone pipeline for this brief (a decline or failure degrades back to it); it never hard-blocks. **Edge:** because the signal is sourced from the architect's structural read of `CANDIDATES` (not the surviving issue set), it is carried verbatim and surfaced **even if every candidate is later parked/dropped at Step 6** — it is independent of which issues survive. Grounding: `docs/specs/v0.3.1-driver-handoff.md` §5 (detection + advisory, non-blocking) and §6 (the additive Multi-milestone advisory plan-file field).
 
 ### Step 3.5 — Park candidates blocked by a shared product gap (before the fan-out)
 
@@ -371,6 +463,121 @@ Before the Step 4–6 fan-out, park the candidates the architect already linked 
 **Quality-hold invariant.** The candidates the architect **LINKED** to an unresolved gap park here — the **same** candidates that would have parked at the §6.5 self-check on the identical gap, just **earlier**; this only changes **WHEN** they park (before the fan-out vs at the Step 6 self-check). A candidate the architect linked to a gap would have authored, triaged, and then parked at the §6.5 self-check on that identical product gap; parking it here reaches the **same parked end-state for those candidates** without paying for their doomed author + triage + design dispatches. Surviving (non-blocked) issues are authored, reviewed, and gated exactly as before — quality on them (the gate's verdict on the surviving issues) is **unchanged**. (Acceptance criterion 3: a shared decision blocking ≥2 candidates is detected **ONCE here**, not rediscovered per candidate at Step 6.)
 
 **Complementary, not a replacement — the §6.5/§6.6 late park stays the catch-all.** Step 3.5 is an **early** park for gaps the architect **linked to candidates** via `blocks:`. A gap the architect did **NOT** link to candidates — one that surfaces only later, at the self-check (e.g. an issue-author returns `STATUS: PRODUCT_GAP`, or a reviewer raises a Buildability "no conventional default" Blocker) — STILL parks via §6.5 exactly as today, unchanged. The two paths are complementary: Step 3.5 catches the architect-linked gaps early; §6.5/§6.6 remains the catch-all for everything discovered during the fan-out.
+
+### Step 3.6 — Front-door size/scope check: route an oversized brief into `build-roadmap`
+
+**Boundary: Step 3.6 is OUTER, run-level orchestration — NOT part of the per-milestone inner routine** (like Step 0). It runs once per run on the main thread; a dispatched per-milestone inner routine (Steps 1, 2, 3, 3.5, 4, 5, 6, 7) does **not** re-enter it.
+
+This is the **front-door** size/scope check. It runs after the architect's structural read is fully captured (Step 3) and after the Step-3.5 pre-park, and **before the Step 4 issue-author fan-out**. The architect's `SCOPE_SPANS_MULTIPLE_MILESTONES` signal is its **SOLE arbiter** of "oversized" — the front-door introduces **no second threshold metric of its own**; the borderline call is the architect's, carried verbatim. **Initialize `roadmapRouteTaken = false` HERE, before branching on the signal** — so every path (including `none`, which never enters the route below) leaves the flag in a defined state for Step 7's read, regardless of which branch runs. Branch on the captured signal:
+
+| Captured signal | Front-door action |
+|---|---|
+| **`none`** (single coherent release) | **Do not route.** Fall straight through to Step 4 on the whole brief — today's single-milestone pipeline, **byte-for-byte unchanged**. No `build-roadmap` invocation, no advisory change, no new prompt. |
+| **Raised** (≥2 milestones forming a strict partition of `CANDIDATES`) | **Route into `build-roadmap`** (the internal skill #152 introduced) — see below. |
+
+**The oversized route.** Invoke the `build-roadmap` skill — a Claude Code **skill invocation**, the same way `create` runs `plan` first (`skills/create/SKILL.md` Step 1 — the **Absent** row runs `plan` first); there is **no bash/pwsh form** for the invocation itself. Hand it exactly the inputs its Step 0 expects (`skills/build-roadmap/SKILL.md` Step 0 — "Receive the inputs from `plan`"), **all already in hand — re-resolve nothing** (the resolve-once boundary, `skills/plan/SKILL.md:22`):
+
+- the **oversized whole-app brief** — the Step-1 normalized brief (`{ goal, in-scope, out-of-scope, surfaces, … }`);
+- the **source-brief reference** (`inline` | `file:<path>` | `epic #<n>`) captured at Step 1;
+- the **resolved feeder profile + shared keys** (`sourceGlobs`, `uiSurfaceGlobs`, `integrationBranch`) from Step 0;
+- the **resolved project-docs grounding digest** from Step 0 (an empty digest passes through unchanged — not an error, `.project/design-philosophy.md#Error & failure philosophy`).
+
+`build-roadmap` dispatches the roadmap-splitter once, **surfaces the proposed split for the user to confirm / merge / split / reorder / reject** (it owns that checkpoint — `plan` does not re-surface it), and returns control with **either a confirmed manifest path or none** (`skills/build-roadmap/SKILL.md` Step 4). The `#154 → #155` hand-off **manifest shape is OWNED by `build-roadmap`'s #152 manifest contract** — `plan` forwards the manifest path; it does **not** redefine its shape. Consume the return:
+
+| `build-roadmap` return | Front-door outcome |
+|---|---|
+| **A confirmed manifest path** | **Route taken.** Surface the confirmed roadmap + the manifest path, and hand it to the **per-milestone planning fan-out (Step 3.7)** — which runs the single-milestone inner routine (Steps 1–7) once per milestone the roadmap names, in build order. (**#154** owns detect + route + invoke + surface + hand off; **Step 3.7 / #155** owns the fan-out itself.) On this path the single-milestone **Steps 4–7 do NOT run for the whole brief** (the fan-out plans each milestone instead), so the Step-7 passive *"~N milestones"* advisory is **SUPERSEDED** — the confirmed roadmap was surfaced in its place. |
+| **No manifest path** — `build-roadmap` resolved the brief to a single milestone, the user **rejected** the split, or its own dispatch/return failed; **OR** `build-roadmap` does **not resolve** in this session (optional-skill degrade, mirroring `create`'s silent soft-dependency degrade, `skills/create/SKILL.md` Step 4 Gate 2 — "driver installed (else silently skip)") | **Degrade gracefully — never abort, never drop the signal.** Fall through to Step 4 on the whole brief — today's single-milestone pipeline, **unchanged** — and **RETAIN** the passive *"~N milestones"* advisory (Step 7 emits it, since the architect raised the signal). `build-roadmap` surfaces the reason for its own non-manifest outcomes (single-milestone / reject / error) itself; the retained advisory is the non-blocking backstop that keeps the signal from being silently dropped (`.project/design-philosophy.md#Error & failure philosophy`). |
+
+**Route-state flag.** Record `roadmapRouteTaken` = **true** only on the confirmed-manifest outcome; **false** on every other (signal `none`, degrade, decline, single-milestone-after-all). Step 7 reads it to choose **supersede** (true → omit the passive advisory) vs **retain** (false **and** signal raised → emit it). The flag never gates the run; it only selects which surface the user sees.
+
+### Step 3.7 — Parallel per-milestone planning fan-out (the roadmap branch)
+
+**Boundary: Step 3.7 is OUTER, run-level orchestration — NOT part of the per-milestone inner routine** (like Step 0 and Step 3.6). It runs once per run on the main thread and **dispatches** the inner routine per milestone; a dispatched inner routine runs Steps 1, 2, 3, 3.5, 4, 5, 6, 7 and **never re-enters Step 3.6 or Step 3.7** (no recursion). Its only seams INTO the routine are the two optional parameters (`preResolvedVersion`, `assignedSlug`) consumed by Step 5.1's and Step 7's ADOPT branches.
+
+This is the **roadmap branch** — it runs **ONLY** when Step 3.6 set `roadmapRouteTaken` = **true** (a confirmed manifest path). On **every other** Step-3.6 outcome (signal `none`, degrade, decline, single-milestone-after-all) `roadmapRouteTaken` is **false**, this step is **SKIPPED**, and control has already fallen through to **Step 4** on the whole brief — today's single-milestone pipeline **byte-for-byte unchanged**. **The fan-out lives only here; the normal-sized-brief path never reaches it** (acceptance criterion: disabled/edge state — single-milestone planning is unchanged).
+
+**On the roadmap path this step IS the planning for the brief.** It plans every milestone the confirmed roadmap names and **then returns control** — it does **NOT** fall through to Step 4 (the single-milestone Steps 4–7 do not run for the whole brief; that supersession is already recorded at Step 3.6).
+
+**Consume the confirmed manifest (re-derive nothing).** Read the manifest at the path `build-roadmap` returned (Step 3.6): its milestone entries (name, brief slice, `Build-order position` 1..N) and its `Build order:` line. **The manifest shape + the cross-milestone build order are OWNED by the #152 manifest contract** (`skills/build-roadmap/SKILL.md` "Manifest format"); the fan-out **consumes** them and **never re-partitions or re-derives the order** (`docs/specs/v0.3.1-driver-handoff.md` §6; `.project/design-philosophy.md#Layering & boundaries` — skills orchestrate, the manifest is the build artifact, `plan` does not redefine its schema).
+
+Run the phases below **in order** — the empty guard first, then the probe (before any milestone is planned), then version resolution (hoisted to the main thread), then the dispatch fan-out.
+
+#### 3.7.a — Empty / single-milestone guard (first)
+
+Branch on the count **N** of milestone entries in the confirmed manifest **before** the probe or any dispatch:
+
+| N | Action |
+|---|---|
+| **0** | **No probe, no dispatch, no plan files.** Surface the empty manifest to the user (state it is empty) and **return control** — this is **NOT an error** (`.project/design-philosophy.md#Error & failure philosophy` — surfaced, never silently dropped, never aborts). |
+| **1** | **Degenerate the fan-out to a single inner-routine dispatch — no rolling window.** Still run the probe (3.7.b) and version resolution (3.7.c), then dispatch the inner routine **once**, producing **one** plan file. |
+| **≥2** | The full fan-out (3.7.b → 3.7.f). |
+
+(A confirmed manifest normally carries **N ≥ 2** — `build-roadmap` Step 2 routes <2 milestones to the single-milestone path with no manifest — but the guard handles N = 0/1 defensively, re-verified here, not assumed, mirroring `build-roadmap`'s own "re-verified here, not assumed" partition gate.)
+
+#### 3.7.b — Probe FIRST: pin the dispatch topology (feasibility-verification-first)
+
+**Before planning ANY milestone**, run a single harness probe. Dispatch **one** background `Agent(run_in_background: true)` whose **sole** task is to attempt to dispatch a trivial sub-subagent **via the Agent tool** and report whether that **nested** dispatch succeeded. **Await** the probe, then **pin the run's dispatch topology** from its result:
+
+| Probe result | Pinned topology |
+|---|---|
+| Nested dispatch **succeeded** | **Nested-supported** (preferred). |
+| Nested dispatch **failed**, the probe errored, or it returned no usable result | **Flat-fallback.** |
+
+**Nested sub-dispatch is NEVER relied on before the probe confirms it** — the documented async model is flat, one-level dispatch (`.project/environment.md#Async & messaging` — agents are dispatched as subagents within a `plan` run; it does **not** establish that a background subagent may itself dispatch subagents), so the default before the probe is **flat**, and **only a confirming probe licenses the nested topology** for this run. The probe runs **once per run** and pins the topology for **every** milestone dispatch in 3.7.e.
+
+#### 3.7.c — Hoist version resolution to the main thread (before the fan-out dispatches)
+
+Resolve each milestone's **exact title** **on the MAIN THREAD, BEFORE** any dispatch — because a background subagent **cannot prompt**, so the version ladder's one interactive rung must never run inside a dispatch. For **each** milestone, run the **Step 5.1 version ladder** using **ONLY the non-interactive rungs 1–3** (explicit `milestoneLine` / `versioning` declaration / infer-and-**PROPOSE** from existing milestone titles or git tags — all read-only, none prompt; "5.1 — Resolve the milestone version + exact title").
+
+- If a milestone would fall to **rung 4** (greenfield — nothing above resolved), fire the **rung-4 greenfield prompt ONCE, up front, on the main thread** — the run's **one sanctioned interactive moment**. Never inside a background subagent.
+- Record each milestone's resolved **exact title** + its **true provenance** (`explicit | declaration | inferred from <…> | prompted`). **Pass each into that milestone's dispatch as the `preResolvedVersion` parameter** (3.7.e) — `{ title, provenance }`. Step 5.1's **ADOPT branch** consumes it verbatim and runs **no** ladder rung and **no** prompt. **Use this dedicated parameter, NOT `milestoneLine`** — routing the title in via `milestoneLine` (rung 1) would mislabel every provenance as `explicit` and, when the version is empty/non-versioned, re-open the rung-4 prompt inside the background subagent. Each resolved title is **surfaced in that milestone's own plan file** (Step 7's `Milestone title (exact)` + `Version provenance`) **for confirm/override before `create`** — never silently invented (`.project/design-philosophy.md#One-way doors` — a one-way door is surfaced for sign-off, not silently finalized; `docs/specs/v0.3.1-driver-handoff.md` §2, §3, §6).
+
+#### 3.7.d — Pre-derive slugs + resolve collisions (deterministic)
+
+For each milestone, derive its plan-file `<slug>` from its **goal** by the **same deterministic rule** the inner routine's Step 7 uses (`.project/conventions.md#Naming` — lowercase the one-line goal, collapse non-alphanumeric runs to single hyphens, trim, cap length). **Where two milestones derive the SAME `<slug>`**, append the milestone's **build-order index** for the colliding milestones — `plan-<slug>-m<index>.md`, where `<index>` is the manifest's `Build-order position`. The suffix is the position, so the disambiguation is **DETERMINISTIC**: re-planning the same roadmap resolves to the **same paths**, and **no plan file overwrites another** (acceptance criterion: slug-collision tiebreaker). **Pass each milestone its assigned (disambiguated) slug as the `assignedSlug` parameter** (3.7.e); Step 7's **ADOPT branch** writes that milestone's plan file to `.milestone-feeder/plan-<assignedSlug>.md`, so two colliding milestones never overwrite each other.
+
+#### 3.7.e — Dispatch the inner routine once per milestone (pinned topology, cap-4 rolling window)
+
+**Reuse the Step-4 author fan-out's cap-4 rolling window verbatim** ("Step 4 — Dispatch issue-author per candidate"; mirrors the driver's worker fan-out, `milestone-driver` plugin `skills/solve-milestone/SKILL.md` Phase 1 step 2): **≤4 milestone-planning dispatches in flight**; **M > 4 → rolling window** (as one returns, dispatch the next); **M ≤ 4 → all at once**; **M = 1 → a single dispatch, no window** (M = 0 already returned at 3.7.a). **Await ALL dispatches** before 3.7.f (the barrier).
+
+The pinned topology (3.7.b) selects **only the dispatch LEVEL** — both topologies yield **identical N plan files** and **the same build-order metadata**:
+
+| Pinned topology | How the inner routine + its sub-dispatches run |
+|---|---|
+| **Nested-supported** | Dispatch the **#153 inner routine (Steps 1–7)** once per milestone, **EACH in its own background subagent that itself sub-dispatches** architect/issue-author/reviewer. **Also cap the inner #153 Step-4/Step-6 fan-out at 4** (total ≤16) so compound concurrency stays bounded. |
+| **Flat-fallback** | The `plan` **MAIN THREAD** orchestrates each milestone's planning so the architect/issue-author/reviewer sub-dispatches happen **at the main-thread level** — under the **same cap-4 rolling window** across milestones — with **NO subagent spawning sub-subagents**. |
+
+Hand each milestone's dispatch the inner routine's **five contract parameters — three required + two optional** ("The single-milestone inner routine (Steps 1–7) — callable contract"):
+
+| Parameter | What the fan-out passes |
+|---|---|
+| **`briefSlice`** | This milestone's **brief slice from the manifest**, normalized to the Step-1 shape. |
+| **`resolved`** | The **once-per-run** config + shared-keys bundle + grounding digest **Step 0 produced**, passed through **verbatim** — **re-resolve NOTHING** (the resolve-once boundary). Every milestone gets the **same** `resolved` bundle. |
+| **`buildOrderPosition`** | This milestone's **position from the manifest's build order** (3.7.f). |
+| **`preResolvedVersion`** (optional) | The **hoisted exact title + true provenance** resolved on the main thread at 3.7.c — `{ title, provenance }`. Step 5.1's **ADOPT branch** consumes it and runs no ladder/prompt. |
+| **`assignedSlug`** (optional) | The **disambiguated slug** assigned at 3.7.d. Step 7's **ADOPT branch** writes the plan file to `plan-<assignedSlug>.md`. |
+
+**Both `preResolvedVersion` and `assignedSlug` are OPTIONAL and supplied ONLY here, on the roadmap path.** On the single-brief path they are **ABSENT**, so Step 5.1 runs the version ladder and Step 7 derives the slug from the goal — **single-brief behavior is unchanged**.
+
+#### 3.7.f — Record the cross-milestone build order as metadata
+
+The cross-milestone build order's **recorded home is the #152 MANIFEST** (its `Build order:` line + each milestone's `Build-order position`), **owned by the #152 manifest contract** (`skills/build-roadmap/SKILL.md` "Manifest format") — that manifest is the **source of truth** the downstream `create` / driver read for cross-milestone order. The fan-out **records nothing new and writes no build order into the individual per-milestone plan files** (per the #153 contract, `buildOrderPosition` does **not** alter the rendered plan file). It only **consumes** the order from the manifest — **never re-deriving it or redefining the schema** — and **surfaces** it to the user in the 3.7.g roster; the manifest remains its recorded home (`docs/specs/v0.3.1-driver-handoff.md` §6).
+
+#### 3.7.g — Failed-milestone handling (continue the others) + surface the roster
+
+**One milestone's failure NEVER aborts the roadmap.** Classify each milestone's dispatch outcome at the barrier:
+
+| Outcome | Classify |
+|---|---|
+| The dispatch returned a plan file at its assigned path (even if some issues parked) | **planned** — record its plan-file path into the manifest's `Plan file:` field (see below). |
+| The dispatch **errored** (no return), the routine **Step-2 STOPped** (needs-product-input report only, no plan file), or its self-check **did not converge to any buildable issue** | **failed-to-plan** — record the milestone and the reason. |
+
+A **failed-to-plan** milestone is recorded and the fan-out **CONTINUES** the remaining milestones (the rolling window keeps refilling) — one failure never aborts the whole roadmap (`.project/design-philosophy.md#Error & failure philosophy` — surfaced, never aborts).
+
+**Record each planned milestone's plan-file path into the manifest (close the producer→consumer handle for `create`).** For every milestone classified **planned**, record its real plan-file path — `.milestone-feeder/plan-<assignedSlug>.md`, the `assignedSlug` pre-derived at 3.7.d — into that milestone's entry in the confirmed manifest, in the `Plan file:` field the #152 manifest contract reserves (`skills/build-roadmap/SKILL.md` "Manifest format"). Edit the manifest **in place**, consistent with how `plan` writes its own scratch files (Step 7) — it is local scratch the model already authored, so **no new shell is needed**; key the write to the milestone entry by its `Build-order position`, so re-planning the same roadmap overwrites the field to the **same deterministic path** (idempotent). This records the path into the **MANIFEST only** — it writes **nothing** into the per-milestone plan files (consistent with 3.7.f, which keeps cross-milestone metadata out of the plan files). A **failed-to-plan** milestone's `Plan file:` field is **left pending** (no file exists to point at). When the barrier completes, every planned milestone's entry carries its real plan-file path — the deterministic handle `create`'s deploy-loop resolves each milestone's plan file by (`skills/create/SKILL.md` Step 1R), **never** a slug re-derived from the milestone name.
+
+**Surface the roster.** After the barrier, surface a concise per-milestone roster (a table) — the **build order**, **which milestones produced plan files** (and their paths), and **which failed-to-plan** (and why). This is the roadmap-path surface that **replaces** the single-milestone "here's your plan file" moment: the user reviews each milestone's plan file (confirming/overriding its surfaced title), then runs `/milestone-feeder:create` per milestone in build order. **`plan` wrote no GitHub state.** Control returns here — the run does not continue into Step 4.
 
 ### Step 4 — Dispatch issue-author per candidate (parallelizable)
 
@@ -424,6 +631,8 @@ This is the human-readable description and the exact ordering source the driver'
 
 Resolve the milestone's **exact title** — the load-bearing identity string that carries the semver **inside it** (there is **no separate version field**; the driver parses the version from the title, so that is the single place it can live — `docs/specs/v0.3.1-driver-handoff.md` §2, and §10's "A separate version field" non-goal). Resolve it by the **layered ladder below, FIRST-MATCH-WINS** — the first rung that yields an answer wins and the ladder STOPS (`docs/specs/v0.3.1-driver-handoff.md` §2 *"The layered version default"*). Alongside the title, record a one-line **version provenance** (one of `explicit` | `declaration` | `inferred from <tag/milestone>` | `prompted`) so the surfaced default is legible (`docs/specs/v0.3.1-driver-handoff.md` §6).
 
+**ADOPT branch (roadmap fan-out — optional parameter).** If the caller supplied the optional `preResolvedVersion` parameter (the callable contract's optional field 4 — present **ONLY** on the roadmap path, where Step 3.7.c resolved it **once, on the main thread**), **ADOPT its `title` + `provenance` VERBATIM and SKIP the ladder entirely**: run **NO** rung and fire **NO** prompt. Record the adopted title in the `Milestone title (exact)` field and the adopted provenance in `Version provenance` (Step 7), surfaced for confirm/override exactly as a ladder-resolved title is. This is the mechanism that guarantees the rung-4 greenfield prompt **can NEVER fire inside a background subagent** — a dispatched per-milestone routine always arrives with its version pre-resolved, so it never reaches rung 4. **When `preResolvedVersion` is ABSENT (the single-brief path and every non-roadmap run), run the ladder below exactly as today** — no behavior change.
+
 **This sub-step is READ-ONLY on GitHub.** Its only new repo reads are a read-only `git tag` read and a **read-only** `gh api` milestones read (rung 3); it **creates, posts, and patches nothing**. The greenfield prompt (rung 4) is the **one sanctioned interactive moment** of the run. This is consistent with the no-GitHub-write invariant (`skills/plan/SKILL.md:10` and the **Non-negotiables** section): `plan` writes NO GitHub state.
 
 | Rung | Source | Outcome | Provenance |
@@ -437,7 +646,7 @@ Resolve the milestone's **exact title** — the load-bearing identity string tha
 
 **Rung 3 — the two read-only infer signals (in order):**
 
-1. **FIRST, the highest semver among EXISTING milestone TITLES.** **Reuse the canonical `env.t`-style quote-safe `gh api` milestones read defined in `skills/create/SKILL.md` Step 3 pass (b) BY REFERENCE — do NOT re-define it** (the same reuse-by-reference discipline `skills/update/SKILL.md:60` follows; both bash and PowerShell 7+ forms are given at `skills/create/SKILL.md:84-90`). **One intentional delta from create pass (b):** create pass (b) `select`s the **one** milestone whose title equals `env.t`; here you read **ALL** milestone titles (no `env.t` filter — e.g. `--jq '.[] | .title'`) and scan them for the **highest** semver, since you are finding a reference version rather than matching one exact title (the delta is noted here exactly as `skills/update/SKILL.md` notes its own pass-(b) delta). The matched milestone's **NAME part is reused** for the title; its (highest) semver is the **REFERENCE** version. Provenance `inferred from <milestone>`.
+1. **FIRST, the highest semver among EXISTING milestone TITLES.** **Reuse the canonical `env.t`-style quote-safe `gh api` milestones read defined in `skills/create/SKILL.md` Step 3 pass (b) BY REFERENCE — do NOT re-define it** (the same reuse-by-reference discipline `skills/update/SKILL.md` Step 3b follows — it reuses create pass (b)'s `env.t` resolve by reference; both bash and PowerShell 7+ forms are given at `skills/create/SKILL.md` Step 3 pass (b)). **One intentional delta from create pass (b):** create pass (b) `select`s the **one** milestone whose title equals `env.t`; here you read **ALL** milestone titles (no `env.t` filter — e.g. `--jq '.[] | .title'`) and scan them for the **highest** semver, since you are finding a reference version rather than matching one exact title (the delta is noted here exactly as `skills/update/SKILL.md` notes its own pass-(b) delta). The matched milestone's **NAME part is reused** for the title; its (highest) semver is the **REFERENCE** version. Provenance `inferred from <milestone>`.
 2. **ELSE the latest `vX.Y.Z` git tag.** Use a cross-platform `git tag` read (plain `git tag` works identically on bash and PowerShell 7+; e.g. `git tag --list 'v*'` then pick the highest semver — keep any sort shell-neutral, do not rely on a shell-specific sort flag). The **reference** version is that tag; the **name** falls back to today's goal-derived name. Provenance `inferred from <tag>`.
 
 **On EITHER infer path:** the inferred/composed title carries the **REFERENCE (highest existing) semver VERBATIM**, and the surfaced plan-file line is **WHERE THE USER ADJUSTS the patch / minor / major bump** — the feeder cannot know whether this milestone is a patch, minor, or major bump, so it proposes the reference version verbatim and lets the user adjust the bump on the surfaced line (`docs/specs/v0.3.1-driver-handoff.md` §2 rung 3). The feeder PROPOSES; it does not silently finalize.
@@ -469,7 +678,7 @@ The `reviewer` value read at Step 0 selects the backend. Resolve it as follows:
 | `"internal"` | Run the **internal checklist** (§6.4) — the feeder's own check mirroring the five triage criteria. Same pass/Blocker verdict shape, so the gate logic downstream is backend-agnostic. |
 | `false` | **Skip the gate.** Print a **visible 🔴 warning** to the user — `🔴 Self-check DISABLED (reviewer:false) — generated issues were NOT vetted against the driver's entry gate; they may not pass triage.` — and record `SKIPPED (reviewer:false)` in the plan-file verdict line (Step 7). Proceed straight to writing the plan file; run no reviewer and no checklist. |
 
-**Runtime degrade-to-internal trigger (`"milestone-driver"` → `"internal"`).** The degrade is decided at **dispatch time, not config time** (mirrors the *config*-time reviewer-resolve probe in `skills/setup/SKILL.md:29`, but applied live here because availability can differ between setup and this run). On the **first** issue's `triage-reviewer` dispatch: attempt the dispatch; if the agent **does not resolve** (no such agent in the session — `milestone-driver` not installed) **or the dispatch returns no usable block** (the return does not contain a parseable `ISSUE:` / `GAPS:` block), then:
+**Runtime degrade-to-internal trigger (`"milestone-driver"` → `"internal"`).** The degrade is decided at **dispatch time, not config time** (mirrors the *config*-time reviewer-resolve probe in `skills/setup/SKILL.md` Phase 1 — the reviewer-availability signal, but applied live here because availability can differ between setup and this run). On the **first** issue's `triage-reviewer` dispatch: attempt the dispatch; if the agent **does not resolve** (no such agent in the session — `milestone-driver` not installed) **or the dispatch returns no usable block** (the return does not contain a parseable `ISSUE:` / `GAPS:` block), then:
 
 1. Emit a visible notice: `Self-check: milestone-driver reviewers did not resolve — degrading to the internal checklist for this run.`
 2. Switch the backend to `"internal"` for the **remainder of the run** (do not retry `milestone-driver` per issue — decide once, on the first dispatch). **Under the concurrent Pass-1 triage batch (Step 6 intro), "first dispatch" means the first triage return that LANDS:** evaluate the degrade trigger on that first return, then batch/continue the rest of Pass 1 under the chosen backend — the decide-once semantics hold unchanged.
@@ -529,7 +738,7 @@ When `uiSurfaceGlobs` is absent (the degradation noted at Step 0), treat every i
 
 #### 6.5 — Retry / park fork (per FAILed issue)
 
-For each issue that FAILed §6.3, classify each Blocker and act — bounded to **at most 2** `issue-author` re-dispatches, the same cap the driver applies on every gate (`milestone-driver/skills/solve-issue/SKILL.md:119`):
+For each issue that FAILed §6.3, classify each Blocker and act — bounded to **at most 2** `issue-author` re-dispatches, the same cap the driver applies on every gate (`milestone-driver/skills/solve-issue/SKILL.md` — the ≤2 re-dispatch cap the driver applies on every gate):
 
 | Blocker class | Test | Action |
 |---|---|---|
@@ -550,11 +759,11 @@ A parked issue is **not emitted** in the milestone (§6.6 handles it and its dep
 
 After §6.6, the surviving issue set has either all-PASS (or all-Advisory-only) verdicts, or the run is `SKIPPED` (`reviewer:false`). Carry the gate outcome forward to the Step 7 verdict line.
 
-### Step 7 — Write the plan file
+### Step 7 — Write the plan file (inner routine — ends; returns the plan file)
 
 By the time this step runs, the self-check gate (Step 6) has already produced the **surviving issue set** — the gate-clean (PASS / Advisory-only), **non-parked, non-dropped** issues from §6.6. Parked (product-gap / needs-human-direction) and dropped-dependent issues are **never carried as buildable**; they go to the report (parked) or are simply omitted (dropped). This step writes a single reviewable plan file. **No GitHub writes occur — `plan` writes only local scratch files.**
 
-Write the reviewable **plan file** to a gitignored per-run scratch path: `.milestone-feeder/plan-<slug>.md`. The `<slug>` is a **deterministic** kebab-case slug of the milestone **goal**, so the same brief always resolves to the same path and `create` / `update` can locate it. Derive `<slug>` deterministically: take the one-line milestone goal, lowercase it, replace every run of non-alphanumeric characters with a single hyphen, then strip any leading/trailing hyphens (cap the length at a reasonable bound, trimming a trailing hyphen if the cut lands on one).
+Write the reviewable **plan file** to a gitignored per-run scratch path: `.milestone-feeder/plan-<slug>.md`. **Resolve `<slug>` thus: if the caller supplied the optional `assignedSlug` parameter** (the callable contract's optional field 5 — present **ONLY** on the roadmap path, Step 3.7.d), **use it VERBATIM** (`.milestone-feeder/plan-<assignedSlug>.md`) — it is the `-m<index>` collision-disambiguated slug the fan-out assigned, so two milestones that derive the same base slug never overwrite each other's plan file. **Otherwise (the single-brief path and every non-roadmap run) derive `<slug>` from the milestone goal exactly as today:** take the one-line milestone goal, lowercase it, replace every run of non-alphanumeric characters with a single hyphen, then strip any leading/trailing hyphens (cap the length at a reasonable bound, trimming a trailing hyphen if the cut lands on one). Either way the `<slug>` is **deterministic**, so the same brief always resolves to the same path and `create` / `update` can locate it.
 
 **Make the scratch git-invisible from the first write (zero user setup).** `.milestone-feeder/` is pure per-run scratch — the plan file and any reports the user reviews, then deploys via `create` — with no tracked config of its own (per-clone runtime scratch, like the driver's `.milestone-driver-*`). **Before writing any file under `.milestone-feeder/`, FIRST ensure the directory self-ignores:** create `.milestone-feeder/` if absent, and ensure `.milestone-feeder/.gitignore` exists containing a single `*` line. A `*` inside that folder makes the whole folder (and the `.gitignore` itself) invisible to `git status` in **any** consumer repo, without touching the consumer's root `.gitignore`. Do this on the first write of every run so a freshly-cloned consumer is clean from the very first `plan`:
 
@@ -576,7 +785,7 @@ if (-not (Test-Path .milestone-feeder/.gitignore)) { Set-Content -LiteralPath .m
 |---|---|
 | **Milestone title (exact)** | The exact milestone title, on its own labeled line — **distinct** from the one-line goal. Now **user-owned** and carrying the resolved **semver inside the string** (no separate version field), resolved at Step 5.1 by the version ladder and **surfaced for the user to confirm or override BEFORE `create`** (`docs/specs/v0.3.1-driver-handoff.md` §3, §6). `create` / `update` still resolve the milestone by this exact title (creating it if absent, adopting it if it already exists), and the driver parses the version from it — this remains the load-bearing identity field; the one-line goal is descriptive only. |
 | **Version provenance** | One line, one of `explicit` \| `declaration` \| `inferred from <tag/milestone>` \| `prompted` (the Step 5.1 ladder rung that resolved the title — `docs/specs/v0.3.1-driver-handoff.md` §6 "Version provenance" row). It makes the surfaced default **legible** so the user can trust or correct it. |
-| **Multi-milestone advisory** | **ADDITIVE and OPTIONAL** — present **ONLY** when the architect raised `SCOPE_SPANS_MULTIPLE_MILESTONES` (Step 3). Carries the flag + the proposed split (milestone names + their candidate tags) **VERBATIM** from the architect — `plan` does not re-partition. **OMITTED entirely** when the signal is `none`, so a single-milestone plan is byte-for-byte unchanged. **Non-blocking** — it does not change what gets deployed; the plan stays a deployable single-milestone plan. Sourced from the architect's structural read of `CANDIDATES`, so it is written even if every candidate is parked/dropped (Step 6). Grounding: `docs/specs/v0.3.1-driver-handoff.md` §6 (the additive plan-file field) and §5. |
+| **Multi-milestone advisory** | **ADDITIVE and OPTIONAL** — present **ONLY** on the **retained** path: the architect raised `SCOPE_SPANS_MULTIPLE_MILESTONES` (Step 3) **AND** the front-door (Step 3.6) did **NOT** route this brief into `build-roadmap` (`roadmapRouteTaken` false — the signal was raised but the route degraded, was declined, or resolved to a single milestone). On that path it carries the flag + the proposed split (milestone names + their candidate tags) **VERBATIM** from the architect — `plan` does not re-partition. **OMITTED entirely** when the signal is `none` (single-milestone plan byte-for-byte unchanged) **OR** when the front-door **took the route** (`roadmapRouteTaken` true — the confirmed roadmap was surfaced in its place, so this passive advisory is **SUPERSEDED**; on the route path the single-milestone Steps 4–7 do not run for the whole brief anyway). **Non-blocking** — it does not change what gets deployed; the plan stays a deployable single-milestone plan. Sourced from the architect's structural read of `CANDIDATES`, so on the retained path it is written even if every candidate is parked/dropped (Step 6). Grounding: `docs/specs/v0.3.1-driver-handoff.md` §6 (the additive plan-file field) and §5. |
 | **One-line goal** | The milestone goal in one line — the header. |
 | **Milestone description (Wave order)** | The Step 5 build-order / Wave description, verbatim, with local slugs (`#A`/`#B`). This is what `create` PATCHes onto the milestone after issue numbers exist. |
 | **Per surviving issue** | For each surviving (gate-clean / Advisory-only) issue: its slug, title, the FULL §4 `ISSUE_BODY` verbatim, its labels, and its surface/risk. `create` reads these — no regeneration. |
@@ -584,12 +793,13 @@ if (-not (Test-Path .milestone-feeder/.gitignore)) { Set-Content -LiteralPath .m
 | **Dropped issues** | Each dropped issue: slug, title, and the parked dependency that dropped it. Marked, never created. |
 | **Self-check verdict line** | The Step 6 outcome (PASS / INTERNAL / PARKED / SKIPPED(reviewer:false)). `create` trusts it; no re-vet. |
 | **Source brief reference** | `inline` \| `file:<path>` \| `epic #<n>` — drives the downstream report routing and the brief↔plan match. Record `epicIssueNumber` here when the brief was an epic. |
+| **Original brief (full text)** | The **full** brief text this plan run received — persisted verbatim and multi-line as the `## Original brief` … `## End original brief` delimited section below (a brief is multi-line, so a SECTION, not a `Label: value` header line; `Source brief reference` records only the form token; the paired end-delimiter keeps a brief that contains its own `## ` headings intact for the consumer, never truncated at its first internal heading). It is the durable single-milestone fallback `create`'s closing brief-coverage verification reads to audit the deploy against the original brief (`skills/create/SKILL.md` Step 3V — the brief-resolution ladder). Mirrors the roadmap manifest's `## Original brief`, which persists the whole-app brief for a roadmap run (`skills/build-roadmap/SKILL.md` "Manifest format"). |
 
 **Surface the resolved identity for confirm/override.** Both the resolved `Milestone title (exact)` (carrying the semver per the Step 5.1 ladder) **and** its `Version provenance` line are written to the plan file and **surfaced for the user to confirm or override BEFORE running `create`** — `plan` never silently finalizes a milestone identity the user cannot see or change (`docs/specs/v0.3.1-driver-handoff.md` §2, §3, §6). On an infer rung the title carries the **reference version verbatim**, and this surfaced line is **where the user adjusts the patch / minor / major bump** before `create` deploys it.
 
-**Surface the multi-milestone advisory — ONLY when raised — alongside the same identity moment.** When the architect raised `SCOPE_SPANS_MULTIPLE_MILESTONES` (Step 3), surface its advisory **prominently UP FRONT, at the same confirm/override moment** the user already sees the milestone identity above (NOT a separate prompt, NOT a hard block): a clear *"this looks like ~N milestones — deploy the one big milestone, or split the brief and re-run"* message plus the proposed split (the milestone names + their candidate tags, verbatim from the architect). It is **advisory only** — the user decides; `plan` still produced a deployable single-milestone plan and changes nothing about what `create` deploys. Surface it **ONLY when the signal is raised**; when the signal is `none`, surface **nothing** — no advisory line, no message — and the surfaced moment is exactly as before (`docs/specs/v0.3.1-driver-handoff.md` §5).
+**Surface the multi-milestone advisory — ONLY on the retained path — alongside the same identity moment.** When the architect raised `SCOPE_SPANS_MULTIPLE_MILESTONES` (Step 3) **and the front-door (Step 3.6) did NOT take the roadmap route** (`roadmapRouteTaken` false — retained path), surface its advisory **prominently UP FRONT, at the same confirm/override moment** the user already sees the milestone identity above (NOT a separate prompt, NOT a hard block): a clear *"this looks like ~N milestones — deploy the one big milestone, or split the brief and re-run"* message plus the proposed split (the milestone names + their candidate tags, verbatim from the architect). It is **advisory only** — the user decides; `plan` still produced a deployable single-milestone plan and changes nothing about what `create` deploys. Surface it **ONLY on the retained path**; when the signal is `none`, surface **nothing** — no advisory line, no message — and the surfaced moment is exactly as before. When the front-door **took the route** (`roadmapRouteTaken` true), the confirmed roadmap was already surfaced by `build-roadmap` (Step 3.6), so this passive advisory is **superseded** — surface nothing here (`docs/specs/v0.3.1-driver-handoff.md` §5).
 
-**Preserve an existing deploy receipt on re-plan.** The plan file may already carry a `Milestone number (GitHub): <n>` line — the **deploy receipt** `create` writes back post-deploy (the create-side write block at `skills/create/SKILL.md:99-135`; the exact field shape at `skills/create/SKILL.md:104`). It is the stable handle `update` resolves by, so a re-plan must NOT drop it: **before overwriting** `.milestone-feeder/plan-<slug>.md`, **read the PRIOR file at that same path** (if one exists) and **carry its receipt line forward, verbatim**, into the freshly-written plan file — as a sibling header line in the same position `create` writes it (after `Source brief:`). The receipt is **additive and READ-ONLY here**: `plan` never resolves a number or writes one (it has no milestone number — it writes only local slugs); it merely **preserves** the line `create` already recorded. **No prior file, OR a prior file with no receipt line → OMIT it, NO error** — a plan with no receipt is valid and deployable (`docs/specs/v0.3.1-driver-handoff.md` §6: *"A v0.3.0 plan file lacking them still parses (the consumers degrade gracefully)"*; the additive-fields row: *"`plan` preserves it on re-plan"*). Read the prior receipt line before the overwrite:
+**Preserve an existing deploy receipt on re-plan.** The plan file may already carry a `Milestone number (GitHub): <n>` line — the **deploy receipt** `create` writes back post-deploy (the create-side write block at `skills/create/SKILL.md` Step 3 pass (b) — "Write the deploy receipt"; the exact field shape at `skills/create/SKILL.md` Step 3 pass (b) — the `Milestone number (GitHub):` field shape). It is the stable handle `update` resolves by, so a re-plan must NOT drop it: **before overwriting** `.milestone-feeder/plan-<slug>.md`, **read the PRIOR file at that same path** (if one exists) and **carry its receipt line forward, verbatim**, into the freshly-written plan file — as a sibling header line in the same position `create` writes it (after `Source brief:`). The receipt is **additive and READ-ONLY here**: `plan` never resolves a number or writes one (it has no milestone number — it writes only local slugs); it merely **preserves** the line `create` already recorded. **No prior file, OR a prior file with no receipt line → OMIT it, NO error** — a plan with no receipt is valid and deployable (`docs/specs/v0.3.1-driver-handoff.md` §6: *"A v0.3.0 plan file lacking them still parses (the consumers degrade gracefully)"*; the additive-fields row: *"`plan` preserves it on re-plan"*). Read the prior receipt line before the overwrite:
 
 ```bash
 # bash — capture the prior receipt line (if any) BEFORE overwriting the plan file.
@@ -608,6 +818,8 @@ $rcpt = (Get-Content -LiteralPath $plan -ErrorAction SilentlyContinue |
 
 When `rcpt` is non-empty, write it verbatim into the new plan file as the sibling header line after `Source brief:`; when empty, write no such line.
 
+**Persist the original brief in full (the durable coverage-verification copy).** Write the **full** brief text this plan run received into a multi-line `## Original brief` section of the plan file — verbatim, every section the author wrote, NOT a single `Label: value` header line (a brief is multi-line; the `Source brief:` header records only the *form* token). **Close the section with a literal `## End original brief` line emitted immediately after the brief text** — the paired opening/closing delimiters let the downstream consumer read strictly between them, so a brief that contains its own `## ` headings is captured intact and is never truncated at its first internal heading (`skills/create/SKILL.md` Step 3V, rung 2). For a `file:<path>` or `epic #<n>` brief, persist the resolved text `plan` already read to do its work; for an inline brief, the argument text. This mirrors the roadmap manifest's `## Original brief` section (`skills/build-roadmap/SKILL.md` "Manifest format") and is the **durable single-milestone fallback** `create`'s closing brief-coverage verification reads when the in-session brief is unavailable (`skills/create/SKILL.md` Step 3V — the brief-resolution ladder, rung 2; `.project/design-philosophy.md#Layering & boundaries` — the plan file is the build artifact downstream consumers read). On a **roadmap run** this per-milestone plan persists the **brief-slice** the inner routine received; the whole-app brief lives in the manifest's `## Original brief`, which is what `create` reads for a roadmap run. **Never fabricate** — persist what was received; if the brief text genuinely cannot be captured, omit the section rather than inventing one (the downstream verification degrades gracefully on an absent copy).
+
 **Plan-file format.** Write the file in this shape — the **Milestone title (exact)** line is its own labeled field, separate from the goal in the header:
 
 ```markdown
@@ -621,7 +833,21 @@ Self-check: <the Step 6 outcome — one of:
   PARKED — <M> issue(s) → needs product input; <K> issue(s) → needs human direction (still-Blocker after 2 retries)
   SKIPPED (reviewer:false) — 🔴 gate disabled; generated issues were NOT vetted>
 Source brief: <inline | file:<path> | epic #<n>>
-Milestone number (GitHub): <n>   # OPTIONAL sibling header line — carried forward verbatim from a prior plan file if present; omitted on first plan (create writes it post-deploy, skills/create/SKILL.md:104)
+Milestone number (GitHub): <n>   # OPTIONAL sibling header line — carried forward verbatim from a prior plan file if present; omitted on first plan (create writes it post-deploy, skills/create/SKILL.md Step 3 pass (b))
+
+## Original brief
+<The full brief text this plan run received, persisted verbatim and multi-line — every
+ section the author wrote, in full. A brief is multi-line, so this is a SECTION, not a
+ `Label: value` header line. `create`'s closing brief-coverage verification reads it to
+ audit the deploy against the original brief (the durable single-milestone fallback —
+ `skills/create/SKILL.md` Step 3V brief-resolution ladder). Mirrors the roadmap manifest's
+ `## Original brief` (`skills/build-roadmap/SKILL.md` "Manifest format"). On a roadmap run
+ this persists the per-milestone brief-slice; the whole-app brief lives in the manifest.
+ The brief is delimited by the paired `## Original brief` … `## End original brief` markers
+ (the literal closing line below), so a brief that contains its OWN `## ` headings is
+ captured intact — the consumer reads strictly between the markers and is NOT truncated at
+ the first internal `## ` heading.>
+## End original brief
 
 ## Milestone description (Wave order)
 <the Step 5 Wave-ordered description, verbatim — the §4 template with local slugs>
@@ -641,7 +867,7 @@ Milestone number (GitHub): <n>   # OPTIONAL sibling header line — carried forw
 
 ### … (one block per surviving candidate, in Wave order; only PASS / Advisory-only issues carry a full body)
 
-## Multi-milestone advisory   <!-- OPTIONAL section — written ONLY when the architect raised SCOPE_SPANS_MULTIPLE_MILESTONES (Step 3); OMITTED ENTIRELY when the signal is `none`, leaving the file byte-for-byte the pre-#61 shape. Advisory only — does not change what gets deployed; the plan stays a deployable single-milestone plan. -->
+## Multi-milestone advisory   <!-- OPTIONAL section — written ONLY on the retained path: the architect raised SCOPE_SPANS_MULTIPLE_MILESTONES (Step 3) AND the front-door did NOT route into build-roadmap (Step 3.6, roadmapRouteTaken false). OMITTED ENTIRELY when the signal is `none` (file byte-for-byte the pre-#61 shape) OR when the front-door took the route (roadmapRouteTaken true — superseded by the confirmed roadmap). Advisory only — does not change what gets deployed; the plan stays a deployable single-milestone plan. -->
 🔴 This brief looks like ~<N> milestones. Deploy the one big milestone below, or split the brief and re-run. Proposed split (carried verbatim from the architect):
 - <proposed milestone 1 name>: #A, #C
 - <proposed milestone 2 name>: #B
@@ -684,4 +910,5 @@ Be concise — report status and outcomes flatly, no wall-of-text. Present steps
 - **Parks product gaps — never invents scope.** A decision with no conventional default is recorded to `productGaps[]` and surfaced in the needs-product-input report — never guessed to make an issue buildable. Design / implementation calls the project docs or a stated convention answers are resolved and cited; calls with no conventional default are parked.
 - **Project docs are read best-effort, never fabricated.** Absent or `[TBD]` sections are skipped, never grounded on. A design call cites its real grounding (`.project/<doc>.md#<section>` or a verified sibling `file:line`) or it is parked as a product gap.
 - **The architect is dispatched exactly once; the issue-author once per candidate.** The pipeline owns the dispatch count; the agents return text and the orchestrator consumes it — no agent opens a GitHub artifact of its own.
+- **The plan file persists the FULL original brief** delimited by the paired `## Original brief` … `## End original brief` markers (Step 7) — verbatim, never fabricated, and robust to briefs containing their own `## ` headings (the consumer reads strictly between the markers). It is the durable single-milestone copy `create`'s closing brief-coverage verification reads (`skills/create/SKILL.md` Step 3V); it mirrors the roadmap manifest's `## Original brief` (`skills/build-roadmap/SKILL.md`), which owns the whole-app brief for a roadmap run. (Producer↔consumer contract shared with #157 / #158.)
 - **Self-check gate is mandatory.** Every generated issue is vetted (§5 / §6 Step 6) before the plan file is written; a failing issue is retried (≤2) or parked — never silently planned. The gate is only skipped on an explicit `reviewer:false`, and only with a visible 🔴 warning recorded in the plan-file verdict line.

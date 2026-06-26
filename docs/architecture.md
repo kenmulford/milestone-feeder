@@ -18,8 +18,11 @@ The plan file is the **build artifact** (see [The plan file as build artifact](#
 | Setup skill | `skills/setup/SKILL.md` | First-run profile bootstrap: infer keys from repo signals, write `.milestone-config/feeder.json`, provision the label taxonomy aligned to the driver's. Auto-invoked by `plan`/`create` when the profile is absent. Mirrors `milestone-driver:setup`. |
 | Plan skill | `skills/plan/SKILL.md` | Orchestrator preview: brief → a reviewable plan file. Runs Steps 0–6 (incl. the reviewer gate) and emits at Step 7 — the plan file at `.milestone-feeder/plan-<slug>.md`. **No GitHub writes.** `/milestone-feeder:plan <brief>`. |
 | Create skill | `skills/create/SKILL.md` | Deploys the approved plan: reads the plan file and performs the GitHub writes (labels, create-or-adopt milestone, issues, slug→`#n` rewrite, description PATCH). Runs `plan` first only if no plan file exists. `/milestone-feeder:create <brief>`. See [The create deploy / write order](#the-create-deploy--write-order). |
-| Architect agent | `agents/architect.md` | Architect lens: brief + standing docs + repo → candidate issue set + dependency edges + Wave order. One heavy reasoning step, dispatched once. Read-only. |
+| Build-roadmap skill | `skills/build-roadmap/SKILL.md` | **Internal** (invoked by `plan` Step 3.6 on an oversized whole-app brief, never a user command): dispatch `roadmap-splitter` once, surface the proposed split for confirm / merge / split / reorder / reject, and on confirmation write a roadmap manifest to `.milestone-feeder/roadmap-<slug>.md`. **No GitHub writes.** See [The roadmap](#the-roadmap). |
+| Architect agent | `agents/architect.md` | Architect lens: brief + standing docs + repo → candidate issue set + dependency edges + Wave order. One heavy reasoning step, dispatched once. Read-only. Raises `SCOPE_SPANS_MULTIPLE_MILESTONES` — the signal that triggers the roadmap route. |
 | Issue-author agent | `agents/issue-author.md` | Per-issue subagent: authors one issue's full spec to the §4 output contract so it passes the driver's triage clean. Read-only; returns issue text, never opens the issue. |
+| Roadmap-splitter agent | `agents/roadmap-splitter.md` | Roadmap lens: an oversized whole-app brief + standing docs → a strict, build-ordered partition into named milestones (the `ROADMAP` block). Dispatched once by `build-roadmap`. Read-only. Supersedes the architect's passive multi-milestone advisory with a real, ordered split. |
+| Brief-coverage-verifier agent | `agents/brief-coverage-verifier.md` | Coverage-audit lens: audits the read-back content of every created milestone + issue against the **original** brief and returns a coverage punch-list. Dispatched once by `create` Step 3V. Read-only; runs no `gh` of its own — `create` does the read-back and hands it the content. See [The create deploy / write order](#the-create-deploy--write-order). |
 | Hook: `no-source-edit` | `hooks/` (`hooks.json`, `run-hook.cmd`, `.sh`, `.ps1`) | `PreToolUse` (`Write`/`Edit`/`MultiEdit`/`NotebookEdit`): unconditionally deny edits to the feeder's own `sourceGlobs`. The only mechanical gate the feeder needs — it authors no code and opens no PRs. See [The mechanical gate](#the-mechanical-gate). |
 | Manifest + registration | `.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`, `hooks/hooks.json` | Plugin metadata (incl. the `superpowers` dependency), marketplace registration, and Claude-side hook registration. |
 | Update skill | `skills/update/SKILL.md` | Plan-driven reconcile against an existing milestone: re-triage live issues through the reviewer gate, patch gapped bodies, fill missing edges, re-render the Wave order. `/milestone-feeder:update <brief>`. Creates and deletes no issues; a clean milestone is a no-op. Reuses the reviewer gate (Step 6) and `create`'s write-primitives by reference. |
@@ -138,6 +141,35 @@ writes none either. `create` then deploys the emitted plan file (see
 | 6 | **Reviewer gate** (the keystone): vet every generated issue against the same gate that fronts the driver's build loop. Iterate each FAILed issue to clean (≤2 `issue-author` re-dispatches) or park it. **No GitHub writes.** See [The reviewer gate](#the-reviewer-gate). |
 | 7 | **Emit the plan file.** Write the reviewable plan file to `.milestone-feeder/plan-<slug>.md` — the build artifact `create`/`update` deploy — plus a "needs product input" report when product gaps remain. **No GitHub writes.** |
 
+### The roadmap
+
+Steps 1–7 above are a **callable single-milestone inner routine**; Step 0 is the
+once-per-run outer boundary. `plan` wraps the routine in a **conditional outer
+loop**:
+
+- **Single / normal brief (the default).** The architect's
+  `SCOPE_SPANS_MULTIPLE_MILESTONES` signal is `none` — `plan` runs the inner
+  routine **exactly once** on the whole brief. Byte-for-byte the prior behavior.
+- **Oversized whole-app brief.** The architect raises the signal, and `plan`'s
+  front-door (Step 3.6) routes the brief into the internal **`build-roadmap`**
+  skill: it dispatches `roadmap-splitter` once for a build-ordered partition of the
+  brief into named milestones, surfaces the split for the user to **confirm / merge
+  / split / reorder / reject** (one up-front sign-off, before anything is written),
+  and on confirmation writes a **roadmap manifest**
+  (`.milestone-feeder/roadmap-<slug>.md`) carrying the milestone build order and the
+  full original brief. `plan` (Step 3.7) then runs the inner routine **once per
+  milestone, in build order**, fanning the per-milestone planning out in parallel —
+  each milestone's version + title resolved once on the main thread before the
+  fan-out, and emitted to its own plan file.
+
+The signal is the **sole arbiter** of "oversized" — the front-door adds no second
+threshold. Steps 3.6/3.7 are outer orchestration; a dispatched per-milestone routine
+never re-enters them, so the fan-out cannot recurse. A user who declines the split,
+or a brief the splitter resolves to a single milestone, falls straight back to the
+single-milestone plan. **No new config key** — the roadmap reuses the existing
+`projectDocs` grounding; a one-time per-clone notice in `plan` Step 0 announces the
+routing to existing users (`SPEC.md` §3.1, the discovery-path principle).
+
 ### The create deploy / write order
 
 `create` reads the plan file (running `plan` first only when no plan file exists)
@@ -157,8 +189,32 @@ Idempotent re-run relies on stable, exact, open issue titles: the adopt +
 match-by-title path reuses existing issues rather than duplicating them, and pass
 (d) is a no-op against already-numeric bodies/descriptions.
 
-After the write sequence (a–e), `create` runs a top-level **Step 4 — the driver
-handoff**. It is **not** a GitHub write and is **not** part of the pass-(d)
+**A roadmap of N milestones (Step 1R).** When `plan`'s roadmap flow left a **roadmap
+manifest** for the brief, `create` deploys **all N** milestones in one run by
+**looping the per-plan deploy above** (passes a–e, unchanged) over the manifest's
+milestones in build order — adding only the outer loop. Each milestone's description
+gains one canonical `build order: milestone X of N` line (the cross-milestone
+position the driver reads to build the roadmap in sequence), ridden inside pass (d)'s
+REPLACE-form PATCH so it stays idempotent — the count never grows. The single-plan
+path is the **N=1** case, byte-for-byte unchanged; a mid-loop failure stops and
+reports, deletes nothing, and a re-run resumes (already-deployed milestones adopted
+by exact title, the rest deployed).
+
+**Closing verification — coverage against the original brief (Step 3V).** After the
+deploy loop (single-plan Step 3 / roadmap Step 1R) and before the optional Step-4
+handoff, `create` reads **every** deployed milestone + issue back from live GitHub
+and dispatches `brief-coverage-verifier` once against the **original** brief
+(resolved in-session, else from the persisted `## Original brief` … `## End original
+brief` copy — the roadmap manifest on a roadmap run, the plan file otherwise; else a
+non-blocking "original brief unavailable" notice, never a fabricated brief). It surfaces a coverage
+punch-list — uncovered / duplicated / distorted brief parts, plus any read-errors —
+routed exactly like the needs-input report. It is **always-on** (every `create`,
+single-milestone included) and **best-effort / non-blocking**: it never blocks
+`create`, the handoff, or any merge, and never auto-fixes, edits, reopens, or
+comments-to-fix any deployed issue or milestone (`SPEC.md` §3.1).
+
+After the write sequence (a–e) and the closing verification, `create` runs a
+top-level **Step 4 — the driver handoff**. It is **not** a GitHub write and is **not** part of the pass-(d)
 idempotent-re-run guarantee — it is a post-deploy skill invocation; see
 [The create → driver handoff](#the-create--driver-handoff).
 

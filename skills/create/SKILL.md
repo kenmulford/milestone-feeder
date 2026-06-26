@@ -5,9 +5,11 @@ description: This skill should be used when the user invokes "/milestone-feeder:
 
 # create — deploy the approved plan to GitHub (read-the-plan, faithful)
 
-Resolve the plan file `plan` wrote for this brief (by the same deterministic slug), then deploy **exactly it** to GitHub: ensure the labels, create-or-adopt the milestone by its exact title, open each surviving issue, rewrite the local slug references to real issue numbers, PATCH the build-order description onto the milestone, and file the needs-input report. The deploy step of the feeder pipeline: where `plan` *compiles* the plan file, `create` *deploys* it.
+Resolve the plan file `plan` wrote for this brief (by the same deterministic slug), then deploy **exactly it** to GitHub: ensure the labels, create-or-adopt the milestone by its exact title, open each surviving issue, rewrite the local slug references to real issue numbers, PATCH the build-order description onto the milestone, file the needs-input report, and — as its **closing action** — verify the deployed milestone(s) and issues cover the original brief (Step 3V). The deploy step of the feeder pipeline: where `plan` *compiles* the plan file, `create` *deploys* it.
 
 `create` is **faithful** — it builds what you approved. On the found path it does **NOT** re-dispatch the architect or the issue-author, and does **NOT** re-run the self-check gate (the reviewer). The plan file already recorded the gate-surviving issue set and its verdict; `create` trusts that verdict and writes the recorded issues — it regenerates nothing (`docs/specs/v0.3.0-humanize-the-surface.md` §4: *"on the found path, `create` does not re-dispatch the architect / issue-author, and does not re-run the self-check gate"*). The only path that runs the gate from `create` is the run-`plan`-first fallback (the plan file was absent, so there is nothing yet to deploy). **No flags** — `create` *is* the write verb of the plan/create pair; there is nothing to argument-parse (`docs/specs/v0.3.0-humanize-the-surface.md` §2: zero flags anywhere). Authors no code, opens no PRs, never touches branches; every dispatched agent — only on the run-`plan`-first fallback — stays read-only against provided text. The GitHub writes are performed by the skill itself via `gh`, so the agent-read-only invariant holds.
+
+**One brief, or a roadmap of N milestones.** Most runs deploy **one** plan file to **one** milestone (the single-plan path). When `plan`'s roadmap flow produced a **roadmap manifest** for this brief — the ordered list of N milestone plan files in build order (`skills/build-roadmap/SKILL.md` "Manifest format") — `create` deploys **all N** in one run by **looping this same per-plan deploy** over the manifest's milestones in build order, recording each milestone's cross-milestone position in its description. The per-plan deploy is reused **by reference, not re-derived as a drifting copy** (`.project/design-philosophy.md#What we optimize for` — composability). The single-plan path is the **N=1** case and is unchanged; the multi-milestone loop is purely additive and is gated on a manifest only `plan`'s roadmap flow produces (Step 1R below).
 
 ## Announce first
 
@@ -16,6 +18,8 @@ Say this to the user before doing any work — pick the line that matches the re
 > **Plan file found:** Standing by while I deploy the approved plan to GitHub — I'll ensure the labels, create-or-adopt the milestone, open each issue, rewrite the slug references to real numbers, and PATCH the build order. I'm deploying **exactly the plan you approved** — I trust the review it already recorded and re-check nothing.
 
 > **No plan file yet:** I don't have a plan file for this brief, so I'll run `plan` first to make one (it reads your project docs, breaks the idea into issues, and checks each against your conventions), then deploy that plan to GitHub.
+
+> **Roadmap of milestones found:** I have a roadmap of N milestones for this brief, so I'll deploy **all N** in build order — for each one I'll ensure the labels, create-or-adopt the milestone, open its issues, rewrite the slug references to real numbers, and PATCH its build order, then record where it sits in the overall build order (`build order: milestone X of N`). I deploy **exactly the plan you approved** for each milestone and re-check nothing. If one fails I'll stop and report what deployed and what's left to do — I delete nothing, and re-running picks up where it stopped.
 
 ## Procedure
 
@@ -29,9 +33,69 @@ Read `.milestone-config/feeder.json`. **Absent → invoke `milestone-feeder:setu
 |---|---|---|
 | `autoHandoff` | `"prompt"` | After the deploy, whether `create` offers to hand the milestone to `milestone-driver` to start building (Step 4). `"prompt"` → ask (default); `"auto"` → kick off immediately, no prompt; `"off"` → never offer. An **unrecognized value** (anything that is not exactly `"prompt"`, `"auto"`, or `"off"`) is treated as the default `"prompt"` — mirrors how `versioning` treats an invalid value as absent (`docs/profile-schema.md` `versioning` per-key note); never error on the key. |
 
+### Step 1R — Resolve the deploy target: a single plan, or a roadmap of N milestones
+
+Before resolving a plan file, check whether `plan`'s roadmap flow left a **roadmap manifest** for this brief. Derive `<slug>` **exactly as Step 1 does** (the same deterministic rule, `skills/plan/SKILL.md` Step 7 — the slug-derivation rule), then resolve the manifest at the path `build-roadmap` writes — the cross-milestone build artifact `create` deploys (`skills/build-roadmap/SKILL.md` "Manifest format"; `.project/design-philosophy.md#Layering & boundaries` — the plan file / manifest is the build artifact):
+
+```
+.milestone-feeder/roadmap-<slug>.md
+```
+
+| Resolution | Action |
+|---|---|
+| **Absent** (no manifest) | **Single-plan path — UNCHANGED.** Fall through to **Step 1** below and run **Steps 1 → 4 once, exactly as today**. This is the **N=1** case; the single-plan path sees zero behavior change. Skip the rest of this section. |
+| **Found** (a manifest) | **Multi-milestone roadmap deploy.** Read the manifest and run the **outer loop** below. The manifest is **read, never regenerated** — `create` re-dispatches no agent and re-runs no gate on the found path, exactly as for a plan file (`SPEC.md` §3.1). Do **NOT** also run the single-plan Step 1 resolution for the whole brief: the roadmap replaces it — each of its milestones has its own `plan-<slug>.md`, and there is no whole-brief plan file. |
+
+**The outer loop (manifest found) — loop the per-plan deploy over the manifest's milestones.** The manifest's `## Milestones (in build order)` section lists the milestones, each `### <position>. <milestone name>` with a `Build-order position: <position>` line **and a `Plan file:` path** (the exact plan-file handle the planning fan-out recorded, `skills/build-roadmap/SKILL.md` "Manifest format"; `skills/plan/SKILL.md` Step 3.7.g), in build order. Let **N** be that milestone count. Only the **outer loop** is added — the per-milestone deploy is **Step 3 passes a–e reused unchanged**. **For each milestone, in build order (position 1 → N):**
+
+| Per-milestone step | What runs |
+|---|---|
+| **i. Resolve this milestone's plan file** | **Read the recorded `Plan file:` path from this manifest entry** — the exact `.milestone-feeder/plan-<assignedSlug>.md` the planning fan-out populated (`skills/build-roadmap/SKILL.md` "Manifest format"; `skills/plan/SKILL.md` Step 3.7.g). **Do NOT re-derive a slug from the milestone name** — the plan-file slug is goal-derived with an `-m<index>` collision tiebreaker the manifest name does not encode (`skills/plan/SKILL.md` Step 3.7.d), so a name-derived path would miss. Read that plan file and treat it as Step 1's **Found** row, then deploy it. If the entry's `Plan file:` is **pending/empty**, or the file at that path is **absent** (this milestone never finished planning), STOP the loop and report it as a mid-loop failure (🔴, Partial-failure path below) — do **NOT** re-plan from `create`. |
+| **ii. Read its plan-file contract** | **Step 2**, unchanged. |
+| **iii. Deploy it** | **Step 3 passes a–e**, entirely unchanged — ensure labels (a) / create-or-adopt the milestone by exact title (b) / create-or-reuse each surviving issue by exact title (c) / slug→`#n` rewrite + Wave-description PATCH (d) / route the needs-input report (e). Per-milestone idempotency is the existing **create-or-adopt**, inherited per iteration: never delete a milestone or issue, never duplicate a same-title open issue. |
+| **iv. Record the build-order line** | When pass (d) PATCHes this milestone's description, include the canonical `build order: milestone X of N` line in the PATCHed description, alongside the `## Waves` block (see "The build-order line" below). |
+
+After the loop deploys all N, report each milestone's deploy receipt (`#`) and the recorded build order, then continue to **Step 3V** (verify the deploy covers the whole-app brief — reading between the manifest's paired `## Original brief` … `## End original brief` markers) and **Step 4** (its multi-milestone note).
+
+**The build-order line (the cross-milestone metadata).** Pin **one** canonical literal — `build order: milestone X of N` — where **X** is this milestone's `Build-order position` (1..N) and **N** is the manifest's milestone count. It extends the Wave-order-in-description convention (`SPEC.md` §4): the description already encodes the *intra*-milestone Wave order (`## Waves`); this single line encodes the *cross*-milestone position the driver reads to build the roadmap in sequence. Place it as a standalone line directly under the one-paragraph milestone goal and above the `## Waves` block, so milestone X's PATCHed description reads:
+
+```markdown
+<one-paragraph milestone goal>
+
+build order: milestone X of N
+
+## Waves
+- Wave 1 (parallel): #A, #B, ...
+- ...
+```
+
+**Idempotency is INHERITED from pass (d), not re-implemented.** Pass (d) PATCHes the description with the **REPLACE form** (`gh api --method PATCH .../milestones/<number> -f description=...`, Step 3 pass d) — it replaces the whole description every run. The build-order line rides **inside that one REPLACE payload**, so a re-run over an already-deployed manifest **overwrites** the line in place; the line count never grows (the same overwrite guarantee pass (d) already makes for the Wave order). **No new read-modify-write of the description is added** — only pass (d)'s payload gains the one canonical line. Assemble the augmented description (bash + PowerShell 7+ twins), then PATCH it with pass (d)'s existing REPLACE-form command:
+
+```bash
+# bash — assemble milestone X's description: goal + the ONE canonical build-order line + the
+# slug-rewritten Waves block, then PATCH via pass (d)'s REPLACE form. X = Build-order position; N = count.
+# $goal and $waves are the two halves of the description pass (d) already builds (slugs rewritten to #n).
+desc="$(printf '%s\n\nbuild order: milestone %s of %s\n\n%s\n' "$goal" "$X" "$N" "$waves")"
+gh api --method PATCH "repos/{owner}/{repo}/milestones/<number>" -f "description=$desc"
+```
+
+```powershell
+# PowerShell 7+ — same assembly + pass (d)'s REPLACE-form PATCH; the ONE canonical line.
+$desc = @"
+$goal
+
+build order: milestone $X of $N
+
+$waves
+"@
+gh api --method PATCH "repos/{owner}/{repo}/milestones/<number>" -f "description=$desc"
+```
+
+Re-PATCHing on a re-run overwrites the line — idempotent by construction, so the `build order: milestone X of N` count stays exactly one per milestone, never growing.
+
 ### Step 1 — Resolve the plan file for the brief
 
-Derive `<slug>` **deterministically** from the one-line milestone goal of the brief, using the **same derivation `plan` uses** (`skills/plan/SKILL.md:262`): lowercase the goal, replace every run of non-alphanumeric characters with a single hyphen, strip any leading/trailing hyphen, and cap the length at the same bound (trimming a trailing hyphen if the cut lands on one). The same brief always resolves to the same path:
+Derive `<slug>` **deterministically** from the one-line milestone goal of the brief, using the **same derivation `plan` uses** (`skills/plan/SKILL.md` Step 7 — the slug-derivation rule): lowercase the goal, replace every run of non-alphanumeric characters with a single hyphen, strip any leading/trailing hyphen, and cap the length at the same bound (trimming a trailing hyphen if the cut lands on one). The same brief always resolves to the same path:
 
 ```
 .milestone-feeder/plan-<slug>.md
@@ -104,7 +168,7 @@ PowerShell 7+ is the same form — set `$env:t = "<milestone-title>"` first, the
 
 **Write the deploy receipt (the concluding action of pass b).** As soon as pass (b) has resolved the milestone `.number` — **any** outcome above (created / adopted-open / adopted-reopened / first-of-multiple) — write that number back into the **same plan file Step 1 resolved** (`.milestone-feeder/plan-<slug>.md`, `skills/create/SKILL.md` Step 1) as a single labeled receipt field. This is the stable handle `update` will resolve by after a later title change (`docs/specs/v0.3.1-driver-handoff.md` §4 *"The deploy receipt — a stable handle for rename"*; the plan-file additive-fields row, §6: *"`Milestone number (GitHub):` `<n>` — the deploy receipt … `create` writes it post-deploy"*). The receipt is the create-SIDE back-write only — the `update`-side READ is a separate issue and is **not** part of `create`.
 
-- **Field shape.** Exactly one labeled line, a **sibling to the plan file's existing header lines** (`Milestone title (exact):`, `Self-check:`, `Source brief:` near the top — the format block at `skills/plan/SKILL.md:282-288`):
+- **Field shape.** Exactly one labeled line, a **sibling to the plan file's existing header lines** (`Milestone title (exact):`, `Self-check:`, `Source brief:` near the top — the format block at `skills/plan/SKILL.md` Step 7 — "Plan-file format"):
 
   ```
   Milestone number (GitHub): <n>
@@ -237,6 +301,107 @@ Before writing the local report, ensure the scratch dir self-ignores (it normall
 
 If the plan file's `## Needs human input` pointer is "none" (no product gap and nothing parked), there is no report to route — say so and skip this pass.
 
+### Step 3V — Verify the deploy covers the original brief (create's closing action)
+
+After the deploy loop completes — **single-plan path:** Step 3 passes a–e; **roadmap path (Step 1R):** the outer loop over all N milestones — run this **closing verification** before the optional Step-4 handoff. It is **always-on** (every `create`, single-milestone included) — **not** gated like the Step-4 handoff — and **best-effort / non-blocking**: it reads the live deployed state back, audits it against the **original** brief, and surfaces a coverage punch-list, but it **never** blocks `create`'s completion, the Step-4 handoff, or any merge, and **never** auto-fixes, edits, reopens, or comments-to-fix any deployed issue or milestone (`.project/design-philosophy.md#One-way doors` — surfaced for the human, never auto-applied; `#Error & failure philosophy` — degrade gracefully, never abort). **Announce the step, and at the end its outcome, flatly.**
+
+**Skip conditions (a non-blocking notice, NOT an error).** Before resolving the brief, skip the whole step — print the stated notice and continue to Step 4 — when either holds:
+
+| Condition | Notice |
+|---|---|
+| **Nothing was deployed to read back** — the deploy created no surviving issue (all candidates parked / dropped) | `coverage not verified — nothing was deployed to read back` |
+| **The verifier agent does not resolve** — `milestone-feeder:brief-coverage-verifier` (#156) is not available in this session (detect by the **same optional soft-dependency convention Step 4 Gate 2 uses**: attempt the dispatch; "does not resolve" = absent) | `coverage not verified — brief-coverage-verifier not installed` |
+
+**1. Resolve the ORIGINAL brief — the resolution ladder (first-match-wins).** The audit is against the **original** brief, never the per-milestone plan slices:
+
+| Rung | Source |
+|---|---|
+| **1. In-session** | The original brief `create` already holds — the `create` argument (resolved to text if it is a `file:<path>` / `epic #<n>` reference `create` can still read). |
+| **2. Persisted durable copy** | The `## Original brief` … `## End original brief` delimited section of the persisted artifact: the **roadmap manifest** (`.milestone-feeder/roadmap-<slug>.md`, `skills/build-roadmap/SKILL.md` "Manifest format") on a **roadmap run**; the **plan file** (`.milestone-feeder/plan-<slug>.md` — the `## Original brief` section `plan` persists, `skills/plan/SKILL.md` Step 7) on a **single-milestone run**. Extract the lines **strictly between** the paired markers (the extractor below) so a brief containing its own `## ` headings is read intact, not truncated at its first internal `## `. |
+| **3. Fallback** | Neither resolved (e.g. a `file:<path>` brief that no longer resolves and no persisted copy exists) → emit the non-blocking notice `original brief unavailable — coverage not verified`, **never fabricate a brief**, and let `create` complete. |
+
+**Extract the rung-2 copy between the paired delimiters.** The persisted `## Original brief` section is bounded by a paired end-marker: both producers emit a literal `## End original brief` line immediately after the brief text (`skills/build-roadmap/SKILL.md` "Manifest format"; `skills/plan/SKILL.md` Step 7). Capture the lines **strictly between** `## Original brief` and the first following `## End original brief` — both delimiter lines excluded — so a brief that contains its own `## ` headings is read **intact**, never truncated at its first internal `## `. **Graceful fallback:** if the opening `## Original brief` is present but no closing `## End original brief` exists (e.g. an older scratch artifact written before the paired-delimiter convention), degrade to the prior naive behavior — read from `## Original brief` to the next top-level `## ` heading or EOF — yielding a usable, non-empty result rather than nothing. (This prior read may truncate a brief that has its own internal `## ` headings — the very reason the paired delimiter is preferred — but it never returns empty for a non-empty brief.) Step 3V already degrades gracefully on an absent copy, so it degrades gracefully on a delimiter-less one too. Extract with the artifact path in `$art` (both shells):
+
+```bash
+# bash — resolve the persisted original brief from the artifact at "$art".
+art=".milestone-feeder/<roadmap|plan>-<slug>.md"
+if grep -qxF '## End original brief' "$art"; then
+  # Primary: the lines STRICTLY BETWEEN `## Original brief` and the first following
+  # `## End original brief` (both delimiter lines excluded) — robust to a brief that
+  # contains its OWN `## ` headings; it is NOT truncated at the first internal `## `.
+  brief="$(awk '
+    $0 == "## End original brief" { inblk=0 }
+    inblk                         { print }
+    $0 == "## Original brief"     { inblk=1 }
+  ' "$art")"
+else
+  # Graceful fallback (no closing delimiter): read from `## Original brief` to the next
+  # top-level `## ` heading or EOF — the prior behavior. A usable result, never empty.
+  brief="$(awk '
+    inblk && /^## /           { inblk=0 }
+    inblk                     { print }
+    $0 == "## Original brief" { inblk=1 }
+  ' "$art")"
+fi
+```
+
+```powershell
+# PowerShell 7+ — same resolution from the artifact at $art.
+$art = ".milestone-feeder/<roadmap|plan>-<slug>.md"
+$lines = @(Get-Content -LiteralPath $art -ErrorAction SilentlyContinue)
+$start = [array]::IndexOf($lines, '## Original brief')
+$brief = ''
+if ($start -ge 0) {
+  $end = [array]::IndexOf($lines, '## End original brief', $start + 1)
+  if ($end -ge 0) {
+    # Primary: the lines STRICTLY BETWEEN the paired markers (both excluded) —
+    # robust to a brief containing its own `## ` headings.
+    if ($end -gt $start + 1) { $brief = ($lines[($start + 1)..($end - 1)] -join "`n") }
+  } else {
+    # Graceful fallback (no closing delimiter): to the next top-level `## ` heading or
+    # EOF — the prior behavior. A usable result, never empty.
+    for ($k = $start + 1; $k -lt $lines.Count -and $lines[$k] -notmatch '^## '; $k++) {
+      $brief += $lines[$k] + "`n"
+    }
+  }
+}
+```
+
+**2. Read back every deployed target — the #158→#156 input contract (`create` does the reads, #156 does none).** `create` performs the live-GitHub read-back of **every** deployed target via the **same cross-platform `gh` surface it already uses** (the milestone read of Step 3 pass b; the issue handles from pass c/d) — for **each** created milestone its title + description, and for **each** created issue its title + body. The milestone number(s) and issue numbers are already in hand from the deploy (pass b's resolved `.number`, pass c/d's slug→`#n` map; on a roadmap run, each milestone's own deploy). For **each** target record a per-target **STATUS** — the content, **or** a `read-error: <reason>` marker if its read fails — so #156 populates `READ_ERRORS` **purely from these markers** and runs **no** `gh` read of its own (`agents/brief-coverage-verifier.md` — it runs NO `gh` reads, taking provided read-back content; `.project/design-philosophy.md#Layering & boundaries` — skills do the GitHub ops, the read-only agent audits provided text). Read each target (both shells; on a non-zero `gh` exit, record the marker instead of content):
+
+```bash
+# bash — read back milestone <number> (title + description); on a non-zero gh exit, record the marker.
+m="$(gh api "repos/{owner}/{repo}/milestones/<number>" --jq '{title, description}')" \
+  || m="read-error: milestone <number> could not be read back"
+# bash — read back issue #<n> (title + body); on a non-zero gh exit, record the marker.
+i="$(gh issue view <n> --json title,body)" \
+  || i="read-error: issue #<n> could not be read back"
+```
+
+```powershell
+# PowerShell 7+ — same read-backs; on a non-zero gh exit, record the marker instead of content.
+$m = gh api "repos/{owner}/{repo}/milestones/<number>" --jq '{title, description}'
+if ($LASTEXITCODE -ne 0) { $m = "read-error: milestone <number> could not be read back" }
+$i = gh issue view <n> --json title,body
+if ($LASTEXITCODE -ne 0) { $i = "read-error: issue #<n> could not be read back" }
+```
+
+On a **roadmap run**, read back **all N** milestones and **all** their issues into one payload — the audit is against the manifest's whole-app brief (rung 2), so the read-back must cover every milestone the roadmap deployed.
+
+**3. Dispatch the brief-coverage verifier (#156), once.** Dispatch `milestone-feeder:brief-coverage-verifier`, passing (1) the **resolved original brief** (step 1) and (2) the **per-target read-back payload** (content-or-marker per milestone/issue, step 2). It audits every readable target against the original brief, populates `READ_ERRORS` from the markers alone, and returns its structured `COVERAGE_VERDICT / UNCOVERED / DUPLICATED / DISTORTED / READ_ERRORS` block (`agents/brief-coverage-verifier.md`). It opens, edits, and comments on nothing — `create` routes its output.
+
+**4. Surface / route the punch-list — exactly like the needs-input report (pass e).** Route by the recorded **Source brief reference** — the **manifest's** on a roadmap run, the **plan file's** on a single-milestone run (the same artifact the brief was resolved from at rung 2):
+
+| `COVERAGE_VERDICT` | Action |
+|---|---|
+| **`clean`** (UNCOVERED / DUPLICATED / DISTORTED / READ_ERRORS all the literal `none`) | Report `coverage verified — nothing missed`. **Route nothing.** |
+| **`punch-list`**, brief form **`epic #<n>`** | Post the block as a comment on the epic: `gh issue comment <epicIssueNumber> --body "<punch-list>"` (mirrors pass e's epic branch). |
+| **`punch-list`**, brief form **file / inline** | Write the block to the local git-invisible file `.milestone-feeder/coverage-<slug>.md` and **print a notice** that the punch-list is local (no epic to comment on) — mirrors pass e's file/inline branch. Ensure `.milestone-feeder/.gitignore` contains a single `*` first (it already does — `plan` / pass e ensured it). |
+
+The punch-list is **advisory** — `create` surfaces it for the human and **changes nothing** on GitHub (no issue opened, edited, closed, reopened, or auto-fixed; `.project/design-philosophy.md#One-way doors`).
+
+**Failure stays non-blocking.** If the verifier dispatch errors or returns no parseable block, emit a non-blocking notice (`coverage not verified — verifier did not return a usable result`) and continue — never abort, never block Step 4 (`.project/design-philosophy.md#Error & failure philosophy`). The whole step is read-only on the deployed state.
+
 ### Step 4 — Offer the driver handoff (clean-run only)
 
 After the deploy completes (Step 3), `create` can hand the freshly-built milestone straight to `milestone-driver` to start building — instead of ending the run and leaving the user to invoke the driver themselves. This is **build-kickoff only**; it invokes `/milestone-driver:solve-milestone "<milestone-title>"`, which builds to the integration branch and **never** crosses the release boundary (Gate 3 below). The behavior is governed by the `autoHandoff` key (Step 0) and three gates that must **ALL** hold to offer the handoff. (Resolved design: issue #148, 2nd comment — Ken, 2026-06-24.)
@@ -244,13 +409,13 @@ After the deploy completes (Step 3), `create` can hand the freshly-built milesto
 **Gate 1 — clean run only (no gaps/parks AND the self-check actually ran).** Offer the handoff **only** when **BOTH** conditions hold:
 
   1. **No gaps/parks** — the plan file's `## Needs human input` pointer is **"none"** (the exact same signal pass (e) reads, `skills/create/SKILL.md` pass e, line ~232, to decide whether to route a report): no product gap AND nothing parked/dropped.
-  2. **The self-check actually ran** — the plan file's `Self-check:` verdict (already read at Step 2; the plan-file contract row) is a **real PASS or INTERNAL** verdict, **NOT** `SKIPPED(reviewer:false)`. A `reviewer: false` run **skips the self-check gate entirely** — its issues are explicitly **NOT vetted** against the driver's entry gate (`plan` records `SKIPPED(reviewer:false)` with a visible 🔴 warning; `skills/plan/SKILL.md:470`, `docs/architecture.md` reviewer-backends table). Such a run can have no product gaps and nothing parked → pointer "none" → it would otherwise read as "clean" while harboring exactly the **unsurfaced** gaps the gate exists to catch. So a `SKIPPED(reviewer:false)` verdict is a **Gate 1 fail**.
+  2. **The self-check actually ran** — the plan file's `Self-check:` verdict (already read at Step 2; the plan-file contract row) is a **real PASS or INTERNAL** verdict, **NOT** `SKIPPED(reviewer:false)`. A `reviewer: false` run **skips the self-check gate entirely** — its issues are explicitly **NOT vetted** against the driver's entry gate (`plan` records `SKIPPED(reviewer:false)` with a visible 🔴 warning; `skills/plan/SKILL.md` §6.1 — the `reviewer: false` skip-the-gate row, `docs/architecture.md` reviewer-backends table). Such a run can have no product gaps and nothing parked → pointer "none" → it would otherwise read as "clean" while harboring exactly the **unsurfaced** gaps the gate exists to catch. So a `SKIPPED(reviewer:false)` verdict is a **Gate 1 fail**.
 
 If **either** condition is not met — any candidate was parked / flagged / blocked (the pointer is NOT "none"), **OR** the self-check was skipped (`SKIPPED(reviewer:false)`) — **do NOT offer the handoff**; the existing gap-surfacing / reviewer-skipped behavior stands unchanged (pass e routes the gaps as today; the 🔴 reviewer-skipped warning already stands), and `create` ends as it does today. Handing a milestone with known gaps — or with issues that were never vetted — to an unattended build loop would build past the very gaps the feeder exists to surface; the clean-run gate (no gaps/parks AND the self-check ran) is what keeps the human in the loop.
 
-**Gate 2 — driver installed (else silently skip).** Detect whether `milestone-driver` is available in this session using the **same convention the feeder already uses** for the optional driver soft-dependency: attempt the invocation and treat "does not resolve (no such skill / agent in the session — `milestone-driver` not installed)" as **absent** (`skills/plan/SKILL.md:472` — the runtime degrade-to-internal trigger: a dispatch that does not resolve = the agent is not installed; `docs/consumer-setup.md:17-20` — the optional `milestone-driver` soft-dependency **degrades silently** when absent). For the handoff, the cleanest detection is: **does `/milestone-driver:solve-milestone` resolve in this session?** If it does **NOT** resolve, **silently skip** this step — **no prompt, no error, no notice** — exactly as the optional soft-dependency degrades silently elsewhere. The handoff is a convenience on top of a clean deploy; its absence is not a failure.
+**Gate 2 — driver installed (else silently skip).** Detect whether `milestone-driver` is available in this session using the **same convention the feeder already uses** for the optional driver soft-dependency: attempt the invocation and treat "does not resolve (no such skill / agent in the session — `milestone-driver` not installed)" as **absent** (`skills/plan/SKILL.md` §6.1 — the runtime degrade-to-internal trigger: a dispatch that does not resolve = the agent is not installed; `docs/consumer-setup.md:17-20` — the optional `milestone-driver` soft-dependency **degrades silently** when absent). For the handoff, the cleanest detection is: **does `/milestone-driver:solve-milestone` resolve in this session?** If it does **NOT** resolve, **silently skip** this step — **no prompt, no error, no notice** — exactly as the optional soft-dependency degrades silently elsewhere. The handoff is a convenience on top of a clean deploy; its absence is not a failure.
 
-**Gate 3 — never crosses the release boundary.** The handoff invokes `/milestone-driver:solve-milestone "<milestone-title>"`, which **only merges to the integration branch** (`develop`) and never to the protected branch (`main`). Release (`integrationBranch` → `protectedBranch`), closing the GitHub milestone object, and deploy stay **manual and human-only** — that boundary is what makes unattended operation safe (`milestone-driver/skills/solve-milestone/SKILL.md:11` — the "Bounded blast radius" note: "merges only to `integrationBranch`, never to `protectedBranch`. Release … and deploy stay manual and human-only"). `create`'s handoff is **build-kickoff only**: it does not auto-merge to a protected branch, does not remove the release gate, and `develop → main` stays a manual human call. `solve-milestone` already enforces this; the handoff simply invokes it.
+**Gate 3 — never crosses the release boundary.** The handoff invokes `/milestone-driver:solve-milestone "<milestone-title>"`, which **only merges to the integration branch** (`develop`) and never to the protected branch (`main`). Release (`integrationBranch` → `protectedBranch`), closing the GitHub milestone object, and deploy stay **manual and human-only** — that boundary is what makes unattended operation safe (`milestone-driver/skills/solve-milestone/SKILL.md` — the "Bounded blast radius" note: "merges only to `integrationBranch`, never to `protectedBranch`. Release … and deploy stay manual and human-only"). `create`'s handoff is **build-kickoff only**: it does not auto-merge to a protected branch, does not remove the release gate, and `develop → main` stays a manual human call. `solve-milestone` already enforces this; the handoff simply invokes it.
 
 **Behavior by `autoHandoff` (Step 0):**
 
@@ -260,11 +425,13 @@ If **either** condition is not met — any candidate was parked / flagged / bloc
 | `"prompt"` (**default**) | **Ask:** *"milestone-driver is installed — start building this milestone now, or review it first?"* → **yes** invokes `/milestone-driver:solve-milestone "<milestone-title>"`; **no** stops (today's behavior). | **Do not offer** — Gate 1 fail (gaps/parks present, **OR** `SKIPPED(reviewer:false)` — the issues were never vetted): surface the gaps as today (pass e); the 🔴 reviewer-skipped warning already stands. Gate 2 fail: silently skip (no prompt, no error). |
 | `"auto"` | **Invoke immediately**, no prompt: `/milestone-driver:solve-milestone "<milestone-title>"`. Print a one-line notice for legibility — `create: clean run — handing "<milestone-title>" to milestone-driver to start building (autoHandoff: auto)`. (Driver-side precondition: see the numeric-title caveat below.) | **Do not invoke** — Gate 1 fail (gaps/parks present, **OR** `SKIPPED(reviewer:false)` — the issues were never vetted, so auto-firing would build past un-vetted design): surface the gaps as today (pass e); the 🔴 reviewer-skipped warning already stands. Gate 2 fail: silently skip. |
 
-**Numeric-title caveat (`"auto"` defers to the driver's own preconditions).** `autoHandoff: "auto"` kicks off the driver with no prompt, but it does **not** override the driver's own entry preconditions. If the deployed milestone title is **purely numeric**, `/milestone-driver:solve-milestone` **halts and prompts the human for a rename** regardless of `autoHandoff: "auto"` — it interprets a bare number as single-issue mode and refuses to drive a numeric-titled milestone unattended (`milestone-driver/skills/solve-milestone/SKILL.md:86` — "if it is purely numeric, halt immediately and prompt the human … do not proceed to Phase 0"). So auto mode's "no question asked" contract ends at the driver boundary: auto kicks off the driver, but the driver enforces a non-numeric-title precondition for unattended operation. This is **narrow** — a feeder-deployed milestone normally carries the user-owned semver in its title (non-numeric), so the caveat rarely bites; no special handling is added here, the doc is simply honest that auto defers to the driver's preconditions.
+**Numeric-title caveat (`"auto"` defers to the driver's own preconditions).** `autoHandoff: "auto"` kicks off the driver with no prompt, but it does **not** override the driver's own entry preconditions. If the deployed milestone title is **purely numeric**, `/milestone-driver:solve-milestone` **halts and prompts the human for a rename** regardless of `autoHandoff: "auto"` — it interprets a bare number as single-issue mode and refuses to drive a numeric-titled milestone unattended (`milestone-driver/skills/solve-milestone/SKILL.md` — the numeric-title precondition: "if it is purely numeric, halt immediately and prompt the human … do not proceed to Phase 0"). So auto mode's "no question asked" contract ends at the driver boundary: auto kicks off the driver, but the driver enforces a non-numeric-title precondition for unattended operation. This is **narrow** — a feeder-deployed milestone normally carries the user-owned semver in its title (non-numeric), so the caveat rarely bites; no special handling is added here, the doc is simply honest that auto defers to the driver's preconditions.
 
 **The exact milestone title.** The invocation passes the **exact** `Milestone title (exact)` line from the plan file — the same identity string `create` deployed at pass (b) (Step 2; the plan-file `Milestone title (exact)` field). Never a re-derived or goal-derived name — the title carries the user-owned semver and is the handle the driver resolves the milestone by. Pass it verbatim to `solve-milestone "<milestone-title>"`.
 
 **This is a skill invocation, not a shell command.** `/milestone-driver:solve-milestone` is invoked as a Claude Code skill (the same way `create` runs `plan` first on the absent path) — there is no bash/pwsh form to ship for the invocation itself. The `autoHandoff` value is already in hand from Step 0; this step needs no additional config read.
+
+**Multi-milestone roadmap note (Step 1R).** When a **roadmap manifest** drove the deploy (Step 1R, multi-milestone path), this single-plan handoff is **not** auto-fired across the roadmap. `create`'s roadmap responsibility ends at deploying all N milestones and recording each one's `build order: milestone X of N` line — which is exactly the cross-milestone order the driver reads. A roadmap deploy therefore completes by reporting the N deploy receipts and the recorded build order; starting the build stays a human call. The single-plan handoff above (Gates 1–3, `autoHandoff`) is **unchanged** for the N=1 / no-manifest path.
 
 ### Partial-failure path (resume on re-run)
 
@@ -277,6 +444,8 @@ A `create` run is **not "done"** until the milestone description AND every creat
 | **Pass (d), a `gh issue edit` (body rewrite)** fails — after all issues were created | **Report** which created issue still carries local slugs in its body. | Re-run re-executes pass (d): re-applying the rewrite to already-numeric bodies is a no-op, and the still-slugged body is rewritten and edited. Adopted (pre-existing) issue bodies are left as-is per the pass-(c) body policy. |
 
 In all cases the failure path is **defined, not silent**, and re-running `create` always re-attempts pass (d) until the milestone description and all created-issue bodies carry real numbers — the resume re-uses the match-by-title de-dup (least-code).
+
+**Multi-milestone roadmap (the outer loop, Step 1R).** When a roadmap manifest drove the deploy, the same partial-failure discipline applies **per milestone**, with a cross-milestone dimension on top. If a milestone's deploy fails mid-loop — a missing plan file at per-milestone step **i**, or any pass (c)/(d) failure inside its Step 3 — **STOP the loop** and report the partial state: which milestones **fully deployed** (with their `#`), which one **failed and at which pass**, and which remain **pending**. **Delete nothing.** A **re-run resumes**: the outer loop re-iterates the whole manifest in build order — each already-deployed milestone is **adopted by exact title** (create-or-adopt, reopened if closed; its open issues reused by title; its pass (d), including the `build order: milestone X of N` line, re-PATCHed idempotently), and the failed + remaining milestones deploy. Resumption is the existing per-plan path applied per milestone — no new resume machinery.
 
 ## Output style
 
@@ -291,3 +460,5 @@ Be concise — report status and outcomes flatly, no wall-of-text. Present steps
 - **Authors no code, opens no PRs, never touches branches.** Creating issues / a milestone / labels / one epic comment is NOT code, a PR, or a branch. The feeder reads code to ground decisions; it never edits a source file, creates a branch, or opens a PR. The GitHub writes are performed by the skill itself via `gh`, not by any dispatched agent.
 - **Every dispatched agent stays read-only — only on the run-`plan`-first fallback.** On the found path `create` dispatches no agent at all (it deploys the recorded plan). On the absent path it runs `plan`, whose architect / issue-author / reviewer dispatches are all read-only against provided text (`skills/plan/SKILL.md` Non-negotiables). The agent-read-only invariant holds on both paths.
 - **The driver handoff is build-kickoff only, gated three ways, and never crosses the release boundary (Step 4).** `create` offers the handoff **only** on a clean run (the `## Needs human input` pointer is "none" **AND** the self-check actually ran — a `SKIPPED(reviewer:false)` verdict is a Gate 1 fail, since its issues were never vetted) **and** only when `/milestone-driver:solve-milestone` resolves in this session (absent → silently skip, no prompt, no error). It invokes `/milestone-driver:solve-milestone "<exact milestone title>"` — which merges only to the integration branch; `develop → main` stays a manual human call. The handoff **never** auto-merges to a protected branch and never removes the release gate. `autoHandoff` (default `"prompt"`) governs prompt / auto / off; an unrecognized value is treated as the default `"prompt"`.
+- **`create` closes by verifying the deploy covers the original brief (Step 3V) — always-on, non-blocking, never auto-fixing.** After the deploy loop (single-plan Step 3 / roadmap Step 1R) and before the optional Step-4 handoff, `create` reads back every deployed milestone + issue via `gh` (bash + PowerShell 7+ twins), dispatches the brief-coverage verifier (#156, `milestone-feeder:brief-coverage-verifier`) against the **original** brief — resolved in-session, else from the persisted copy bounded by the paired `## Original brief` … `## End original brief` markers (the roadmap manifest on a roadmap run, the plan file on a single-milestone run), which Step 3V reads **strictly between** the markers (graceful fallback to the next `## ` heading when no closing delimiter is present) so a brief carrying its own `## ` headings is read intact, else a non-blocking `original brief unavailable` notice (**never a fabricated brief**) — passing each target's content-or-`read-error` marker so #156 runs no `gh` read of its own. It routes the returned punch-list exactly like the needs-input report (epic → comment; file/inline → local git-invisible file + notice; empty → "nothing missed", route nothing). It is **best-effort**: it never blocks `create`'s completion, the Step-4 handoff, or any merge, never auto-fixes / edits / reopens / comments-to-fix any deployed issue or milestone, and skips with a non-blocking notice when nothing was deployed to read back or #156 is not installed.
+- **A roadmap of N milestones deploys by LOOPING the unchanged per-plan deploy (Step 1R).** When `plan`'s roadmap flow left a roadmap manifest for this brief (`.milestone-feeder/roadmap-<slug>.md`), `create` deploys all N milestones in build order by running **Step 3 passes a–e unchanged** per milestone and recording each one's cross-milestone position as a single canonical `build order: milestone X of N` line in its description (idempotent — pass (d)'s REPLACE-form PATCH overwrites it, so the count never grows). The single-plan path is the **N=1** case and is byte-for-byte unchanged. Create-or-adopt is inherited per iteration: a mid-loop failure **stops and reports**, deletes nothing, and a re-run resumes (already-deployed milestones adopted by exact title, the rest deployed).
