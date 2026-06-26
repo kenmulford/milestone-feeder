@@ -3,6 +3,36 @@
 Release notes for milestone-feeder. Each tagged release is also published on the
 [GitHub Releases page](https://github.com/kenmulford/milestone-feeder/releases).
 
+## v0.6.0 — the roadmap: a whole-app brief becomes a sequenced set of milestones
+
+**Theme:** The feeder is no longer one brief → one milestone for an oversized whole-app brief. Hand `plan` a brief that spans several releases and it now carves it into a **roadmap** — a build-ordered set of milestones — confirms the split with you once, plans them all in parallel, and `create` deploys them in build order and then checks the result covers your whole brief. The v0.3.1 *"this looks like ~N milestones"* advisory is now the **trigger** for the real split, not a passive note. A normal, single-release brief is unchanged.
+
+### ✨ The roadmap — whole-app brief → sequenced milestones
+
+| Issue | PR | What |
+|---|---|---|
+| #151 Roadmap-splitter agent | #161 | A new read-only `milestone-feeder:roadmap-splitter` agent: a whole-app brief + your standing docs → a strict, build-ordered partition into named milestones (the `ROADMAP` block). It supersedes the architect's passive multi-milestone advisory with a real, ordered split — every part of the brief in exactly one milestone, none dropped or duplicated. |
+| #152 Internal build-roadmap skill | #164 | A new **internal** `build-roadmap` skill (invoked by `plan`, never a user command): dispatch the splitter once, surface the proposed split for you to **confirm / merge / split / reorder / reject** before anything is written, and on confirmation write a **roadmap manifest** (`.milestone-feeder/roadmap-<slug>.md`) carrying the milestone build order and the full original brief. Read-only on GitHub. |
+| #153 plan inner-routine refactor | #163 | `plan`'s Steps 1–7 are named as a **callable single-milestone inner routine** — behavior-neutral. The default single-brief path invokes it exactly once (byte-for-byte the prior behavior); the roadmap path invokes it once per milestone. |
+| #154 plan front-door routing | #166 | `plan` gains a front-door size/scope check (Step 3.6): when the architect raises `SCOPE_SPANS_MULTIPLE_MILESTONES`, it routes the brief into `build-roadmap` instead of just flagging it. The signal is the sole arbiter of "oversized" — no second threshold; a decline or degrade falls back to the single-milestone plan with the passive advisory retained as a backstop. A one-time per-clone notice announces the new routing to existing users. |
+| #155 parallel per-milestone fan-out | #167 | `plan`'s roadmap branch (Step 3.7) plans every milestone the confirmed roadmap names, in build order, fanning the per-milestone planning out in parallel (a probe pins the dispatch topology). Each milestone's version + title is resolved once on the main thread before the fan-out, so the version ladder's one interactive prompt never runs inside a background subagent; each milestone emits its own plan file. |
+| #156 Brief-coverage-verifier agent | #162 | A new read-only `milestone-feeder:brief-coverage-verifier` agent: audits the read-back content of every created milestone + issue against the **original** brief and returns a coverage punch-list (uncovered / duplicated / distorted parts, plus read-errors). It runs no `gh` of its own — `create` does the read-back and hands it the content. |
+| #157 create deploy-loop | #168 | `create` deploys a roadmap of **N** milestones by **looping its unchanged per-plan deploy** over the manifest's milestones in build order, recording each one's cross-milestone position as a single `build order: milestone X of N` line. The single-plan path is the N=1 case, byte-for-byte unchanged; a mid-loop failure stops and reports, deletes nothing, and a re-run resumes. |
+| #158 post-create coverage verification | #170 | `create`'s **closing action** (Step 3V, always-on): read every deployed milestone + issue back from live GitHub and dispatch the brief-coverage-verifier once against the original brief, surfacing a coverage punch-list routed like the needs-input report. Best-effort and **non-blocking** — it never blocks `create`, the driver handoff, or any merge, and never auto-fixes a deployed issue. |
+
+### 📝 Docs & version
+
+| Issue | PR | What |
+|---|---|---|
+| #159 Roadmap docs sweep + v0.6.0 | (this PR) | Documented the roadmap pipeline across `SPEC.md`, `docs/architecture.md`, `docs/consumer-setup.md`, `README.md`, and this changelog; reconciled the v0.3.1 multi-milestone advisory prose to point at the real roadmap support (the advisory is now its trigger); added the two new agents (`roadmap-splitter`, `brief-coverage-verifier`) to the SPEC + architecture rosters; and bumped `.claude-plugin/plugin.json` `version` 0.5.0 → 0.6.0 with the README `## Status` line re-synced to match (also clearing the pre-existing `v0.4.6` README drift). Documentation + version metadata only — no runtime change. |
+
+### Consumer notes (upgrading from v0.5.0)
+
+- **New behavior on a whole-app brief.** A brief that reads as several separate releases now routes into the **roadmap flow**: `plan` proposes a sequenced set of milestones and asks you to confirm, merge, split, reorder, or reject the split before planning anything; `create` then deploys them in build order and checks the result covers your brief. Previously such a brief got only a passive *"this looks like ~N milestones"* advisory you acted on by hand — that advisory is now the **trigger** for the real split, and is kept only as a backstop when you decline the roadmap.
+- **Small / normal briefs are unchanged.** The roadmap only triggers when your brief spans several releases — a single-release brief sees no roadmap step and no extra prompt, and the single-milestone plan output is byte-for-byte as before. `plan` shows a one-time, per-clone heads-up the first time the routing could apply, so you discover the behavior.
+- **No schema changes.** No new config key — the roadmap reuses the existing `projectDocs` grounding; nothing in `.milestone-config/feeder.json`, `.milestone-config/driver.json`, or `/milestone-feeder:setup` changes.
+- **Version bump only in the two source-of-truth locations.** `.claude-plugin/plugin.json` is `0.6.0` and the README `## Status` line is re-synced to match; the `SPEC.md` as-built header carries no version by design.
+
 ## v0.5.0 — automated feeder → driver handoff
 
 **Theme:** When `create` finishes building a milestone on a clean, vetted run and `milestone-driver` is installed, the feeder can hand the milestone straight to the driver to start building — instead of leaving you to invoke the driver yourself. You stay in control: the default is to ask first, and the handoff never crosses the `develop → main` release boundary.
