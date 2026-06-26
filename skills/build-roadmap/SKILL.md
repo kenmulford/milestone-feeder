@@ -128,11 +128,13 @@ Build order: <milestone 1 name> → <milestone 2 name> → … → <milestone N 
 ### 1. <milestone name>
 - Brief slice: <the portion of the brief this milestone owns — the author sections / scope it covers, verbatim or closely paraphrased>
 - Build-order position: 1
+- Plan file: <pending — `build-roadmap` leaves this EMPTY; the roadmap planning fan-out (`plan` Step 3.7) populates it with `.milestone-feeder/plan-<assignedSlug>.md` after it plans this milestone>
 - Change-rationale: <merged | split | reordered | unchanged vs the author's headings, and why — the sections involved and the dependency, if any>
 
 ### 2. <milestone name>
 - Brief slice: <…>
 - Build-order position: 2
+- Plan file: <pending — populated by the fan-out (`plan` Step 3.7) after it plans this milestone>
 - Change-rationale: <…>
 
 ### … (one block per confirmed milestone, in build order; positions run 1..N)
@@ -140,6 +142,8 @@ Build order: <milestone 1 name> → <milestone 2 name> → … → <milestone N 
 ---
 This roadmap manifest is the cross-milestone build artifact. It records WHICH milestones to plan and in WHAT order, plus the full original brief — NOT each milestone's §4 issue bodies or Wave order, which `plan` produces into that milestone's own `.milestone-feeder/plan-<slug>.md` when it runs the single-milestone pipeline per milestone above. `build-roadmap` wrote no GitHub state.
 ```
+
+**The `Plan file:` field — the deterministic per-milestone handle, written in two stages.** Each milestone entry carries a `Plan file:` field, but `build-roadmap` writes it **PENDING (empty)**: at manifest-write time it has confirmed only the milestone *names* and *build order* — it has planned **no** milestone, so it does **not** yet know the disambiguated `assignedSlug` that names the plan file (that slug is goal-derived with an `-m<index>` collision tiebreaker the milestone *name* does not encode; `plan` Step 3.7.d owns it). The **roadmap planning fan-out** (`plan` Step 3.7) **populates** each entry's `Plan file:` with that milestone's real path — `.milestone-feeder/plan-<assignedSlug>.md` — **after** it plans that milestone (`plan` Step 3.7.g). Once the fan-out finishes, every planned milestone's entry carries its real plan-file path, and that path is the **deterministic handle `create`'s deploy-loop resolves each milestone's plan file by** (`skills/create/SKILL.md` Step 1R) — **never** a slug re-derived from the milestone name. `build-roadmap` itself reserves the field and plans nothing; populating it is the fan-out's job.
 
 ## Output style
 
@@ -153,5 +157,6 @@ Be concise — report status and outcomes flatly, no wall-of-text. Present steps
 - **Fewer than two milestones is the single-milestone state, NOT an error.** Write no manifest, tell the user, and return so `plan` proceeds with its existing single-milestone pipeline unchanged.
 - **A failed dispatch, a malformed return, or a non-partition split writes NO partial or corrupt manifest.** The failure is surfaced, not swallowed; control does not advance on a failed split or a failed scratch-write.
 - **The manifest persists the FULL original brief** in a multi-line `## Original brief` section — the manifest is the cross-milestone build artifact, and this skill is its owner (the persisted-brief decision is shared with #158 / #157).
+- **Each milestone entry reserves a `Plan file:` field, written PENDING.** `build-roadmap` plans no milestone, so it cannot know the disambiguated `assignedSlug` that names each plan file — it leaves the field empty. The roadmap planning fan-out (`plan` Step 3.7) populates it with `.milestone-feeder/plan-<assignedSlug>.md` after it plans that milestone; that recorded path is the handle `create`'s deploy-loop reads (`skills/create/SKILL.md` Step 1R), never a name-derived slug. (Producer↔consumer contract shared with #155 / #157.)
 - **Scratch is git-invisible from the first write** — `.milestone-feeder/.gitignore` is ensured to contain a single `*` before the first write under `.milestone-feeder/`, as bash + PowerShell 7+ twins.
 - **`build-roadmap` writes NO GitHub state and authors no code.** Its entire output is one local scratch manifest. No milestone is created, no issue is opened, no label is applied, no PR is opened, no branch is touched. The downstream `plan` → `create` pipeline is the only thing that writes GitHub state.
