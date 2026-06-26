@@ -21,6 +21,91 @@ Say this to the user before doing any work:
 
 Read `.milestone-config/feeder.json`. **Absent → invoke `milestone-feeder:setup`** (it bootstraps the profile, aligns the label taxonomy, and returns control), then continue — the user does not re-run the command (`skills/setup/SKILL.md` Phase 5). `update` reads the same own-keys as `plan` (`projectDocs`, `reviewer`, `architectAgent`, `issueAuthorAgent`, `issueSize` — `skills/plan/SKILL.md` Step 0). On the **found** path `update` regenerates nothing (it reconciles the recorded plan against the live milestone), so it consumes **none** of these generation keys; the only path that consumes them is the run-`plan`-first fallback (Step 1), where `plan` itself reads them. The only configuration `update` itself needs is GitHub write access (the `gh` surface in Step 3 / Step 4).
 
+**Surface the optional implied-surfaces overlay once per clone (read-only, marker-gated, non-blocking).** The implied-surfaces feature adds an optional project-local overlay file at the fixed path `.milestone-config/implied-surfaces.md`, which the architect reads alongside the plugin's bundled implied-surfaces reference (`docs/implied-surfaces.md` → "Project-local overlay"). Because it is a new optional surface, existing users need a way to discover it — so `update` prints a one-time, per-clone notice that names the overlay, explains its additive merge, and shows how to add one. Mirrors the `plan` Step 0 one-time-notice family (the bootstrap-nudge sibling: detect → print verbatim → drop a per-clone marker).
+
+Gate: print the 🟡 notice **verbatim** ONLY when the overlay `.milestone-config/implied-surfaces.md` is **absent** AND the per-clone marker `.milestone-config/.runtime/implied-surfaces-notice` is **absent**. On print, ensure `.runtime/` exists (`mkdir -p .milestone-config/.runtime` / `New-Item -ItemType Directory -Force`), then create the marker. Stay **silent** if the marker already exists OR the overlay file exists (a project that already has an overlay knows about it). The marker lives under `.runtime/`, which the nested `.milestone-config/.gitignore` already ignores — so the marker is git-invisible with **no new gitignore line**. **Both forms below are best-effort: swallow any failure (unwritable dir, permission error, missing `jq`) and continue the `update` run — a failed detect/notice/marker must never abort `update`. Read-only except the `.runtime/` dir + the marker; it never writes the overlay.**
+
+<!-- KEEP THIS DETECTION + NOTICE BLOCK IN SYNC with the implied-surfaces notice in skills/plan/SKILL.md Step 0 (#180), shared marker .milestone-config/.runtime/implied-surfaces-notice -->
+```text
+🟡 Optional: add project-specific implied surfaces
+
+| What | You can add an optional overlay file at
+|      | .milestone-config/implied-surfaces.md. The architect reads it
+|      | alongside the plugin's bundled implied-surfaces reference when it
+|      | breaks your brief into issues.
+| Why  | The bundled reference is universal, so it can't carry capability
+|      | clusters specific to your domain (a church app's "giving", say).
+|      | Your overlay merges in additively — it can add a new capability
+|      | and extend an existing one, but never removes a surface the
+|      | bundled reference already defines.
+| How  | Create .milestone-config/implied-surfaces.md and write one
+|      | capability per ## heading with its implied surfaces beneath — the
+|      | same shape as the bundled reference. Leave it out and the bundled
+|      | reference is used as-is; an absent overlay is never an error.
+| Note | This notice shows at most once per clone.
+```
+
+```bash
+# bash — read-only detect + one-time notice; NEVER writes the overlay; never aborts update.
+# printf '%s\n' (NOT a heredoc): indent-safe under this list item — a heredoc terminator must sit
+# at column 0, but this block is nested, so an indented EOF would be a syntax error. Mirrors the
+# plan Step-0 bootstrap-nudge form. The notice text is the quoted args, so it prints flush-left.
+marker=".milestone-config/.runtime/implied-surfaces-notice"
+if [ ! -f "$marker" ] && [ ! -f ".milestone-config/implied-surfaces.md" ]; then
+  printf '%s\n' \
+    '🟡 Optional: add project-specific implied surfaces' \
+    '' \
+    '| What | You can add an optional overlay file at' \
+    '|      | .milestone-config/implied-surfaces.md. The architect reads it' \
+    '|      | alongside the plugin'"'"'s bundled implied-surfaces reference when it' \
+    '|      | breaks your brief into issues.' \
+    '| Why  | The bundled reference is universal, so it can'"'"'t carry capability' \
+    '|      | clusters specific to your domain (a church app'"'"'s "giving", say).' \
+    '|      | Your overlay merges in additively — it can add a new capability' \
+    '|      | and extend an existing one, but never removes a surface the' \
+    '|      | bundled reference already defines.' \
+    '| How  | Create .milestone-config/implied-surfaces.md and write one' \
+    '|      | capability per ## heading with its implied surfaces beneath — the' \
+    '|      | same shape as the bundled reference. Leave it out and the bundled' \
+    '|      | reference is used as-is; an absent overlay is never an error.' \
+    '| Note | This notice shows at most once per clone.'
+  mkdir -p .milestone-config/.runtime 2>/dev/null && : > "$marker" 2>/dev/null || true
+fi
+```
+
+```powershell
+# PowerShell 7+ — same read-only detect + one-time notice; NEVER writes the overlay; never aborts update.
+try {
+  $marker = Join-Path '.milestone-config' (Join-Path '.runtime' 'implied-surfaces-notice')
+  $overlay = Join-Path '.milestone-config' 'implied-surfaces.md'
+  if ((-not (Test-Path $marker)) -and (-not (Test-Path $overlay))) {
+    # Indent-safe array-join (the #120/#121 self-heal construct) — NOT a here-string: an
+    # @'…'@ closing terminator must sit at column 0, which breaks when nested under this
+    # indented markdown list item. The text below is byte-identical to the bash printf args.
+    Write-Host (@(
+      '🟡 Optional: add project-specific implied surfaces'
+      ''
+      '| What | You can add an optional overlay file at'
+      '|      | .milestone-config/implied-surfaces.md. The architect reads it'
+      '|      | alongside the plugin''s bundled implied-surfaces reference when it'
+      '|      | breaks your brief into issues.'
+      '| Why  | The bundled reference is universal, so it can''t carry capability'
+      '|      | clusters specific to your domain (a church app''s "giving", say).'
+      '|      | Your overlay merges in additively — it can add a new capability'
+      '|      | and extend an existing one, but never removes a surface the'
+      '|      | bundled reference already defines.'
+      '| How  | Create .milestone-config/implied-surfaces.md and write one'
+      '|      | capability per ## heading with its implied surfaces beneath — the'
+      '|      | same shape as the bundled reference. Leave it out and the bundled'
+      '|      | reference is used as-is; an absent overlay is never an error.'
+      '| Note | This notice shows at most once per clone.'
+    ) -join "`n")
+    New-Item -ItemType Directory -Force -Path (Join-Path '.milestone-config' '.runtime') | Out-Null
+    New-Item -ItemType File -Force -Path $marker | Out-Null
+  }
+} catch {}
+```
+
 ### Step 1 — Resolve / refresh the plan file for the brief
 
 Derive `<slug>` **deterministically** from the one-line milestone goal of the brief, using the **same derivation `plan` uses** (`skills/plan/SKILL.md` Step 7 — the slug-derivation rule) and **the same Step 1 resolution `create` uses** (`skills/create/SKILL.md` Step 1): lowercase the goal, replace every run of non-alphanumeric characters with a single hyphen, strip any leading/trailing hyphen, and cap the length at the same bound (trimming a trailing hyphen if the cut lands on one). The same brief always resolves to the same path:
