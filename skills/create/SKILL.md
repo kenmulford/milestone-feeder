@@ -9,6 +9,8 @@ Resolve the plan file `plan` wrote for this brief (by the same deterministic slu
 
 `create` is **faithful** — it builds what you approved. On the found path it does **NOT** re-dispatch the architect or the issue-author, and does **NOT** re-run the self-check gate (the reviewer). The plan file already recorded the gate-surviving issue set and its verdict; `create` trusts that verdict and writes the recorded issues — it regenerates nothing (`docs/specs/v0.3.0-humanize-the-surface.md` §4: *"on the found path, `create` does not re-dispatch the architect / issue-author, and does not re-run the self-check gate"*). The only path that runs the gate from `create` is the run-`plan`-first fallback (the plan file was absent, so there is nothing yet to deploy). **No flags** — `create` *is* the write verb of the plan/create pair; there is nothing to argument-parse (`docs/specs/v0.3.0-humanize-the-surface.md` §2: zero flags anywhere). Authors no code, opens no PRs, never touches branches; every dispatched agent — only on the run-`plan`-first fallback — stays read-only against provided text. The GitHub writes are performed by the skill itself via `gh`, so the agent-read-only invariant holds.
 
+**One brief, or a roadmap of N milestones.** Most runs deploy **one** plan file to **one** milestone (the single-plan path). When `plan`'s roadmap flow produced a **roadmap manifest** for this brief — the ordered list of N milestone plan files in build order (`skills/build-roadmap/SKILL.md` "Manifest format") — `create` deploys **all N** in one run by **looping this same per-plan deploy** over the manifest's milestones in build order, recording each milestone's cross-milestone position in its description. The per-plan deploy is reused **by reference, not re-derived as a drifting copy** (`.project/design-philosophy.md#What we optimize for` — composability). The single-plan path is the **N=1** case and is unchanged; the multi-milestone loop is purely additive and is gated on a manifest only `plan`'s roadmap flow produces (Step 1R below).
+
 ## Announce first
 
 Say this to the user before doing any work — pick the line that matches the resolution outcome (the plan file was found, or it was absent):
@@ -16,6 +18,8 @@ Say this to the user before doing any work — pick the line that matches the re
 > **Plan file found:** Standing by while I deploy the approved plan to GitHub — I'll ensure the labels, create-or-adopt the milestone, open each issue, rewrite the slug references to real numbers, and PATCH the build order. I'm deploying **exactly the plan you approved** — I trust the review it already recorded and re-check nothing.
 
 > **No plan file yet:** I don't have a plan file for this brief, so I'll run `plan` first to make one (it reads your project docs, breaks the idea into issues, and checks each against your conventions), then deploy that plan to GitHub.
+
+> **Roadmap of milestones found:** I have a roadmap of N milestones for this brief, so I'll deploy **all N** in build order — for each one I'll ensure the labels, create-or-adopt the milestone, open its issues, rewrite the slug references to real numbers, and PATCH its build order, then record where it sits in the overall build order (`build order: milestone X of N`). I deploy **exactly the plan you approved** for each milestone and re-check nothing. If one fails I'll stop and report what deployed and what's left to do — I delete nothing, and re-running picks up where it stopped.
 
 ## Procedure
 
@@ -28,6 +32,66 @@ Read `.milestone-config/feeder.json`. **Absent → invoke `milestone-feeder:setu
 | Key | Default | Use |
 |---|---|---|
 | `autoHandoff` | `"prompt"` | After the deploy, whether `create` offers to hand the milestone to `milestone-driver` to start building (Step 4). `"prompt"` → ask (default); `"auto"` → kick off immediately, no prompt; `"off"` → never offer. An **unrecognized value** (anything that is not exactly `"prompt"`, `"auto"`, or `"off"`) is treated as the default `"prompt"` — mirrors how `versioning` treats an invalid value as absent (`docs/profile-schema.md` `versioning` per-key note); never error on the key. |
+
+### Step 1R — Resolve the deploy target: a single plan, or a roadmap of N milestones
+
+Before resolving a plan file, check whether `plan`'s roadmap flow left a **roadmap manifest** for this brief. Derive `<slug>` **exactly as Step 1 does** (the same deterministic rule, `skills/plan/SKILL.md` Step 7 — the slug-derivation rule), then resolve the manifest at the path `build-roadmap` writes — the cross-milestone build artifact `create` deploys (`skills/build-roadmap/SKILL.md` "Manifest format"; `.project/design-philosophy.md#Layering & boundaries` — the plan file / manifest is the build artifact):
+
+```
+.milestone-feeder/roadmap-<slug>.md
+```
+
+| Resolution | Action |
+|---|---|
+| **Absent** (no manifest) | **Single-plan path — UNCHANGED.** Fall through to **Step 1** below and run **Steps 1 → 4 once, exactly as today**. This is the **N=1** case; the single-plan path sees zero behavior change. Skip the rest of this section. |
+| **Found** (a manifest) | **Multi-milestone roadmap deploy.** Read the manifest and run the **outer loop** below. The manifest is **read, never regenerated** — `create` re-dispatches no agent and re-runs no gate on the found path, exactly as for a plan file (`SPEC.md` §3.1). Do **NOT** also run the single-plan Step 1 resolution for the whole brief: the roadmap replaces it — each of its milestones has its own `plan-<slug>.md`, and there is no whole-brief plan file. |
+
+**The outer loop (manifest found) — loop the per-plan deploy over the manifest's milestones.** The manifest's `## Milestones (in build order)` section lists the milestones, each `### <position>. <milestone name>` with a `Build-order position: <position>` line **and a `Plan file:` path** (the exact plan-file handle the planning fan-out recorded, `skills/build-roadmap/SKILL.md` "Manifest format"; `skills/plan/SKILL.md` Step 3.7.g), in build order. Let **N** be that milestone count. Only the **outer loop** is added — the per-milestone deploy is **Step 3 passes a–e reused unchanged**. **For each milestone, in build order (position 1 → N):**
+
+| Per-milestone step | What runs |
+|---|---|
+| **i. Resolve this milestone's plan file** | **Read the recorded `Plan file:` path from this manifest entry** — the exact `.milestone-feeder/plan-<assignedSlug>.md` the planning fan-out populated (`skills/build-roadmap/SKILL.md` "Manifest format"; `skills/plan/SKILL.md` Step 3.7.g). **Do NOT re-derive a slug from the milestone name** — the plan-file slug is goal-derived with an `-m<index>` collision tiebreaker the manifest name does not encode (`skills/plan/SKILL.md` Step 3.7.d), so a name-derived path would miss. Read that plan file and treat it as Step 1's **Found** row, then deploy it. If the entry's `Plan file:` is **pending/empty**, or the file at that path is **absent** (this milestone never finished planning), STOP the loop and report it as a mid-loop failure (🔴, Partial-failure path below) — do **NOT** re-plan from `create`. |
+| **ii. Read its plan-file contract** | **Step 2**, unchanged. |
+| **iii. Deploy it** | **Step 3 passes a–e**, entirely unchanged — ensure labels (a) / create-or-adopt the milestone by exact title (b) / create-or-reuse each surviving issue by exact title (c) / slug→`#n` rewrite + Wave-description PATCH (d) / route the needs-input report (e). Per-milestone idempotency is the existing **create-or-adopt**, inherited per iteration: never delete a milestone or issue, never duplicate a same-title open issue. |
+| **iv. Record the build-order line** | When pass (d) PATCHes this milestone's description, include the canonical `build order: milestone X of N` line in the PATCHed description, alongside the `## Waves` block (see "The build-order line" below). |
+
+After the loop deploys all N, report each milestone's deploy receipt (`#`) and the recorded build order, then continue to **Step 4** (its multi-milestone note).
+
+**The build-order line (the cross-milestone metadata).** Pin **one** canonical literal — `build order: milestone X of N` — where **X** is this milestone's `Build-order position` (1..N) and **N** is the manifest's milestone count. It extends the Wave-order-in-description convention (`SPEC.md` §4): the description already encodes the *intra*-milestone Wave order (`## Waves`); this single line encodes the *cross*-milestone position the driver reads to build the roadmap in sequence. Place it as a standalone line directly under the one-paragraph milestone goal and above the `## Waves` block, so milestone X's PATCHed description reads:
+
+```markdown
+<one-paragraph milestone goal>
+
+build order: milestone X of N
+
+## Waves
+- Wave 1 (parallel): #A, #B, ...
+- ...
+```
+
+**Idempotency is INHERITED from pass (d), not re-implemented.** Pass (d) PATCHes the description with the **REPLACE form** (`gh api --method PATCH .../milestones/<number> -f description=...`, Step 3 pass d) — it replaces the whole description every run. The build-order line rides **inside that one REPLACE payload**, so a re-run over an already-deployed manifest **overwrites** the line in place; the line count never grows (the same overwrite guarantee pass (d) already makes for the Wave order). **No new read-modify-write of the description is added** — only pass (d)'s payload gains the one canonical line. Assemble the augmented description (bash + PowerShell 7+ twins), then PATCH it with pass (d)'s existing REPLACE-form command:
+
+```bash
+# bash — assemble milestone X's description: goal + the ONE canonical build-order line + the
+# slug-rewritten Waves block, then PATCH via pass (d)'s REPLACE form. X = Build-order position; N = count.
+# $goal and $waves are the two halves of the description pass (d) already builds (slugs rewritten to #n).
+desc="$(printf '%s\n\nbuild order: milestone %s of %s\n\n%s\n' "$goal" "$X" "$N" "$waves")"
+gh api --method PATCH "repos/{owner}/{repo}/milestones/<number>" -f "description=$desc"
+```
+
+```powershell
+# PowerShell 7+ — same assembly + pass (d)'s REPLACE-form PATCH; the ONE canonical line.
+$desc = @"
+$goal
+
+build order: milestone $X of $N
+
+$waves
+"@
+gh api --method PATCH "repos/{owner}/{repo}/milestones/<number>" -f "description=$desc"
+```
+
+Re-PATCHing on a re-run overwrites the line — idempotent by construction, so the `build order: milestone X of N` count stays exactly one per milestone, never growing.
 
 ### Step 1 — Resolve the plan file for the brief
 
@@ -266,6 +330,8 @@ If **either** condition is not met — any candidate was parked / flagged / bloc
 
 **This is a skill invocation, not a shell command.** `/milestone-driver:solve-milestone` is invoked as a Claude Code skill (the same way `create` runs `plan` first on the absent path) — there is no bash/pwsh form to ship for the invocation itself. The `autoHandoff` value is already in hand from Step 0; this step needs no additional config read.
 
+**Multi-milestone roadmap note (Step 1R).** When a **roadmap manifest** drove the deploy (Step 1R, multi-milestone path), this single-plan handoff is **not** auto-fired across the roadmap. `create`'s roadmap responsibility ends at deploying all N milestones and recording each one's `build order: milestone X of N` line — which is exactly the cross-milestone order the driver reads. A roadmap deploy therefore completes by reporting the N deploy receipts and the recorded build order; starting the build stays a human call. The single-plan handoff above (Gates 1–3, `autoHandoff`) is **unchanged** for the N=1 / no-manifest path.
+
 ### Partial-failure path (resume on re-run)
 
 A `create` run is **not "done"** until the milestone description AND every created-issue body carry real `#n` numbers. A failure can land in pass (c) (an issue create) or pass (d) (a body edit or the milestone-description PATCH); the table below maps each to its action. **Pass (d) is IDEMPOTENT** — re-applying the slug→`#n` rewrite to an already-numeric body or description is a no-op (the substring-safe rule finds no slug to rewrite), and the PATCH overwrites — so a re-run can always safely re-execute pass (d) against the captured (or re-derivable, from the now-complete title→`#n` map) slug→`#n` map, **even when pass (c) created nothing** because every issue was already adopted by title.
@@ -277,6 +343,8 @@ A `create` run is **not "done"** until the milestone description AND every creat
 | **Pass (d), a `gh issue edit` (body rewrite)** fails — after all issues were created | **Report** which created issue still carries local slugs in its body. | Re-run re-executes pass (d): re-applying the rewrite to already-numeric bodies is a no-op, and the still-slugged body is rewritten and edited. Adopted (pre-existing) issue bodies are left as-is per the pass-(c) body policy. |
 
 In all cases the failure path is **defined, not silent**, and re-running `create` always re-attempts pass (d) until the milestone description and all created-issue bodies carry real numbers — the resume re-uses the match-by-title de-dup (least-code).
+
+**Multi-milestone roadmap (the outer loop, Step 1R).** When a roadmap manifest drove the deploy, the same partial-failure discipline applies **per milestone**, with a cross-milestone dimension on top. If a milestone's deploy fails mid-loop — a missing plan file at per-milestone step **i**, or any pass (c)/(d) failure inside its Step 3 — **STOP the loop** and report the partial state: which milestones **fully deployed** (with their `#`), which one **failed and at which pass**, and which remain **pending**. **Delete nothing.** A **re-run resumes**: the outer loop re-iterates the whole manifest in build order — each already-deployed milestone is **adopted by exact title** (create-or-adopt, reopened if closed; its open issues reused by title; its pass (d), including the `build order: milestone X of N` line, re-PATCHed idempotently), and the failed + remaining milestones deploy. Resumption is the existing per-plan path applied per milestone — no new resume machinery.
 
 ## Output style
 
@@ -291,3 +359,4 @@ Be concise — report status and outcomes flatly, no wall-of-text. Present steps
 - **Authors no code, opens no PRs, never touches branches.** Creating issues / a milestone / labels / one epic comment is NOT code, a PR, or a branch. The feeder reads code to ground decisions; it never edits a source file, creates a branch, or opens a PR. The GitHub writes are performed by the skill itself via `gh`, not by any dispatched agent.
 - **Every dispatched agent stays read-only — only on the run-`plan`-first fallback.** On the found path `create` dispatches no agent at all (it deploys the recorded plan). On the absent path it runs `plan`, whose architect / issue-author / reviewer dispatches are all read-only against provided text (`skills/plan/SKILL.md` Non-negotiables). The agent-read-only invariant holds on both paths.
 - **The driver handoff is build-kickoff only, gated three ways, and never crosses the release boundary (Step 4).** `create` offers the handoff **only** on a clean run (the `## Needs human input` pointer is "none" **AND** the self-check actually ran — a `SKIPPED(reviewer:false)` verdict is a Gate 1 fail, since its issues were never vetted) **and** only when `/milestone-driver:solve-milestone` resolves in this session (absent → silently skip, no prompt, no error). It invokes `/milestone-driver:solve-milestone "<exact milestone title>"` — which merges only to the integration branch; `develop → main` stays a manual human call. The handoff **never** auto-merges to a protected branch and never removes the release gate. `autoHandoff` (default `"prompt"`) governs prompt / auto / off; an unrecognized value is treated as the default `"prompt"`.
+- **A roadmap of N milestones deploys by LOOPING the unchanged per-plan deploy (Step 1R).** When `plan`'s roadmap flow left a roadmap manifest for this brief (`.milestone-feeder/roadmap-<slug>.md`), `create` deploys all N milestones in build order by running **Step 3 passes a–e unchanged** per milestone and recording each one's cross-milestone position as a single canonical `build order: milestone X of N` line in its description (idempotent — pass (d)'s REPLACE-form PATCH overwrites it, so the count never grows). The single-plan path is the **N=1** case and is byte-for-byte unchanged. Create-or-adopt is inherited per iteration: a mid-loop failure **stops and reports**, deletes nothing, and a re-run resumes (already-deployed milestones adopted by exact title, the rest deployed).
