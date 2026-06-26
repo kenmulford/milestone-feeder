@@ -13,7 +13,7 @@ or from a marketplace once published). Confirm it is enabled with `/plugin`.
 
 | Plugin | Status | Why |
 |---|---|---|
-| [`superpowers`](https://github.com/anthropics/claude-code) | **Required** | A hard dependency, declared in `.claude-plugin/plugin.json`. The plan pipeline depends on it. |
+| [`superpowers`](https://github.com/anthropics/claude-code) | **Required** | A hard dependency — a required prerequisite you install yourself (no longer auto-installed; see `README.md`). The plan pipeline depends on it. |
 | `milestone-driver` | **Optional** | The backend for the `reviewer: "milestone-driver"` mode — the feeder dispatches the driver's own `triage-reviewer` / `design-reviewer` as its pre-emit reviewer gate. **Absent → degrades to `"internal"`**, and the pipeline still runs. |
 
 **The `milestone-driver` soft dependency.** `milestone-driver` is the **optional

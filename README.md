@@ -4,7 +4,7 @@ Turn a rough idea into a build-ready GitHub milestone — a tidy list of small, 
 
 milestone-feeder is a Claude Code plugin. You hand it a brief — a file, a few lines of text, or a GitHub epic issue — and it writes a reviewable plan: each piece of work as its own issue, with a full spec, the decisions an engineer would otherwise have to invent, and a build order. You read the plan, then tell it to build the milestone on GitHub. Its sibling plugin, [`milestone-driver`](https://github.com/kenmulford/milestone-driver), can then pick the issues up and build them with no further clarification. Once a change is built, [`milestone-coherence-reviewer`](https://github.com/kenmulford/milestone-coherence-reviewer) reviews the result and, if it drifted far from intent, hands a follow-up brief back to the feeder.
 
-**Install it** — either marketplace below pulls in the required `superpowers` plugin. Restart Claude Code afterward so the plugin's hook loads.
+**Before you install, add `superpowers` first.** milestone-feeder needs the `superpowers` plugin to plan — it is a required prerequisite you now install yourself (it is no longer pulled in automatically). Add the `claude-plugins-official` marketplace and install `superpowers` from it, then install milestone-feeder from one of the marketplaces below, then restart Claude Code so the plugin's hook loads. Skip `superpowers` and the planning commands won't work.
 
 **Recommended — the milestone-suite marketplace.** One marketplace carries all four milestone plugins (`milestone-bootstrapper`, `milestone-feeder`, `milestone-driver`, `milestone-coherence-reviewer`), so you add it once and install whichever you want:
 
