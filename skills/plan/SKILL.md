@@ -793,6 +793,7 @@ if (-not (Test-Path .milestone-feeder/.gitignore)) { Set-Content -LiteralPath .m
 | **Dropped issues** | Each dropped issue: slug, title, and the parked dependency that dropped it. Marked, never created. |
 | **Self-check verdict line** | The Step 6 outcome (PASS / INTERNAL / PARKED / SKIPPED(reviewer:false)). `create` trusts it; no re-vet. |
 | **Source brief reference** | `inline` \| `file:<path>` \| `epic #<n>` — drives the downstream report routing and the brief↔plan match. Record `epicIssueNumber` here when the brief was an epic. |
+| **Original brief (full text)** | The **full** brief text this plan run received — persisted verbatim and multi-line as the `## Original brief` section below (a brief is multi-line, so a SECTION, not a `Label: value` header line; `Source brief reference` records only the form token). It is the durable single-milestone fallback `create`'s closing brief-coverage verification reads to audit the deploy against the original brief (`skills/create/SKILL.md` Step 3V — the brief-resolution ladder). Mirrors the roadmap manifest's `## Original brief`, which persists the whole-app brief for a roadmap run (`skills/build-roadmap/SKILL.md` "Manifest format"). |
 
 **Surface the resolved identity for confirm/override.** Both the resolved `Milestone title (exact)` (carrying the semver per the Step 5.1 ladder) **and** its `Version provenance` line are written to the plan file and **surfaced for the user to confirm or override BEFORE running `create`** — `plan` never silently finalizes a milestone identity the user cannot see or change (`docs/specs/v0.3.1-driver-handoff.md` §2, §3, §6). On an infer rung the title carries the **reference version verbatim**, and this surfaced line is **where the user adjusts the patch / minor / major bump** before `create` deploys it.
 
@@ -817,6 +818,8 @@ $rcpt = (Get-Content -LiteralPath $plan -ErrorAction SilentlyContinue |
 
 When `rcpt` is non-empty, write it verbatim into the new plan file as the sibling header line after `Source brief:`; when empty, write no such line.
 
+**Persist the original brief in full (the durable coverage-verification copy).** Write the **full** brief text this plan run received into a multi-line `## Original brief` section of the plan file — verbatim, every section the author wrote, NOT a single `Label: value` header line (a brief is multi-line; the `Source brief:` header records only the *form* token). For a `file:<path>` or `epic #<n>` brief, persist the resolved text `plan` already read to do its work; for an inline brief, the argument text. This mirrors the roadmap manifest's `## Original brief` section (`skills/build-roadmap/SKILL.md` "Manifest format") and is the **durable single-milestone fallback** `create`'s closing brief-coverage verification reads when the in-session brief is unavailable (`skills/create/SKILL.md` Step 3V — the brief-resolution ladder, rung 2; `.project/design-philosophy.md#Layering & boundaries` — the plan file is the build artifact downstream consumers read). On a **roadmap run** this per-milestone plan persists the **brief-slice** the inner routine received; the whole-app brief lives in the manifest's `## Original brief`, which is what `create` reads for a roadmap run. **Never fabricate** — persist what was received; if the brief text genuinely cannot be captured, omit the section rather than inventing one (the downstream verification degrades gracefully on an absent copy).
+
 **Plan-file format.** Write the file in this shape — the **Milestone title (exact)** line is its own labeled field, separate from the goal in the header:
 
 ```markdown
@@ -831,6 +834,15 @@ Self-check: <the Step 6 outcome — one of:
   SKIPPED (reviewer:false) — 🔴 gate disabled; generated issues were NOT vetted>
 Source brief: <inline | file:<path> | epic #<n>>
 Milestone number (GitHub): <n>   # OPTIONAL sibling header line — carried forward verbatim from a prior plan file if present; omitted on first plan (create writes it post-deploy, skills/create/SKILL.md:104)
+
+## Original brief
+<The full brief text this plan run received, persisted verbatim and multi-line — every
+ section the author wrote, in full. A brief is multi-line, so this is a SECTION, not a
+ `Label: value` header line. `create`'s closing brief-coverage verification reads it to
+ audit the deploy against the original brief (the durable single-milestone fallback —
+ `skills/create/SKILL.md` Step 3V brief-resolution ladder). Mirrors the roadmap manifest's
+ `## Original brief` (`skills/build-roadmap/SKILL.md` "Manifest format"). On a roadmap run
+ this persists the per-milestone brief-slice; the whole-app brief lives in the manifest.>
 
 ## Milestone description (Wave order)
 <the Step 5 Wave-ordered description, verbatim — the §4 template with local slugs>
@@ -893,4 +905,5 @@ Be concise — report status and outcomes flatly, no wall-of-text. Present steps
 - **Parks product gaps — never invents scope.** A decision with no conventional default is recorded to `productGaps[]` and surfaced in the needs-product-input report — never guessed to make an issue buildable. Design / implementation calls the project docs or a stated convention answers are resolved and cited; calls with no conventional default are parked.
 - **Project docs are read best-effort, never fabricated.** Absent or `[TBD]` sections are skipped, never grounded on. A design call cites its real grounding (`.project/<doc>.md#<section>` or a verified sibling `file:line`) or it is parked as a product gap.
 - **The architect is dispatched exactly once; the issue-author once per candidate.** The pipeline owns the dispatch count; the agents return text and the orchestrator consumes it — no agent opens a GitHub artifact of its own.
+- **The plan file persists the FULL original brief** in a multi-line `## Original brief` section (Step 7) — verbatim, never fabricated. It is the durable single-milestone copy `create`'s closing brief-coverage verification reads (`skills/create/SKILL.md` Step 3V); it mirrors the roadmap manifest's `## Original brief` (`skills/build-roadmap/SKILL.md`), which owns the whole-app brief for a roadmap run. (Producer↔consumer contract shared with #157 / #158.)
 - **Self-check gate is mandatory.** Every generated issue is vetted (§5 / §6 Step 6) before the plan file is written; a failing issue is retried (≤2) or parked — never silently planned. The gate is only skipped on an explicit `reviewer:false`, and only with a visible 🔴 warning recorded in the plan-file verdict line.
