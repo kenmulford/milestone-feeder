@@ -31,8 +31,9 @@ is executed by **following the prose directly**:
 5. A **grader** subagent scores observed-vs-`expected.md` → ✅ pass / ⚠️ partial / ❌ fail,
    with the observed behavior recorded.
 
-`create` and `update` make real GitHub writes, so their scenarios (07–09) are designed
-here but run later against a throwaway sandbox repo — labeled, not silently skipped.
+`create` and `update` make real GitHub writes, so their scenarios (07–09, and the
+create-loop + verification portion of 11) are designed here but run later against a
+throwaway sandbox repo — labeled, not silently skipped.
 
 ## Layout
 
@@ -47,6 +48,7 @@ tests/
     05-reviewer-backends/         { ... }
     06-cross-cutting-consistency/ { ... }
     10-nested-layout/             { brief.md, project/, feeder-env.md, expected.md }
+    11-roadmap-fan-out/           { brief.md, project/, feeder-env.md, expected.md }
   RESULTS.md                      # scorecard + claim→evidence map (the metric)
 ```
 
@@ -74,6 +76,7 @@ loaded as plugin skills.
 | 08 | update no-op / not-found / patch | clean milestone; missing milestone; gapped issue | update is idempotent (clean → no-op); milestone-not-found → error-and-stop; gapped body patched | sandbox follow-up |
 | 09 | slug→#n at scale | >26 candidates | substring-safe slug rewrite (`#A` not corrupting `#AB`) | sandbox follow-up |
 | 10 | nested layout | a nested monorepo (`siteroot/{web,api}`) where source lives only under app roots, never the repo root | bootstrapper-v0.2.0-baked nested `sourceGlobs` route issue file scope into the nested app roots, never the repo root | ✅ |
+| 11 | roadmap fan-out | an oversized whole-app brief (auth, data model, invoicing, billing, screens) that spans several milestones, seeded from its own author sections | a whole-app brief routes into `build-roadmap`: **split → confirm → parallel-plan** emits the roadmap manifest + N per-milestone plan files; the **create deploy-loop + brief-coverage verification** deploy and audit them back; single-milestone collapse falls back cleanly; an undecided product call parks one issue and siblings continue | plan-side ✅ now / create-loop + verification sandbox follow-up |
 
 ### 06 — the flagship, in detail
 
