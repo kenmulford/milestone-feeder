@@ -140,6 +140,37 @@ otherwise. And there is **nothing new to configure**: the roadmap reuses the sam
 project docs `plan` already grounds on. The first time the roadmap path could apply,
 `plan` shows a one-time heads-up so you know the behavior exists.
 
+## Add project-specific implied surfaces (optional)
+
+When `plan` breaks your brief into issues, it also catches the work your brief
+*implies* but never spells out. Name a capability — "add email", "user management",
+"sync" — or introduce a new kind of record, and a standard set of companion pieces
+comes with it: a delivery-failure log for email, activate / deactivate /
+reset-password for users, a list and a detail screen for a new record. `plan`
+consults a built-in reference of these companions and proposes the conventional ones
+into your plan, each marked `[implied — review / trim / augment]` so you can keep it,
+trim it, or add the ones it missed — **before any issue is created**. It also asks
+you, out loud, "this is a starting set for YOUR app — what's missing?", because a
+built-in list can't know your domain. (A real product call with no obvious default
+isn't guessed — it's set aside for your decision, exactly like any other product
+gap.)
+
+That built-in reference is universal, so it can't hold the companions specific to
+**your** domain — a church app's "giving" (recurring schedules, statements, refunds,
+gateway config), say. You can teach it yours with an **optional overlay file**:
+
+| Detail | What it is |
+|---|---|
+| Where it lives | A file at `.milestone-config/implied-surfaces.md` — the same folder your `feeder.json` is in. There is **nothing to set in `feeder.json`**: `plan` finds the file by that fixed name, not by a config key. |
+| What to write | One capability per `##` heading, with its implied surfaces listed beneath — the same shape as the built-in reference (see [`implied-surfaces.md`](implied-surfaces.md) → "Project-local overlay"). Anyone who can read that file can write an overlay. |
+| How it merges | Your overlay is **added** to the built-in reference, never replaces it: you can add a new capability and extend an existing one, but you can't remove a companion the built-in reference already defines. Don't want one on a given plan? Trim it during your plan review — that's a per-plan call, not a config delete. |
+
+**It is optional, and absent by default.** Most projects need no overlay, and that's
+fine — leave the file out and `plan` uses the built-in reference as-is; there is
+nothing to configure and an absent overlay is never an error. The first time you run
+`plan` (or `update`) without one, you'll see a one-time heads-up telling you the
+overlay exists, so you can add one if your domain needs it.
+
 ## The plan-then-create flow
 
 Issue creation is consequential and the feeder is exactly the stage where human
