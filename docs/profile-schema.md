@@ -198,6 +198,46 @@ which shipped in driver **v1.9.0** (`SPEC.md` §7). The feeder's own fallback
 (resolution chains above) reads both locations, so it works **whether or not**
 that driver change has shipped in a given consumer's pinned version.
 
+## The implied-surfaces overlay (a config file, not a key)
+
+When `plan` breaks your brief into issues, the architect consults a bundled
+**implied-surfaces reference** ([`implied-surfaces.md`](implied-surfaces.md)) — the
+standard companion surfaces a capability name or a new entity quietly implies. A
+project can extend that reference with an **optional project-local overlay**.
+
+The overlay is **not a `feeder.json` own-key** — there is no key in the table above
+that points at it, and there is nothing to set in the profile for it. It is a
+separate **markdown file**, discovered by a **fixed path**, a sibling of
+`feeder.json` in the suite config directory:
+
+```
+<repo-root>/.milestone-config/implied-surfaces.md
+```
+
+Discovery by a fixed conventional location — not a config key — is the same
+discipline the plan file and the `.milestone-config/` profiles already follow, and
+the same **new keys only when a real consumer needs them** rule as the
+[Design principle](#design-principle) above: the overlay needed no new key, so none
+was added.
+
+**Its shape.** The same markdown `##`-section shape as the bundled reference: one
+capability per `##` heading, its implied surfaces listed beneath
+(`docs/implied-surfaces.md` → "Project-local overlay").
+
+**How it merges — additive only.** `plan` Step 0 resolves the overlay and merges it
+into the bundled reference **additively**: an overlay can **add** a capability the
+global reference doesn't carry and **extend** an existing capability with surfaces
+specific to your project — but it can **never remove** a surface the global reference
+defines. Dropping a surface you don't want for a given milestone is the **plan
+review's** job (a per-run "trim this line before approving" call), not a standing
+config-level delete.
+
+**Optional, and absent by default.** Most projects ship no overlay — that is the
+common case, never an error. With no overlay, the bundled reference alone applies and
+there is nothing to configure. When a project does add one, it is ordinary committed
+configuration tracked in git like the rest of `.milestone-config/`; a malformed or
+wrong-shape overlay is skipped best-effort and never breaks a plan run.
+
 ## Absent-means-default discipline
 
 **Omit a key rather than write its default value.** Almost every own-key has a
