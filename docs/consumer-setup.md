@@ -118,6 +118,28 @@ user-facing behavior the standing docs and conventions do not answer — is **pa
 to the "needs product input" report, never guessed. Decide each, record it, and
 re-run.
 
+## When your brief spans several releases (the roadmap)
+
+Most briefs describe one release, and the flow above plans them as a single
+milestone. But if your brief really reads as **several** separate releases — a whole
+app, or a few phased deliverables — `plan` does something different: it turns your
+brief into a **roadmap** of milestones and plans them all. Here is what you see when
+that happens:
+
+| Stage | What happens |
+|---|---|
+| Propose the split | `plan` carves your brief into a build-ordered set of milestones — each roughly one release — and shows you the proposed split. |
+| Confirm it (your call) | You **confirm** it, **merge** two milestones, **split** one, **reorder** them, or **reject** the split — one decision, up front, before anything is planned or written. Reject, and `plan` falls back to planning your brief as a single milestone. |
+| Plan them all | Once you confirm, `plan` plans **every** milestone in the roadmap (in parallel), each to its own plan file, in build order. |
+| Deploy in order | `create` deploys the milestones **in build order**, recording each one's position (`milestone X of N`) so the driver builds them in sequence. |
+| Check coverage | As its last step, `create` reads the deployed milestones and issues back from GitHub and checks they cover **everything your original brief asked for** — surfacing a short punch-list of anything missed, covered twice, or drifted. It never edits your issues; the punch-list is yours to act on. |
+
+**A normal, single-release brief is unchanged.** The roadmap only kicks in when your
+brief reads as several releases — you get no extra step and no extra prompt
+otherwise. And there is **nothing new to configure**: the roadmap reuses the same
+project docs `plan` already grounds on. The first time the roadmap path could apply,
+`plan` shows a one-time heads-up so you know the behavior exists.
+
 ## The plan-then-create flow
 
 Issue creation is consequential and the feeder is exactly the stage where human
