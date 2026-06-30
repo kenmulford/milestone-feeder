@@ -23,88 +23,10 @@ Read `.milestone-config/feeder.json`. **Absent → invoke `milestone-feeder:setu
 
 **Surface the optional implied-surfaces overlay once per clone (read-only, marker-gated, non-blocking).** The implied-surfaces feature adds an optional project-local overlay file at the fixed path `.milestone-config/implied-surfaces.md`, which the architect reads alongside the plugin's bundled implied-surfaces reference (`docs/implied-surfaces.md` → "Project-local overlay"). Because it is a new optional surface, existing users need a way to discover it — so `update` prints a one-time, per-clone notice that names the overlay, explains its additive merge, and shows how to add one. Mirrors the `plan` Step 0 one-time-notice family (the bootstrap-nudge sibling: detect → print verbatim → drop a per-clone marker).
 
-Gate: print the 🟡 notice **verbatim** ONLY when the overlay `.milestone-config/implied-surfaces.md` is **absent** AND the per-clone marker `.milestone-config/.runtime/implied-surfaces-notice` is **absent**. On print, ensure `.runtime/` exists (`mkdir -p .milestone-config/.runtime` / `New-Item -ItemType Directory -Force`), then create the marker. Stay **silent** if the marker already exists OR the overlay file exists (a project that already has an overlay knows about it). The marker lives under `.runtime/`, which the nested `.milestone-config/.gitignore` already ignores — so the marker is git-invisible with **no new gitignore line**. **Both forms below are best-effort: swallow any failure (unwritable dir, permission error, missing `jq`) and continue the `update` run — a failed detect/notice/marker must never abort `update`. Read-only except the `.runtime/` dir + the marker; it never writes the overlay.**
+Gate: print the 🟡 notice **verbatim** ONLY when the overlay `.milestone-config/implied-surfaces.md` is **absent** AND the per-clone marker `.milestone-config/.runtime/implied-surfaces-notice` is **absent**. On print, ensure `.runtime/` exists (`mkdir -p .milestone-config/.runtime` / `New-Item -ItemType Directory -Force`), then create the marker. Stay **silent** if the marker already exists OR the overlay file exists (a project that already has an overlay knows about it). The marker lives under `.runtime/`, which the nested `.milestone-config/.gitignore` already ignores — so the marker is git-invisible with **no new gitignore line**. **Both emitter twins (the bash and PowerShell 7+ forms recorded in `docs/one-time-notices.md`) are best-effort: swallow any failure (unwritable dir, permission error, missing `jq`) and continue the `update` run — a failed detect/notice/marker must never abort `update`. Read-only except the `.runtime/` dir + the marker; it never writes the overlay.**
 
-<!-- KEEP THIS DETECTION + NOTICE BLOCK IN SYNC with the implied-surfaces notice in skills/plan/SKILL.md Step 0 (#180), shared marker .milestone-config/.runtime/implied-surfaces-notice -->
-```text
-🟡 Optional: add project-specific implied surfaces
-
-| What | You can add an optional overlay file at
-|      | .milestone-config/implied-surfaces.md. The architect reads it
-|      | alongside the plugin's bundled implied-surfaces reference when it
-|      | breaks your brief into issues.
-| Why  | The bundled reference is universal, so it can't carry capability
-|      | clusters specific to your domain (a church app's "giving", say).
-|      | Your overlay merges in additively — it can add a new capability
-|      | and extend an existing one, but never removes a surface the
-|      | bundled reference already defines.
-| How  | Create .milestone-config/implied-surfaces.md and write one
-|      | capability per ## heading with its implied surfaces beneath — the
-|      | same shape as the bundled reference. Leave it out and the bundled
-|      | reference is used as-is; an absent overlay is never an error.
-| Note | This notice shows at most once per clone.
-```
-
-```bash
-# bash — read-only detect + one-time notice; NEVER writes the overlay; never aborts update.
-# printf '%s\n' (NOT a heredoc): indent-safe under this list item — a heredoc terminator must sit
-# at column 0, but this block is nested, so an indented EOF would be a syntax error. Mirrors the
-# plan Step-0 bootstrap-nudge form. The notice text is the quoted args, so it prints flush-left.
-marker=".milestone-config/.runtime/implied-surfaces-notice"
-if [ ! -f "$marker" ] && [ ! -f ".milestone-config/implied-surfaces.md" ]; then
-  printf '%s\n' \
-    '🟡 Optional: add project-specific implied surfaces' \
-    '' \
-    '| What | You can add an optional overlay file at' \
-    '|      | .milestone-config/implied-surfaces.md. The architect reads it' \
-    '|      | alongside the plugin'"'"'s bundled implied-surfaces reference when it' \
-    '|      | breaks your brief into issues.' \
-    '| Why  | The bundled reference is universal, so it can'"'"'t carry capability' \
-    '|      | clusters specific to your domain (a church app'"'"'s "giving", say).' \
-    '|      | Your overlay merges in additively — it can add a new capability' \
-    '|      | and extend an existing one, but never removes a surface the' \
-    '|      | bundled reference already defines.' \
-    '| How  | Create .milestone-config/implied-surfaces.md and write one' \
-    '|      | capability per ## heading with its implied surfaces beneath — the' \
-    '|      | same shape as the bundled reference. Leave it out and the bundled' \
-    '|      | reference is used as-is; an absent overlay is never an error.' \
-    '| Note | This notice shows at most once per clone.'
-  mkdir -p .milestone-config/.runtime 2>/dev/null && : > "$marker" 2>/dev/null || true
-fi
-```
-
-```powershell
-# PowerShell 7+ — same read-only detect + one-time notice; NEVER writes the overlay; never aborts update.
-try {
-  $marker = Join-Path '.milestone-config' (Join-Path '.runtime' 'implied-surfaces-notice')
-  $overlay = Join-Path '.milestone-config' 'implied-surfaces.md'
-  if ((-not (Test-Path $marker)) -and (-not (Test-Path $overlay))) {
-    # Indent-safe array-join (the #120/#121 self-heal construct) — NOT a here-string: an
-    # @'…'@ closing terminator must sit at column 0, which breaks when nested under this
-    # indented markdown list item. The text below is byte-identical to the bash printf args.
-    Write-Host (@(
-      '🟡 Optional: add project-specific implied surfaces'
-      ''
-      '| What | You can add an optional overlay file at'
-      '|      | .milestone-config/implied-surfaces.md. The architect reads it'
-      '|      | alongside the plugin''s bundled implied-surfaces reference when it'
-      '|      | breaks your brief into issues.'
-      '| Why  | The bundled reference is universal, so it can''t carry capability'
-      '|      | clusters specific to your domain (a church app''s "giving", say).'
-      '|      | Your overlay merges in additively — it can add a new capability'
-      '|      | and extend an existing one, but never removes a surface the'
-      '|      | bundled reference already defines.'
-      '| How  | Create .milestone-config/implied-surfaces.md and write one'
-      '|      | capability per ## heading with its implied surfaces beneath — the'
-      '|      | same shape as the bundled reference. Leave it out and the bundled'
-      '|      | reference is used as-is; an absent overlay is never an error.'
-      '| Note | This notice shows at most once per clone.'
-    ) -join "`n")
-    New-Item -ItemType Directory -Force -Path (Join-Path '.milestone-config' '.runtime') | Out-Null
-    New-Item -ItemType File -Force -Path $marker | Out-Null
-  }
-} catch {}
-```
+<!-- The implied-surfaces notice — its verbatim 🟡 text and both emitter twins (bash + PowerShell 7+) — lives in `docs/one-time-notices.md` → "Implied-surfaces notice" (#197), the canonical unit. KEEP IN SYNC with `skills/plan/SKILL.md` Step 0: `update` shares that notice's verbatim text and its per-clone marker `.milestone-config/.runtime/implied-surfaces-notice` with the plan Step-0 twin, so the notice shows at most once per clone across both verbs. -->
+When the gate above fires, emit the notice **exactly as recorded** in `docs/one-time-notices.md` → "Implied-surfaces notice" — the byte-exact 🟡 text **and** both emitter twins (the bash and PowerShell 7+ forms; run the one for your shell) — then create the shared marker `.milestone-config/.runtime/implied-surfaces-notice`. The doc holds the canonical unit verbatim; its emitter lead comment reads `never aborts plan`, but the printed notice and the best-effort never-abort guarantee are byte-identical for `update` (that lead comment was the only per-verb difference).
 
 ### Step 1 — Resolve / refresh the plan file for the brief
 
@@ -129,7 +51,7 @@ This is the same staleness behavior `create` carries (`skills/create/SKILL.md` S
 
 ### Step 2 — Read the plan-file contract
 
-The plan file is the **load-bearing build artifact** — `update` reads it and reconciles GitHub against it, regenerating nothing (`docs/specs/v0.3.0-humanize-the-surface.md` §3). `update` parses the **SAME plan-file contract `create` parses** — the same fields, by name: see `skills/create/SKILL.md` Step 2 for the full per-field table (the format is `skills/plan/SKILL.md` Step 7; the field requirements are its plan-file-contract table and `docs/specs/v0.3.0-humanize-the-surface.md` §3). In brief, the fields `update` consumes are exactly create's:
+The plan file is the **load-bearing build artifact** — `update` reads it and reconciles GitHub against it, regenerating nothing (`docs/specs/v0.3.0-humanize-the-surface.md` §3). `update` parses the **SAME plan-file contract `create` parses** — the same fields, by name: see the shared **plan-file contract** at `docs/plan-file-contract.md` for the full per-field table and output templates (`create` parses the same contract — `skills/create/SKILL.md` Step 2; the field-requirement grounding is `docs/specs/v0.3.0-humanize-the-surface.md` §3). In brief, the fields `update` consumes are exactly create's:
 
 - **Milestone title (exact)** — the load-bearing identity field `update` resolves the milestone by **on the title-fallback path, and compares against the live title on the receipt path** (Step 3); distinct from the descriptive one-line goal.
 - **Milestone description (Wave order)** — the build-order description with **local slugs** (`#A`/`#B`), the render target the reconcile re-renders + PATCHes when an edge is added (Step 4).
@@ -252,7 +174,7 @@ The report carries the create pass (e) needs-input pointer (any parked / dropped
 
 ## IDEMPOTENCY — the explicit contract
 
-This is the keystone behavior. It holds by construction:
+This is the keystone behavior. It holds by construction — it follows from the plan-file-is-source-of-truth layering (`.project/design-philosophy.md#Layering & boundaries`):
 
 | Condition | Behavior |
 |---|---|
@@ -274,7 +196,7 @@ Be concise — report status and outcomes flatly, no wall-of-text. Present steps
 - **Bounded rename-in-place is the ONLY way `update` mutates identity.** A title PATCH fires **only** on the receipt-present path when the plan's `Milestone title (exact)` differs from the live title (Step 3a); it is announced before it writes and applied **before** the reconcile. A same-title receipt-present run writes no identity PATCH (the no-op-for-identity contract holds), and the title-fallback path (3b) never renames.
 - **NEVER closes, NEVER deletes.** A live issue absent from the plan is **flagged for the user's decision** in the report, never auto-closed or deleted (park, don't guess). `update` only creates missing issues, patches drifted bodies, adds edges, and PATCHes the description.
 - **Plan file is the source of truth; announce-then-write.** A live body is patched **only when it differs**, and the **diff is shown before applying** — never a silent clobber. To change an issue, change the brief/plan, not GitHub. The plan going in is gate-clean (it came through `plan`'s self-check), so reconciling it inherently repairs drift.
-- **Idempotent — nothing differs → zero writes, and `update` says so.** A byte-identical body is left untouched; a fully-synced milestone yields a true no-op (zero `gh` writes); re-running on an already-synced milestone is a no-op by construction.
+- **Idempotent — nothing differs → zero writes, and `update` says so.** See the explicit `## IDEMPOTENCY` contract above.
 - **Reuses `create`'s write primitives — no second definition.** The label-ensure block (`skills/create/SKILL.md` Step 3 pass (a)), the `env.t` quote-safe milestone resolve (pass (b)), `gh issue create` + the slug→`#n` rewrite (passes (c)/(d)), `gh issue edit --body` (pass (d)), the `gh api PATCH` description form (pass (d)), and the report routing (pass (e)) are all reused **by reference**. The one new write `update` adds beyond the reconcile / diff / flag step is the **bounded title PATCH (Step 3a)** — and even that introduces no new primitive: it is **composed** from create's PATCH-milestone form (`skills/create/SKILL.md` Step 3 pass (b) — the `gh api --method PATCH .../milestones/<number>` form) and its `-f title=` field idiom (`skills/create/SKILL.md` Step 3 pass (b) — the `-f title=` field idiom), with the new title held quote-safe in a **shell variable `t`** (quoted inside the `-f` value) — mirroring create's quote-safe rationale (`skills/create/SKILL.md` Step 3 pass (b) — the `env.t` quote-safe rationale), distinct from create's jq `env.t` *resolve*.
 - **No flags, no aliases.** `update` is a verb; nothing is argument-parsed. There is no `update`-specific preview mode — `plan` is the preview for the whole family (`create` / `update` announce what they will write, then write).
 - **Authors no code, opens no PRs, never touches branches.** Editing issues / a milestone description / labels / one epic comment is NOT code, a PR, or a branch. `update` reads code to ground decisions; it never edits a source file, creates a branch, or opens a PR. All `gh` writes are performed by the skill itself, not by any dispatched agent — the agent-read-only invariant holds (the only agent dispatch is on the run-`plan`-first fallback, where `plan`'s agents are read-only against provided text).
