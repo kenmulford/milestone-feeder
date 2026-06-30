@@ -28,7 +28,7 @@ The reference implementations to copy when building something similar. Point at 
 | A new skill (orchestrator verb) | `skills/plan/SKILL.md` | Frontmatter name/description, "Announce first", numbered Procedure, output style, non-negotiables block — the suite's SKILL shape. |
 | A new read-only agent | `agents/architect.md`, `agents/issue-author.md` | Read-only; returns structured text; never writes repo files or opens issues. |
 | A cross-platform hook | `hooks/no-source-edit.sh` + `hooks/no-source-edit.ps1` + `hooks/run-hook.cmd` | Bash-first / pwsh-fallback twins via the polyglot launcher; fail-open. |
-| A one-time discovery notice | `plan` Step 0 bootstrap nudge (`CHANGELOG.md` v0.4.4/v0.4.5) | Best-effort, read-only, marker-gated to show at most once per clone; honors configurable `projectDocs`. |
+| A one-time discovery notice | `docs/one-time-notices.md` (`CHANGELOG.md` v0.4.4/v0.4.5) | Best-effort, read-only, marker-gated to show at most once per clone; honors configurable `projectDocs`. |
 
 ## Commits & PRs
 Message format and PR expectations.
