@@ -504,46 +504,7 @@ Dispatch the agent named in `architectAgent` (default `milestone-feeder:architec
 - `issueSize` when set; else the default (~1 PR each, independently buildable).
 - The `productGaps[]` carried from Step 2.
 
-**It returns** (verbatim from `agents/architect.md` → "Structured return block"):
-
-```
-CANDIDATES:
-  - tag: #A
-    title: <imperative one-line issue title>
-    surface: ui | logic
-    risk: light | heavy
-    sketch: <what this issue does + the project-docs ref / sibling file:line grounding its design>
-    disposition: grounded | implied   # optional, default/omitted = grounded; `implied` (architect
-                                       #   clause 8) marks a conventional companion surface proposed
-                                       #   for review — "implied — review / trim / augment"
-  - … (one per candidate)
-EDGES:
-  - "#B depends_on #A — <reason / the exact artifact reference>"
-  - …                       # [] when no candidate depends on another
-WAVES:
-  - "Wave 1 (parallel): #A, #C"
-  - "Wave 2: #B (depends on #A)"
-  - …                       # topological sort of EDGES; Wave 1 = no unmet deps
-PRODUCT_GAPS:
-  - gap: <the product decision with no conventional default>
-    why_blocked: <why it cannot be grounded in the project docs or a convention>
-    brief_ref: <the brief line / phrase that asks for it>
-    blocks: [#B, #D]        # the candidate LOCAL TAGS this gap blocks (Step 3.5
-                            #   pre-parks them); `[]` when the gap is NOT tied to
-                            #   specific named candidates (a broad product decision
-                            #   flagged for the human, naming no candidate subset —
-                            #   nothing pre-parks for it) — so the two stay
-                            #   distinguishable
-  - …                       # "none" when the brief is fully resolvable
-SCOPE_SPANS_MULTIPLE_MILESTONES:
-  - milestone: <name of proposed milestone 1>
-    tags: [#A, #C]          # the candidate LOCAL TAGS under this milestone
-  - milestone: <name of proposed milestone 2>
-    tags: [#B]
-  - …                       # "none" when the brief is a single coherent release;
-                            #   when raised, names two or more milestones forming a
-                            #   strict partition of `CANDIDATES`
-```
+**It returns** its structured return block — the `CANDIDATES / EDGES / WAVES / PRODUCT_GAPS / SCOPE_SPANS_MULTIPLE_MILESTONES` schema — defined verbatim at `agents/architect.md` → "Structured return block" (the owning contract; not restated here). The three fields the orchestrator branches on downstream — `disposition`, `blocks`, and `SCOPE_SPANS_MULTIPLE_MILESTONES` — are kept legible inline just below.
 
 `EDGES` is the literal `[]` when no candidate depends on another; `PRODUCT_GAPS` is the literal `none` when the brief is fully resolvable. **Merge** any architect `PRODUCT_GAPS` into `productGaps[]` — they join the gaps found at Step 2 — capturing each gap's `blocks:` tags alongside its `gap` / `why_blocked` / `brief_ref` (a `blocks:` list naming specific candidate tags drives the Step 3.5 early park; `[]` marks a gap not tied to specific named candidates — a broad product decision that names no candidates to pre-park). Step 2 gaps carry no `blocks:` list — they name no specific candidates by construction.
 
@@ -608,7 +569,7 @@ Branch on the count **N** of milestone entries in the confirmed manifest **befor
 
 | N | Action |
 |---|---|
-| **0** | **No probe, no dispatch, no plan files.** Surface the empty manifest to the user (state it is empty) and **return control** — this is **NOT an error** (`.project/design-philosophy.md#Error & failure philosophy` — surfaced, never silently dropped, never aborts). |
+| **0** | **No probe, no dispatch, no plan files.** Surface the empty manifest to the user (state it is empty) and **return control** — this is **NOT an error** (`.project/design-philosophy.md#Error & failure philosophy`). |
 | **1** | **Degenerate the fan-out to a single inner-routine dispatch — no rolling window.** Still run the probe (3.7.b) and version resolution (3.7.c), then dispatch the inner routine **once**, producing **one** plan file. |
 | **≥2** | The full fan-out (3.7.b → 3.7.f). |
 
@@ -638,7 +599,7 @@ For each milestone, derive its plan-file `<slug>` from its **goal** by the **sam
 
 #### 3.7.e — Dispatch the inner routine once per milestone (pinned topology, cap-4 rolling window)
 
-**Reuse the Step-4 author fan-out's cap-4 rolling window verbatim** ("Step 4 — Dispatch issue-author per candidate"; mirrors the driver's worker fan-out, `milestone-driver` plugin `skills/solve-milestone/SKILL.md` Phase 1 step 2): **≤4 milestone-planning dispatches in flight**; **M > 4 → rolling window** (as one returns, dispatch the next); **M ≤ 4 → all at once**; **M = 1 → a single dispatch, no window** (M = 0 already returned at 3.7.a). **Await ALL dispatches** before 3.7.f (the barrier).
+**Reuse the Step-4 author fan-out's cap-4 rolling window** across the milestone-planning dispatches — the same window as Step 4 ("Step 4 — Dispatch issue-author per candidate"; mirrors the driver's worker fan-out, `milestone-driver` plugin `skills/solve-milestone/SKILL.md` Phase 1 step 2); M = 0 already returned at 3.7.a. **Await ALL dispatches** before 3.7.f (the barrier).
 
 The pinned topology (3.7.b) selects **only the dispatch LEVEL** — both topologies yield **identical N plan files** and **the same build-order metadata**:
 
@@ -672,7 +633,7 @@ The cross-milestone build order's **recorded home is the #152 MANIFEST** (its `B
 | The dispatch returned a plan file at its assigned path (even if some issues parked) | **planned** — record its plan-file path into the manifest's `Plan file:` field (see below). |
 | The dispatch **errored** (no return), the routine **Step-2 STOPped** (needs-product-input report only, no plan file), or its self-check **did not converge to any buildable issue** | **failed-to-plan** — record the milestone and the reason. |
 
-A **failed-to-plan** milestone is recorded and the fan-out **CONTINUES** the remaining milestones (the rolling window keeps refilling) — one failure never aborts the whole roadmap (`.project/design-philosophy.md#Error & failure philosophy` — surfaced, never aborts).
+A **failed-to-plan** milestone is recorded and the fan-out **CONTINUES** the remaining milestones (the rolling window keeps refilling) — one failure never aborts the whole roadmap (`.project/design-philosophy.md#Error & failure philosophy`).
 
 **Record each planned milestone's plan-file path into the manifest (close the producer→consumer handle for `create`).** For every milestone classified **planned**, record its real plan-file path — `.milestone-feeder/plan-<assignedSlug>.md`, the `assignedSlug` pre-derived at 3.7.d — into that milestone's entry in the confirmed manifest, in the `Plan file:` field the #152 manifest contract reserves (`skills/build-roadmap/SKILL.md` "Manifest format"). Edit the manifest **in place**, consistent with how `plan` writes its own scratch files (Step 7) — it is local scratch the model already authored, so **no new shell is needed**; key the write to the milestone entry by its `Build-order position`, so re-planning the same roadmap overwrites the field to the **same deterministic path** (idempotent). This records the path into the **MANIFEST only** — it writes **nothing** into the per-milestone plan files (consistent with 3.7.f, which keeps cross-milestone metadata out of the plan files). A **failed-to-plan** milestone's `Plan file:` field is **left pending** (no file exists to point at). When the barrier completes, every planned milestone's entry carries its real plan-file path — the deterministic handle `create`'s deploy-loop resolves each milestone's plan file by (`skills/create/SKILL.md` Step 1R), **never** a slug re-derived from the milestone name.
 
@@ -694,18 +655,7 @@ For **EACH** candidate returned at Step 3 **that was not pre-parked (or dropped)
 - The **edges naming this candidate** — the architect edges that touch this tag, to record verbatim (the author transcribes; it does not invent edges or reorder Waves).
 - Any `productGaps[]` **scoped to this candidate**.
 
-**Each returns** (verbatim from `agents/issue-author.md` → "Output format"):
-
-```
-STATUS: AUTHORED | PRODUCT_GAP
-ISSUE_TAG: #A
-TITLE: <final imperative title>
-ISSUE_BODY: |
-  <the §4 issue-body template, verbatim — Summary / Acceptance criteria /
-   Design (recorded, consistent) / Dependencies / Classification>
-LABELS: [<ui|logic>, <risk:light|risk:heavy if confident>]
-PRODUCT_GAP (only when STATUS: PRODUCT_GAP): { what: <the product decision with no conventional default>, why: <why it cannot be grounded> }
-```
+**Each returns** its output format — the `STATUS / ISSUE_TAG / TITLE / ISSUE_BODY / LABELS / PRODUCT_GAP` wrapper — defined verbatim at `agents/issue-author.md` → "Output format" (not restated here). The `STATUS: PRODUCT_GAP` outcome the orchestrator acts on at the Step-4 join stays legible inline just below.
 
 When a candidate returns `STATUS: PRODUCT_GAP`, **route it to `productGaps[]`** — do **not** author a half-invented issue from a fabricated body. The candidate is recorded as parked, not authored; the plan file still renders the candidate's tag/title with a "parked — needs product input" marker.
 
@@ -748,9 +698,9 @@ Resolve the milestone's **exact title** — the load-bearing identity string tha
 1. **FIRST, the highest semver among EXISTING milestone TITLES.** **Reuse the canonical `env.t`-style quote-safe `gh api` milestones read defined in `skills/create/SKILL.md` Step 3 pass (b) BY REFERENCE — do NOT re-define it** (the same reuse-by-reference discipline `skills/update/SKILL.md` Step 3b follows — it reuses create pass (b)'s `env.t` resolve by reference; both bash and PowerShell 7+ forms are given at `skills/create/SKILL.md` Step 3 pass (b)). **One intentional delta from create pass (b):** create pass (b) `select`s the **one** milestone whose title equals `env.t`; here you read **ALL** milestone titles (no `env.t` filter — e.g. `--jq '.[] | .title'`) and scan them for the **highest** semver, since you are finding a reference version rather than matching one exact title (the delta is noted here exactly as `skills/update/SKILL.md` notes its own pass-(b) delta). The matched milestone's **NAME part is reused** for the title; its (highest) semver is the **REFERENCE** version. Provenance `inferred from <milestone>`.
 2. **ELSE the latest `vX.Y.Z` git tag.** Use a cross-platform `git tag` read (plain `git tag` works identically on bash and PowerShell 7+; e.g. `git tag --list 'v*'` then pick the highest semver — keep any sort shell-neutral, do not rely on a shell-specific sort flag). The **reference** version is that tag; the **name** falls back to today's goal-derived name. Provenance `inferred from <tag>`.
 
-**On EITHER infer path:** the inferred/composed title carries the **REFERENCE (highest existing) semver VERBATIM**, and the surfaced plan-file line is **WHERE THE USER ADJUSTS the patch / minor / major bump** — the feeder cannot know whether this milestone is a patch, minor, or major bump, so it proposes the reference version verbatim and lets the user adjust the bump on the surfaced line (`docs/specs/v0.3.1-driver-handoff.md` §2 rung 3). The feeder PROPOSES; it does not silently finalize.
+**On EITHER infer path:** the inferred/composed title carries the **REFERENCE (highest existing) semver VERBATIM**, and the surfaced plan-file line is **WHERE THE USER ADJUSTS the patch / minor / major bump** — the feeder cannot know whether this milestone is a patch, minor, or major bump, so it proposes the reference version verbatim and lets the user adjust the bump on the surfaced line — propose-not-finalize, per rung 3 above (`docs/specs/v0.3.1-driver-handoff.md` §2 rung 3).
 
-**The resolved exact title always carries the semver INSIDE the title string** — there is no separate version field (`docs/specs/v0.3.1-driver-handoff.md` §2, §10). It lands in the plan file's `Milestone title (exact)` identity field (Step 7; `docs/specs/v0.3.1-driver-handoff.md` §6), with its `Version provenance` line, **both SURFACED for the user to confirm or override BEFORE running `create`** (`docs/specs/v0.3.1-driver-handoff.md` §2, §3). A `"none"` declaration (rung 2) yields a goal-derived name with **no semver** and provenance `declaration`; non-versioned projects are left alone.
+**The resolved exact title always carries the semver INSIDE the title string** (no separate version field — stated at the 5.1 ladder intro above). It lands in the plan file's `Milestone title (exact)` identity field (Step 7; `docs/specs/v0.3.1-driver-handoff.md` §6), with its `Version provenance` line, **both SURFACED for the user to confirm or override BEFORE running `create`** (`docs/specs/v0.3.1-driver-handoff.md` §2, §3). A `"none"` declaration (rung 2) yields a goal-derived name with **no semver** and provenance `declaration`; non-versioned projects are left alone.
 
 ### Step 6 — Self-check gate (the keystone)
 
