@@ -27,390 +27,15 @@ This procedure has two parts: a **once-per-run outer boundary** (Step 0) and a *
 
 Read `.milestone-config/feeder.json`. **Absent → invoke `milestone-feeder:setup`** (it bootstraps the profile, aligns the label taxonomy, and returns control), then continue — the user does not re-run the command (`skills/setup/SKILL.md` Phase 5).
 
-**Self-heal the scratch-ignore (best-effort, create-only — never clobber).** On the **already-configured** path — `feeder.json` is present, so `setup` is NOT auto-invoked above — nothing else establishes the nested scratch-ignore, so a legacy-blanket repo (config present but `.milestone-config/.gitignore` never written) would leak per-run scratch into `git status`. Ensure the `.milestone-config/` directory exists (`mkdir -p .milestone-config`), then write a **committed** `.milestone-config/.gitignore` so per-clone scratch (`preflight-notice`, `trello-notice`, `triage-cache.json`, `tests-stamp`, plus the `.runtime/` and `worktrees/` dirs) is git-invisible in the consumer repo with zero user setup — while tracked config (`driver.json`, `feeder.json` — intentionally NOT listed) stays tracked. **Write the file only when it is absent** (`[ ! -f ]` / `-not (Test-Path …)`), so a user-edited `.gitignore` is never overwritten, appended to, or truncated, and a re-run is a no-op. The write is **best-effort**: swallow any failure and continue the `plan` run — a failed self-heal must never abort `plan`. This mirrors the driver's canonical block verbatim (`milestone-driver/hooks/tests-green.sh` / `tests-green.ps1`) and the same block in feeder `setup` (`skills/setup/SKILL.md` Phase 3); keep the three in sync.
+**Run the five one-time Step-0 units — a `.gitignore` self-heal and four printed notices — each from its recorded form in `docs/one-time-notices.md`, in this order.** The four notices are each emitted by running their recorded **deterministic emitter twin** (the `bash` form or the PowerShell 7+ form) **verbatim**: that emitter's `printf` / `Write-Host` args **are** the canonical notice text, so the emitted text is **byte-identical by construction** — never re-type a notice as free-form agent text. Each section in the reference records the unit's gate, its per-clone `.runtime/` marker (where it has one), and what it writes; every form is **best-effort and never aborts `plan`**, and read-only except for the `.runtime/` dir + marker — and the self-heal, which writes the nested `.gitignore`.
 
-<!-- KEEP THIS BLOCK IN SYNC with the committed .milestone-config/.gitignore in this repo and with feeder setup, driver solve-issue / solve-milestone / triage. -->
-```gitignore
-# milestone-driver / milestone-feeder per-clone scratch — git-invisible by default.
-# Committed so per-run scratch stays out of `git status` with zero user setup.
-# Patterns are relative to this .milestone-config/ directory. Tracked config
-# (driver.json, feeder.json) is intentionally NOT listed, so it stays tracked.
-preflight-notice
-trello-notice
-triage-cache.json
-tests-stamp
-.runtime/
-worktrees/
-```
+1. **Self-heal the nested `.milestone-config/.gitignore`** — `docs/one-time-notices.md#self-heal-the-nested-milestone-configgitignore`. Create-only, gated on **file-absence** (not a marker), so per-run scratch stays git-invisible in the consumer repo with zero user setup while tracked config (`driver.json` / `feeder.json`) stays tracked; never clobbers a user-edited file. Keep it in sync with this repo's committed `.milestone-config/.gitignore`, feeder `setup` (`skills/setup/SKILL.md` Phase 3), and the driver's `tests-green` twin.
+2. **Legacy-blanket root `.gitignore` notice** (🔴) — `docs/one-time-notices.md#legacy-blanket-root-gitignore-notice`. Fires when the consumer's **root** `.gitignore` blankets `.milestone-config` (hiding the tracked config from git) **and** the marker `.milestone-config/.runtime/legacy-blanket-notice` is absent. Read-only on the root `.gitignore` — it never auto-edits it; the by-hand fix is the user's.
+3. **Bootstrap-nudge notice** (🟡) — `docs/one-time-notices.md#bootstrap-nudge-notice`. Fires when the repo is un-bootstrapped (the resolved `projectDocs` path is absent / has no readable files **OR** `.milestone-config/driver.json` is missing) **and** the marker `.milestone-config/.runtime/bootstrap-nudge-notice` is absent. The emitter resolves `projectDocs` in-block with the **same default (`.project/`) the key list below uses** — so the two reads cannot diverge — and names the resolved path. Read-only: it never runs the bootstrapper and never writes `projectDocs` / `.project/` or `driver.json`.
+4. **Roadmap-routing notice** (🟡) — `docs/one-time-notices.md#roadmap-routing-notice`. Announces the Step-3.6 oversized-brief routing; gated **solely** on the marker `.milestone-config/.runtime/roadmap-routing-notice` (otherwise unconditional — it announces a behavior change, so it carries no repo-state condition). `plan` Step 0 only; no `setup` twin.
+5. **Implied-surfaces notice** (🟡) — `docs/one-time-notices.md#implied-surfaces-notice`. Announces the optional project-local overlay; fires when the overlay `.milestone-config/implied-surfaces.md` is absent **and** the marker `.milestone-config/.runtime/implied-surfaces-notice` is absent. It shares its verbatim text **and** that marker with the `update` Step-0 twin (`skills/update/SKILL.md` Step 0), so it shows **at most once per clone across both verbs**.
 
-```bash
-# bash — create-only self-heal; never clobbers a user-edited file, never aborts plan.
-mkdir -p .milestone-config 2>/dev/null || true
-ignore_path=".milestone-config/.gitignore"
-if [ ! -f "$ignore_path" ]; then
-  printf '%s\n' \
-    '# milestone-driver / milestone-feeder per-clone scratch — git-invisible by default.' \
-    '# Committed so per-run scratch stays out of `git status` with zero user setup.' \
-    '# Patterns are relative to this .milestone-config/ directory. Tracked config' \
-    '# (driver.json, feeder.json) is intentionally NOT listed, so it stays tracked.' \
-    'preflight-notice' 'trello-notice' 'triage-cache.json' 'tests-stamp' \
-    '.runtime/' 'worktrees/' > "$ignore_path" 2>/dev/null || true
-fi
-```
-
-```powershell
-# PowerShell 7+ — same create-only self-heal; no-BOM UTF-8; never clobbers, never aborts.
-try {
-  New-Item -ItemType Directory -Force -Path '.milestone-config' | Out-Null
-  $ignorePath = Join-Path '.milestone-config' '.gitignore'
-  if (-not (Test-Path $ignorePath)) {
-    $ignoreBody = @(
-      '# milestone-driver / milestone-feeder per-clone scratch — git-invisible by default.'
-      '# Committed so per-run scratch stays out of `git status` with zero user setup.'
-      '# Patterns are relative to this .milestone-config/ directory. Tracked config'
-      '# (driver.json, feeder.json) is intentionally NOT listed, so it stays tracked.'
-      'preflight-notice'; 'trello-notice'; 'triage-cache.json'; 'tests-stamp'
-      '.runtime/'; 'worktrees/'
-    ) -join "`n"
-    [System.IO.File]::WriteAllText($ignorePath, $ignoreBody + "`n", [System.Text.UTF8Encoding]::new($false))
-  }
-} catch {}
-```
-
-**Detect a legacy-blanket root `.gitignore` and print a one-time by-hand-fix notice (read-only; NEVER auto-edit the root).** The self-heal above writes the *nested* `.milestone-config/.gitignore`, but it cannot help a consumer whose **root** `.gitignore` carries a legacy blanket for the config dir — `.milestone-config/`, `.milestone-config/*`, or bare `.milestone-config` (with or without a leading `/`). A root blanket hides everything under `.milestone-config/` from git — `feeder.json`, `driver.json`, and the nested `.gitignore` we just wrote — so the tracked config is silently dropped from version control and the self-heal is void for exactly those repos. **Detection is read-only — it writes NOTHING to the root `.gitignore` under any condition; the root file is the consumer's and may hold unrelated rules, so the fix is the user's to apply** (this skill already scopes its own scratch self-ignore to the nested `.milestone-config/.gitignore` "without touching the consumer's root `.gitignore`", `skills/plan/SKILL.md:336`). Mirrors the driver's one-time marker-gated notice pattern (`milestone-driver/skills/solve-milestone/SKILL.md` preflight / Trello notice: detect → print verbatim → drop a per-clone marker; `milestone-driver/skills/solve-issue/SKILL.md` first-run preflight notice).
-
-Gate: print the 🔴 notice **verbatim** ONLY when a root blanket is detected **AND** the per-clone marker `.milestone-config/.runtime/legacy-blanket-notice` is **absent**. On print, ensure `.runtime/` exists (`mkdir -p .milestone-config/.runtime` / `New-Item -ItemType Directory -Force`), then create the marker. Stay **silent** if the marker already exists OR no blanket is detected. The marker lives under `.runtime/`, which the nested `.milestone-config/.gitignore` (written above) already ignores — so the marker is git-invisible with **no new gitignore line** (verified: `git check-ignore .milestone-config/.runtime/legacy-blanket-notice` resolves against the nested `.runtime/` entry). **Blanket-clearing rule:** a blanket counts as present UNLESS it is paired with a **broad** un-ignore that actually re-exposes tracked config (`!.milestone-config`, `!.milestone-config/`, or `!.milestone-config/*`). A lone single-file un-ignore such as `!.milestone-config/driver.json` does **NOT** clear it — `feeder.json` and the nested `.gitignore` stay hidden — so it still counts as a blanket and the notice fires. **Both forms below are best-effort: swallow any failure (unwritable dir, permission error, missing git) and continue the `plan` run — a failed detect/marker must never abort `plan`. Neither form ever writes to the root `.gitignore`.**
-
-<!-- KEEP THIS DETECTION + NOTICE BLOCK IN SYNC with setup Phase 3 (skills/setup/SKILL.md). Read-only on the root .gitignore; marker is .milestone-config/.runtime/legacy-blanket-notice. -->
-```text
-🔴 Legacy blanket detected in your root .gitignore
-
-| What | Your root .gitignore ignores the whole .milestone-config/ directory
-|      | (a line like `.milestone-config/`, `.milestone-config/*`, or
-|      | `.milestone-config`). That hides this suite's TRACKED config —
-|      | feeder.json, driver.json, and the nested .milestone-config/.gitignore —
-|      | from git, so your config is silently dropped from version control.
-| Fix  | Edit your root .gitignore BY HAND and delete the `.milestone-config`
-|      | blanket line. The nested .milestone-config/.gitignore (already
-|      | written) then keeps per-run scratch invisible while feeder.json /
-|      | driver.json / the nested .gitignore stay tracked. We never edit your
-|      | root .gitignore for you — it is yours and may hold unrelated rules.
-| Note | This notice shows at most once per clone.
-```
-
-```bash
-# bash — read-only detect + one-time notice; NEVER writes the root .gitignore; never aborts plan.
-# printf '%s\n' (NOT a heredoc): the same indent-safe construct the setup site uses, so both sites
-# emit one consistent form. The notice text is the quoted args, so it prints flush-left —
-# byte-identical to the setup site.
-marker=".milestone-config/.runtime/legacy-blanket-notice"
-if [ ! -f "$marker" ] && [ -f ".gitignore" ] \
-   && grep -Eq '^[[:space:]]*/?\.milestone-config(/\*?)?[[:space:]]*$' .gitignore \
-   && ! grep -Eq '^[[:space:]]*!/?\.milestone-config(/\*?)?[[:space:]]*$' .gitignore; then
-  printf '%s\n' \
-    '🔴 Legacy blanket detected in your root .gitignore' \
-    '' \
-    '| What | Your root .gitignore ignores the whole .milestone-config/ directory' \
-    '|      | (a line like `.milestone-config/`, `.milestone-config/*`, or' \
-    '|      | `.milestone-config`). That hides this suite'"'"'s TRACKED config —' \
-    '|      | feeder.json, driver.json, and the nested .milestone-config/.gitignore —' \
-    '|      | from git, so your config is silently dropped from version control.' \
-    '| Fix  | Edit your root .gitignore BY HAND and delete the `.milestone-config`' \
-    '|      | blanket line. The nested .milestone-config/.gitignore (already' \
-    '|      | written) then keeps per-run scratch invisible while feeder.json /' \
-    '|      | driver.json / the nested .gitignore stay tracked. We never edit your' \
-    '|      | root .gitignore for you — it is yours and may hold unrelated rules.' \
-    '| Note | This notice shows at most once per clone.'
-  mkdir -p .milestone-config/.runtime 2>/dev/null && : > "$marker" 2>/dev/null || true
-fi
-```
-
-```powershell
-# PowerShell 7+ — same read-only detect + one-time notice; NEVER writes the root .gitignore; never aborts plan.
-try {
-  $marker = Join-Path '.milestone-config' (Join-Path '.runtime' 'legacy-blanket-notice')
-  if ((-not (Test-Path $marker)) -and (Test-Path '.gitignore')) {
-    $lines = Get-Content -LiteralPath '.gitignore'
-    $blanket   = $lines | Where-Object { $_ -match '^\s*/?\.milestone-config(/\*?)?\s*$' }
-    $unignored = $lines | Where-Object { $_ -match '^\s*!/?\.milestone-config(/\*?)?\s*$' }
-    if ($blanket -and -not $unignored) {
-      # Indent-safe array-join (the #120/#121 self-heal construct) — NOT a here-string: an
-      # @'…'@ closing terminator must sit at column 0, which breaks when nested under indented
-      # markdown. The text below is byte-identical to the bash printf args and the setup site.
-      Write-Host (@(
-        '🔴 Legacy blanket detected in your root .gitignore'
-        ''
-        '| What | Your root .gitignore ignores the whole .milestone-config/ directory'
-        '|      | (a line like `.milestone-config/`, `.milestone-config/*`, or'
-        '|      | `.milestone-config`). That hides this suite''s TRACKED config —'
-        '|      | feeder.json, driver.json, and the nested .milestone-config/.gitignore —'
-        '|      | from git, so your config is silently dropped from version control.'
-        '| Fix  | Edit your root .gitignore BY HAND and delete the `.milestone-config`'
-        '|      | blanket line. The nested .milestone-config/.gitignore (already'
-        '|      | written) then keeps per-run scratch invisible while feeder.json /'
-        '|      | driver.json / the nested .gitignore stay tracked. We never edit your'
-        '|      | root .gitignore for you — it is yours and may hold unrelated rules.'
-        '| Note | This notice shows at most once per clone.'
-      ) -join "`n")
-      New-Item -ItemType Directory -Force -Path (Join-Path '.milestone-config' '.runtime') | Out-Null
-      New-Item -ItemType File -Force -Path $marker | Out-Null
-    }
-  }
-} catch {}
-```
-
-**Detect an un-bootstrapped repo and print a one-time non-blocking grounding-is-weak notice (read-only; NEVER auto-run the bootstrapper, NEVER scaffold config).** Grounding is strongest when this repo has both the project's standing docs (the project constitution `plan` grounds issue design on, found under the configurable `projectDocs` path — default `.project/`) and a driver profile (`.milestone-config/driver.json`, the shared-keys source). **The standing-docs path is the resolved `projectDocs` value, not a hardcoded `.project/`** — a consumer with a custom `projectDocs` (e.g. `docs/standards/`) that *is* bootstrapped must not get a false nudge. So this block resolves `projectDocs` in-place **before** the detect (the key-extraction table below has not run yet), reading `.milestone-config/feeder.json` directly with the **same default (`.project/`) the table uses** so the two reads cannot diverge; a missing file / malformed JSON / missing `jq` falls back to `.project/`. When the repo is missing one or both — the resolved `projectDocs` path absent or empty (no readable files), **OR** `.milestone-config/driver.json` missing — `plan` still runs, but falls back to thin inferred conventions, so the issues it writes are weaker. This notice tells the user that, names the resolved `projectDocs` path, points them at `milestone-bootstrapper`, and carries on. **It is purely advisory: never a hard block, never a prompt; it does NOT run `milestone-bootstrapper`, and it writes NOTHING to `.project/` or `driver.json` — its only writes are the `.runtime/` dir and the marker.** This trigger is **independent of** the `feeder.json`-absent → `setup` branch (`skills/plan/SKILL.md:22`) and of the driver-config absent-default resolution (the key-extraction table and the "Resolve the shared keys" steps below) — neither is altered, and a present `feeder.json` with an absent `driver.json` still nudges here while resolving driver keys by absent-default below. Mirrors the driver's one-time marker-gated notice pattern, the same family as the legacy-blanket sibling above (detect → print verbatim → drop a per-clone marker).
-
-Gate: print the 🟡 notice **verbatim** ONLY when the repo is un-bootstrapped (resolved `projectDocs` path absent-or-no-readable-files **OR** `.milestone-config/driver.json` missing) **AND** the per-clone marker `.milestone-config/.runtime/bootstrap-nudge-notice` is **absent**. On print, ensure `.runtime/` exists (`mkdir -p .milestone-config/.runtime` / `New-Item -ItemType Directory -Force`), then create the marker. Stay **silent** if the marker already exists OR the repo is bootstrapped (both the resolved `projectDocs` path has a readable file AND `driver.json` is present). The marker lives under `.runtime/`, which the nested `.milestone-config/.gitignore` (written above) already ignores — so the marker is git-invisible with **no new gitignore line**. **Both forms below are best-effort: swallow any failure (unwritable dir, permission error, malformed feeder.json, missing `jq`) and continue the `plan` run — a failed resolve/detect/notice/marker must never abort `plan`. Neither form ever writes to `projectDocs` / `.project/` or `driver.json`, and neither runs the bootstrapper.**
-
-<!-- KEEP THIS DETECTION + NOTICE BLOCK IN SYNC across the plan/setup one-time-notice family. plan Step 0 only (no setup twin). Read-only on projectDocs/.project/ and driver.json; never runs milestone-bootstrapper; marker is .milestone-config/.runtime/bootstrap-nudge-notice. -->
-<!-- This text block shows the DEFAULT-config rendering (projectDocs = .project/). The runnable bash/PowerShell forms below interpolate the RESOLVED projectDocs path into the "| What |" line — so a custom projectDocs (e.g. docs/standards/) prints "...no docs/standards/ standing docs..." while the default stays byte-identical to this template. Do not make this template dynamic. -->
-```text
-🟡 This repo isn't bootstrapped — your plan's grounding will be weak
-
-| What | This repo has no .project/ standing docs and/or no
-|      | .milestone-config/driver.json. Without them, plan has no project
-|      | constitution to ground issue design on and no driver profile to
-|      | resolve shared keys from, so it falls back to thin inferred
-|      | conventions and the issues it writes are weaker.
-| Fix  | Run milestone-bootstrapper first to scaffold your .project/ docs and
-|      | driver profile, then re-run /milestone-feeder:plan. We won't do this
-|      | for you and we won't block — config is optional and plan will
-|      | continue with best-effort grounding.
-| Note | This notice shows at most once per clone.
-```
-
-```bash
-# bash — read-only detect + one-time notice; NEVER writes projectDocs/.project/ or driver.json, NEVER runs the bootstrapper; never aborts plan.
-# printf '%s\n' (NOT a heredoc): the same indent-safe construct the sibling legacy-blanket block uses, so both
-# sites emit one consistent form. The notice text is the quoted args, so it prints flush-left.
-# Resolve projectDocs in-block (the key-extraction table below has not run yet) with the SAME default the table uses,
-# so the two reads can't diverge; a non-string projectDocs (number/array), missing file / malformed JSON / missing jq
-# all fall back to .project/. Strip ALL trailing slashes for the detect operand; an empty result (e.g. "/") falls back
-# to .project so bash and PowerShell agree; the notice re-adds a single "/" so the printed path always ends in "/".
-pd="$(jq -r 'if (.projectDocs | type) == "string" then .projectDocs else ".project/" end' .milestone-config/feeder.json 2>/dev/null || echo ".project/")"
-[ -z "$pd" ] && pd=".project/"
-while [ "$pd" != "${pd%/}" ]; do pd="${pd%/}"; done
-[ -z "$pd" ] && pd=".project"
-marker=".milestone-config/.runtime/bootstrap-nudge-notice"
-if [ ! -f "$marker" ] \
-   && { [ -z "$(find -L "$pd" -type f 2>/dev/null | head -1)" ] || [ ! -f ".milestone-config/driver.json" ]; }; then
-  printf '%s\n' \
-    '🟡 This repo isn'"'"'t bootstrapped — your plan'"'"'s grounding will be weak' \
-    '' \
-    "| What | This repo has no ${pd}/ standing docs and/or no" \
-    '|      | .milestone-config/driver.json. Without them, plan has no project' \
-    '|      | constitution to ground issue design on and no driver profile to' \
-    '|      | resolve shared keys from, so it falls back to thin inferred' \
-    '|      | conventions and the issues it writes are weaker.' \
-    '| Fix  | Run milestone-bootstrapper first to scaffold your .project/ docs and' \
-    '|      | driver profile, then re-run /milestone-feeder:plan. We won'"'"'t do this' \
-    '|      | for you and we won'"'"'t block — config is optional and plan will' \
-    '|      | continue with best-effort grounding.' \
-    '| Note | This notice shows at most once per clone.'
-  mkdir -p .milestone-config/.runtime 2>/dev/null && : > "$marker" 2>/dev/null || true
-fi
-```
-
-```powershell
-# PowerShell 7+ — same read-only detect + one-time notice; NEVER writes projectDocs/.project/ or driver.json, NEVER runs the bootstrapper; never aborts plan.
-try {
-  # Resolve projectDocs in-block (the key-extraction table below has not run yet) with the SAME default the table uses,
-  # so the two reads can't diverge; a non-string projectDocs (number/array), missing file / malformed JSON all fall
-  # back to .project/. Strip ALL trailing slashes for the detect operand; an empty result (e.g. "/") falls back to
-  # .project so PowerShell and bash agree; the notice re-adds a single "/" so the printed path always ends in "/".
-  $pd = '.project/'
-  try { $pdRaw = (Get-Content -Raw -LiteralPath (Join-Path '.milestone-config' 'feeder.json') -ErrorAction Stop | ConvertFrom-Json).projectDocs; if ($pdRaw -is [string]) { $pd = $pdRaw } } catch {}
-  $pd = $pd -replace '/+$',''
-  if (-not $pd) { $pd = '.project' }
-  $marker = Join-Path '.milestone-config' (Join-Path '.runtime' 'bootstrap-nudge-notice')
-  $projectEmpty = -not (Test-Path $pd) -or -not (Get-ChildItem -LiteralPath $pd -File -Recurse -Force -ErrorAction SilentlyContinue | Select-Object -First 1)
-  $driverMissing = -not (Test-Path (Join-Path '.milestone-config' 'driver.json'))
-  if ((-not (Test-Path $marker)) -and ($projectEmpty -or $driverMissing)) {
-    # Indent-safe array-join (the #120/#121 self-heal construct) — NOT a here-string: an
-    # @'…'@ closing terminator must sit at column 0, which breaks when nested under indented
-    # markdown. The text below is byte-identical to the bash printf args (same resolved $pd).
-    Write-Host (@(
-      '🟡 This repo isn''t bootstrapped — your plan''s grounding will be weak'
-      ''
-      "| What | This repo has no ${pd}/ standing docs and/or no"
-      '|      | .milestone-config/driver.json. Without them, plan has no project'
-      '|      | constitution to ground issue design on and no driver profile to'
-      '|      | resolve shared keys from, so it falls back to thin inferred'
-      '|      | conventions and the issues it writes are weaker.'
-      '| Fix  | Run milestone-bootstrapper first to scaffold your .project/ docs and'
-      '|      | driver profile, then re-run /milestone-feeder:plan. We won''t do this'
-      '|      | for you and we won''t block — config is optional and plan will'
-      '|      | continue with best-effort grounding.'
-      '| Note | This notice shows at most once per clone.'
-    ) -join "`n")
-    New-Item -ItemType Directory -Force -Path (Join-Path '.milestone-config' '.runtime') | Out-Null
-    New-Item -ItemType File -Force -Path $marker | Out-Null
-  }
-} catch {}
-```
-
-**Announce the new oversized-brief routing once per clone (read-only, non-blocking, marker-gated).** Existing `plan` users formed a habit before this routing existed: a whole-app brief that spans several releases used to get only a passive *"~N milestones"* advisory they had to act on by hand. Now `plan`'s front-door (Step 3.6) **routes** such a brief into the `build-roadmap` flow. So existing users get a discovery path — a one-time, per-clone notice that announces the new behavior, mirroring the legacy-blanket / bootstrap-nudge siblings above (print verbatim → drop a per-clone marker). **It is purely informational: never a block, never a prompt; its only writes are the `.runtime/` dir and the marker — it reads and changes nothing else.** Grounding: `SPEC.md` §3.1 (every behavior change ships an existing-user discovery path); `.project/design-philosophy.md#One-way doors` (a behavior change ships a discovery / migration path); `.project/conventions.md#Canonical exemplars` (the one-time-notice pattern → `plan` Step 0).
-
-Gate: print the 🟡 notice **verbatim** ONLY when the per-clone marker `.milestone-config/.runtime/roadmap-routing-notice` is **absent**. This notice is **unconditional** — it announces a behavior change, so unlike the two siblings above it carries **no repo-state condition**; the marker is its only gate. On print, ensure `.runtime/` exists (`mkdir -p .milestone-config/.runtime` / `New-Item -ItemType Directory -Force`), then create the marker. Stay **silent** if the marker already exists. The marker lives under `.runtime/`, which the nested `.milestone-config/.gitignore` (written above) already ignores — so the marker is git-invisible with **no new gitignore line**. **Both forms below are best-effort: swallow any failure (unwritable dir, permission error) and continue the `plan` run — a failed notice/marker must never abort `plan`.** This notice is **`plan` Step 0 only** (no setup twin) — the oversized-brief routing is a `plan` behavior.
-
-<!-- KEEP THIS NOTICE BLOCK IN SYNC across the plan one-time-notice family. plan Step 0 only (no setup twin). Read-only; marker is .milestone-config/.runtime/roadmap-routing-notice. -->
-```text
-🟡 New: an oversized brief now routes into a roadmap flow
-
-| What | When you give plan a whole-app brief that spans several
-|      | releases, plan now hands it to a roadmap step first: it
-|      | proposes a sequenced set of milestones and asks you to
-|      | confirm, merge, split, reorder, or reject the split before
-|      | it plans any single milestone.
-| When | Only when the brief reads as several milestones. A normal,
-|      | single-release brief is unchanged — no roadmap step, no
-|      | extra prompt.
-| Note | This notice shows at most once per clone.
-```
-
-```bash
-# bash — one-time roadmap-routing discovery notice; read-only; marker-gated; never aborts plan.
-# printf '%s\n' (NOT a heredoc): the same indent-safe construct the sibling Step-0 notices use,
-# so all three sites emit one consistent form. The notice text is the quoted args — prints flush-left.
-marker=".milestone-config/.runtime/roadmap-routing-notice"
-if [ ! -f "$marker" ]; then
-  printf '%s\n' \
-    '🟡 New: an oversized brief now routes into a roadmap flow' \
-    '' \
-    '| What | When you give plan a whole-app brief that spans several' \
-    '|      | releases, plan now hands it to a roadmap step first: it' \
-    '|      | proposes a sequenced set of milestones and asks you to' \
-    '|      | confirm, merge, split, reorder, or reject the split before' \
-    '|      | it plans any single milestone.' \
-    '| When | Only when the brief reads as several milestones. A normal,' \
-    '|      | single-release brief is unchanged — no roadmap step, no' \
-    '|      | extra prompt.' \
-    '| Note | This notice shows at most once per clone.'
-  mkdir -p .milestone-config/.runtime 2>/dev/null && : > "$marker" 2>/dev/null || true
-fi
-```
-
-```powershell
-# PowerShell 7+ — same one-time roadmap-routing discovery notice; read-only; marker-gated; never aborts plan.
-try {
-  $marker = Join-Path '.milestone-config' (Join-Path '.runtime' 'roadmap-routing-notice')
-  if (-not (Test-Path $marker)) {
-    # Indent-safe array-join (the #120/#121 self-heal construct) — NOT a here-string; byte-identical
-    # to the bash printf args and the text template above.
-    Write-Host (@(
-      '🟡 New: an oversized brief now routes into a roadmap flow'
-      ''
-      '| What | When you give plan a whole-app brief that spans several'
-      '|      | releases, plan now hands it to a roadmap step first: it'
-      '|      | proposes a sequenced set of milestones and asks you to'
-      '|      | confirm, merge, split, reorder, or reject the split before'
-      '|      | it plans any single milestone.'
-      '| When | Only when the brief reads as several milestones. A normal,'
-      '|      | single-release brief is unchanged — no roadmap step, no'
-      '|      | extra prompt.'
-      '| Note | This notice shows at most once per clone.'
-    ) -join "`n")
-    New-Item -ItemType Directory -Force -Path (Join-Path '.milestone-config' '.runtime') | Out-Null
-    New-Item -ItemType File -Force -Path $marker | Out-Null
-  }
-} catch {}
-```
-
-**Announce the optional project-specific implied surfaces once per clone (read-only, marker-gated, non-blocking).** The implied-surfaces feature adds an optional project-local overlay file at the fixed path `.milestone-config/implied-surfaces.md`, which the architect reads alongside the plugin's bundled implied-surfaces reference (`docs/implied-surfaces.md` → "Project-local overlay") when it breaks your brief into issues. Because it is a new optional surface, existing `plan` users need a way to discover it — so `plan` prints a one-time, per-clone notice that names the overlay, explains its additive merge, and shows how to add one. Mirrors the legacy-blanket / bootstrap-nudge / roadmap-routing siblings above (detect → print verbatim → drop a per-clone marker). It shares its 🟡 printed text **verbatim** and its per-clone marker with the `update` Step-0 twin (`skills/update/SKILL.md` Step 0, #183) — the two notices print the **same** notice text and gate on the **same** marker `.milestone-config/.runtime/implied-surfaces-notice` (the blocks differ only in their verb-specific lead comment — `never aborts plan` vs `never aborts update`), so the notice shows **at most once per clone across both verbs** (whichever of `plan` / `update` runs first prints it and drops the marker; the other then stays silent). Grounding: `SPEC.md` §3.1 (every new optional surface ships an existing-user discovery path); `.project/design-philosophy.md#One-way doors` (a behavior change ships a discovery / migration path); `.project/conventions.md#Canonical exemplars` (the one-time-notice pattern). **The overlay itself is resolved + merged at Step 0 by #181 — this notice only announces it; resolving it is out of scope here.**
-
-Gate: print the 🟡 notice **verbatim** ONLY when the overlay `.milestone-config/implied-surfaces.md` is **absent** AND the per-clone marker `.milestone-config/.runtime/implied-surfaces-notice` is **absent**. On print, ensure `.runtime/` exists (`mkdir -p .milestone-config/.runtime` / `New-Item -ItemType Directory -Force`), then create the marker. Stay **silent** if the marker already exists OR the overlay file exists (a project that already has an overlay knows about it). The marker lives under `.runtime/`, which the nested `.milestone-config/.gitignore` (written above) already ignores — so the marker is git-invisible with **no new gitignore line**. **Both forms below are best-effort: swallow any failure (unwritable dir, permission error, missing `jq`) and continue the `plan` run — a failed detect/notice/marker must never abort `plan`. Read-only except the `.runtime/` dir + the marker; it never writes the overlay.**
-
-<!-- KEEP THIS DETECTION + NOTICE BLOCK IN SYNC with the implied-surfaces notice in skills/update/SKILL.md Step 0 (#183), shared marker .milestone-config/.runtime/implied-surfaces-notice -->
-```text
-🟡 Optional: add project-specific implied surfaces
-
-| What | You can add an optional overlay file at
-|      | .milestone-config/implied-surfaces.md. The architect reads it
-|      | alongside the plugin's bundled implied-surfaces reference when it
-|      | breaks your brief into issues.
-| Why  | The bundled reference is universal, so it can't carry capability
-|      | clusters specific to your domain (a church app's "giving", say).
-|      | Your overlay merges in additively — it can add a new capability
-|      | and extend an existing one, but never removes a surface the
-|      | bundled reference already defines.
-| How  | Create .milestone-config/implied-surfaces.md and write one
-|      | capability per ## heading with its implied surfaces beneath — the
-|      | same shape as the bundled reference. Leave it out and the bundled
-|      | reference is used as-is; an absent overlay is never an error.
-| Note | This notice shows at most once per clone.
-```
-
-```bash
-# bash — read-only detect + one-time notice; NEVER writes the overlay; never aborts plan.
-# printf '%s\n' (NOT a heredoc): indent-safe under this list item — a heredoc terminator must sit
-# at column 0, but this block is nested, so an indented EOF would be a syntax error. Mirrors the
-# plan Step-0 bootstrap-nudge form. The notice text is the quoted args, so it prints flush-left.
-marker=".milestone-config/.runtime/implied-surfaces-notice"
-if [ ! -f "$marker" ] && [ ! -f ".milestone-config/implied-surfaces.md" ]; then
-  printf '%s\n' \
-    '🟡 Optional: add project-specific implied surfaces' \
-    '' \
-    '| What | You can add an optional overlay file at' \
-    '|      | .milestone-config/implied-surfaces.md. The architect reads it' \
-    '|      | alongside the plugin'"'"'s bundled implied-surfaces reference when it' \
-    '|      | breaks your brief into issues.' \
-    '| Why  | The bundled reference is universal, so it can'"'"'t carry capability' \
-    '|      | clusters specific to your domain (a church app'"'"'s "giving", say).' \
-    '|      | Your overlay merges in additively — it can add a new capability' \
-    '|      | and extend an existing one, but never removes a surface the' \
-    '|      | bundled reference already defines.' \
-    '| How  | Create .milestone-config/implied-surfaces.md and write one' \
-    '|      | capability per ## heading with its implied surfaces beneath — the' \
-    '|      | same shape as the bundled reference. Leave it out and the bundled' \
-    '|      | reference is used as-is; an absent overlay is never an error.' \
-    '| Note | This notice shows at most once per clone.'
-  mkdir -p .milestone-config/.runtime 2>/dev/null && : > "$marker" 2>/dev/null || true
-fi
-```
-
-```powershell
-# PowerShell 7+ — same read-only detect + one-time notice; NEVER writes the overlay; never aborts plan.
-try {
-  $marker = Join-Path '.milestone-config' (Join-Path '.runtime' 'implied-surfaces-notice')
-  $overlay = Join-Path '.milestone-config' 'implied-surfaces.md'
-  if ((-not (Test-Path $marker)) -and (-not (Test-Path $overlay))) {
-    # Indent-safe array-join (the #120/#121 self-heal construct) — NOT a here-string: an
-    # @'…'@ closing terminator must sit at column 0, which breaks when nested under this
-    # indented markdown list item. The text below is byte-identical to the bash printf args.
-    Write-Host (@(
-      '🟡 Optional: add project-specific implied surfaces'
-      ''
-      '| What | You can add an optional overlay file at'
-      '|      | .milestone-config/implied-surfaces.md. The architect reads it'
-      '|      | alongside the plugin''s bundled implied-surfaces reference when it'
-      '|      | breaks your brief into issues.'
-      '| Why  | The bundled reference is universal, so it can''t carry capability'
-      '|      | clusters specific to your domain (a church app''s "giving", say).'
-      '|      | Your overlay merges in additively — it can add a new capability'
-      '|      | and extend an existing one, but never removes a surface the'
-      '|      | bundled reference already defines.'
-      '| How  | Create .milestone-config/implied-surfaces.md and write one'
-      '|      | capability per ## heading with its implied surfaces beneath — the'
-      '|      | same shape as the bundled reference. Leave it out and the bundled'
-      '|      | reference is used as-is; an absent overlay is never an error.'
-      '| Note | This notice shows at most once per clone.'
-    ) -join "`n")
-    New-Item -ItemType Directory -Force -Path (Join-Path '.milestone-config' '.runtime') | Out-Null
-    New-Item -ItemType File -Force -Path $marker | Out-Null
-  }
-} catch {}
-```
-
-Extract the feeder's own keys with their bundled defaults (`docs/profile-schema.md`, absent-means-default):
-
-| Key | Default | Use |
-|---|---|---|
-| `projectDocs` | `.project/` | Where the project's standing docs (the project-constitution docs) live (grounds authoring). |
-| `reviewer` | `"milestone-driver"` | Which backend runs the self-check gate (Step 6). `"milestone-driver"` → dispatch the driver's `triage-reviewer` / `design-reviewer` per generated issue (degrades to `"internal"` at runtime if they don't resolve); `"internal"` → run the built-in checklist that mirrors the five triage criteria; `false` → **skip the gate with a visible warning** (resolved in full at Step 6). |
-| `architectAgent` | `milestone-feeder:architect` | The breakdown agent dispatched once at Step 3. |
-| `issueAuthorAgent` | `milestone-feeder:issue-author` | The authoring agent dispatched per candidate at Step 4. |
-| `issueSize` | *(none)* | Optional sizing rule passed into the architect brief; absent → no constraint beyond the defaults. |
+**Extract the feeder's own keys, absent-means-default.** The full key list, types, and defaults are owned by `docs/profile-schema.md` → "Own keys" (not restated here). Step 0 resolves the five plan-relevant own-keys: `projectDocs` (default `.project/` — where the project's standing docs live; grounds authoring), `reviewer` (default `"milestone-driver"` — which backend runs the self-check gate; resolved in full at Step 6), `architectAgent` (default `milestone-feeder:architect` — the breakdown agent dispatched once at Step 3), `issueAuthorAgent` (default `milestone-feeder:issue-author` — the authoring agent dispatched per candidate at Step 4), and `issueSize` (optional — the sizing rule passed into the architect brief; absent → no constraint). `autoHandoff`, `versioning`, and the self-protection `sourceGlobs` are **not** Step-0 inputs — they belong to `create`, the Step-5.1 version ladder, and the `no-source-edit` hook, respectively.
 
 Read the project docs under `projectDocs` **best-effort** (`SPEC.md` §6 Step 0). Honor the `.project/` contract: a section that is absent or marked `[TBD]` is treated as **not present** — it is **skipped, never grounded on**. Degrade gracefully: a missing project-docs directory is not an error; the run proceeds on whatever sections exist and on stated repo conventions. Cite a project-docs-grounded decision as `.project/<doc>.md#<section>` when carrying it forward.
 
@@ -504,46 +129,7 @@ Dispatch the agent named in `architectAgent` (default `milestone-feeder:architec
 - `issueSize` when set; else the default (~1 PR each, independently buildable).
 - The `productGaps[]` carried from Step 2.
 
-**It returns** (verbatim from `agents/architect.md` → "Structured return block"):
-
-```
-CANDIDATES:
-  - tag: #A
-    title: <imperative one-line issue title>
-    surface: ui | logic
-    risk: light | heavy
-    sketch: <what this issue does + the project-docs ref / sibling file:line grounding its design>
-    disposition: grounded | implied   # optional, default/omitted = grounded; `implied` (architect
-                                       #   clause 8) marks a conventional companion surface proposed
-                                       #   for review — "implied — review / trim / augment"
-  - … (one per candidate)
-EDGES:
-  - "#B depends_on #A — <reason / the exact artifact reference>"
-  - …                       # [] when no candidate depends on another
-WAVES:
-  - "Wave 1 (parallel): #A, #C"
-  - "Wave 2: #B (depends on #A)"
-  - …                       # topological sort of EDGES; Wave 1 = no unmet deps
-PRODUCT_GAPS:
-  - gap: <the product decision with no conventional default>
-    why_blocked: <why it cannot be grounded in the project docs or a convention>
-    brief_ref: <the brief line / phrase that asks for it>
-    blocks: [#B, #D]        # the candidate LOCAL TAGS this gap blocks (Step 3.5
-                            #   pre-parks them); `[]` when the gap is NOT tied to
-                            #   specific named candidates (a broad product decision
-                            #   flagged for the human, naming no candidate subset —
-                            #   nothing pre-parks for it) — so the two stay
-                            #   distinguishable
-  - …                       # "none" when the brief is fully resolvable
-SCOPE_SPANS_MULTIPLE_MILESTONES:
-  - milestone: <name of proposed milestone 1>
-    tags: [#A, #C]          # the candidate LOCAL TAGS under this milestone
-  - milestone: <name of proposed milestone 2>
-    tags: [#B]
-  - …                       # "none" when the brief is a single coherent release;
-                            #   when raised, names two or more milestones forming a
-                            #   strict partition of `CANDIDATES`
-```
+**It returns** its structured return block — the `CANDIDATES / EDGES / WAVES / PRODUCT_GAPS / SCOPE_SPANS_MULTIPLE_MILESTONES` schema — defined verbatim at `agents/architect.md` → "Structured return block" (the owning contract; not restated here). The three fields the orchestrator branches on downstream — `disposition`, `blocks`, and `SCOPE_SPANS_MULTIPLE_MILESTONES` — are kept legible inline just below.
 
 `EDGES` is the literal `[]` when no candidate depends on another; `PRODUCT_GAPS` is the literal `none` when the brief is fully resolvable. **Merge** any architect `PRODUCT_GAPS` into `productGaps[]` — they join the gaps found at Step 2 — capturing each gap's `blocks:` tags alongside its `gap` / `why_blocked` / `brief_ref` (a `blocks:` list naming specific candidate tags drives the Step 3.5 early park; `[]` marks a gap not tied to specific named candidates — a broad product decision that names no candidates to pre-park). Step 2 gaps carry no `blocks:` list — they name no specific candidates by construction.
 
@@ -608,7 +194,7 @@ Branch on the count **N** of milestone entries in the confirmed manifest **befor
 
 | N | Action |
 |---|---|
-| **0** | **No probe, no dispatch, no plan files.** Surface the empty manifest to the user (state it is empty) and **return control** — this is **NOT an error** (`.project/design-philosophy.md#Error & failure philosophy` — surfaced, never silently dropped, never aborts). |
+| **0** | **No probe, no dispatch, no plan files.** Surface the empty manifest to the user (state it is empty) and **return control** — this is **NOT an error** (`.project/design-philosophy.md#Error & failure philosophy`). |
 | **1** | **Degenerate the fan-out to a single inner-routine dispatch — no rolling window.** Still run the probe (3.7.b) and version resolution (3.7.c), then dispatch the inner routine **once**, producing **one** plan file. |
 | **≥2** | The full fan-out (3.7.b → 3.7.f). |
 
@@ -638,7 +224,7 @@ For each milestone, derive its plan-file `<slug>` from its **goal** by the **sam
 
 #### 3.7.e — Dispatch the inner routine once per milestone (pinned topology, cap-4 rolling window)
 
-**Reuse the Step-4 author fan-out's cap-4 rolling window verbatim** ("Step 4 — Dispatch issue-author per candidate"; mirrors the driver's worker fan-out, `milestone-driver` plugin `skills/solve-milestone/SKILL.md` Phase 1 step 2): **≤4 milestone-planning dispatches in flight**; **M > 4 → rolling window** (as one returns, dispatch the next); **M ≤ 4 → all at once**; **M = 1 → a single dispatch, no window** (M = 0 already returned at 3.7.a). **Await ALL dispatches** before 3.7.f (the barrier).
+**Reuse the Step-4 author fan-out's cap-4 rolling window** across the milestone-planning dispatches — the same window as Step 4 ("Step 4 — Dispatch issue-author per candidate"; mirrors the driver's worker fan-out, `milestone-driver` plugin `skills/solve-milestone/SKILL.md` Phase 1 step 2); M = 0 already returned at 3.7.a. **Await ALL dispatches** before 3.7.f (the barrier).
 
 The pinned topology (3.7.b) selects **only the dispatch LEVEL** — both topologies yield **identical N plan files** and **the same build-order metadata**:
 
@@ -672,7 +258,7 @@ The cross-milestone build order's **recorded home is the #152 MANIFEST** (its `B
 | The dispatch returned a plan file at its assigned path (even if some issues parked) | **planned** — record its plan-file path into the manifest's `Plan file:` field (see below). |
 | The dispatch **errored** (no return), the routine **Step-2 STOPped** (needs-product-input report only, no plan file), or its self-check **did not converge to any buildable issue** | **failed-to-plan** — record the milestone and the reason. |
 
-A **failed-to-plan** milestone is recorded and the fan-out **CONTINUES** the remaining milestones (the rolling window keeps refilling) — one failure never aborts the whole roadmap (`.project/design-philosophy.md#Error & failure philosophy` — surfaced, never aborts).
+A **failed-to-plan** milestone is recorded and the fan-out **CONTINUES** the remaining milestones (the rolling window keeps refilling) — one failure never aborts the whole roadmap (`.project/design-philosophy.md#Error & failure philosophy`).
 
 **Record each planned milestone's plan-file path into the manifest (close the producer→consumer handle for `create`).** For every milestone classified **planned**, record its real plan-file path — `.milestone-feeder/plan-<assignedSlug>.md`, the `assignedSlug` pre-derived at 3.7.d — into that milestone's entry in the confirmed manifest, in the `Plan file:` field the #152 manifest contract reserves (`skills/build-roadmap/SKILL.md` "Manifest format"). Edit the manifest **in place**, consistent with how `plan` writes its own scratch files (Step 7) — it is local scratch the model already authored, so **no new shell is needed**; key the write to the milestone entry by its `Build-order position`, so re-planning the same roadmap overwrites the field to the **same deterministic path** (idempotent). This records the path into the **MANIFEST only** — it writes **nothing** into the per-milestone plan files (consistent with 3.7.f, which keeps cross-milestone metadata out of the plan files). A **failed-to-plan** milestone's `Plan file:` field is **left pending** (no file exists to point at). When the barrier completes, every planned milestone's entry carries its real plan-file path — the deterministic handle `create`'s deploy-loop resolves each milestone's plan file by (`skills/create/SKILL.md` Step 1R), **never** a slug re-derived from the milestone name.
 
@@ -694,18 +280,7 @@ For **EACH** candidate returned at Step 3 **that was not pre-parked (or dropped)
 - The **edges naming this candidate** — the architect edges that touch this tag, to record verbatim (the author transcribes; it does not invent edges or reorder Waves).
 - Any `productGaps[]` **scoped to this candidate**.
 
-**Each returns** (verbatim from `agents/issue-author.md` → "Output format"):
-
-```
-STATUS: AUTHORED | PRODUCT_GAP
-ISSUE_TAG: #A
-TITLE: <final imperative title>
-ISSUE_BODY: |
-  <the §4 issue-body template, verbatim — Summary / Acceptance criteria /
-   Design (recorded, consistent) / Dependencies / Classification>
-LABELS: [<ui|logic>, <risk:light|risk:heavy if confident>]
-PRODUCT_GAP (only when STATUS: PRODUCT_GAP): { what: <the product decision with no conventional default>, why: <why it cannot be grounded> }
-```
+**Each returns** its output format — the `STATUS / ISSUE_TAG / TITLE / ISSUE_BODY / LABELS / PRODUCT_GAP` wrapper — defined verbatim at `agents/issue-author.md` → "Output format" (not restated here). The `STATUS: PRODUCT_GAP` outcome the orchestrator acts on at the Step-4 join stays legible inline just below.
 
 When a candidate returns `STATUS: PRODUCT_GAP`, **route it to `productGaps[]`** — do **not** author a half-invented issue from a fabricated body. The candidate is recorded as parked, not authored; the plan file still renders the candidate's tag/title with a "parked — needs product input" marker.
 
@@ -748,9 +323,9 @@ Resolve the milestone's **exact title** — the load-bearing identity string tha
 1. **FIRST, the highest semver among EXISTING milestone TITLES.** **Reuse the canonical `env.t`-style quote-safe `gh api` milestones read defined in `skills/create/SKILL.md` Step 3 pass (b) BY REFERENCE — do NOT re-define it** (the same reuse-by-reference discipline `skills/update/SKILL.md` Step 3b follows — it reuses create pass (b)'s `env.t` resolve by reference; both bash and PowerShell 7+ forms are given at `skills/create/SKILL.md` Step 3 pass (b)). **One intentional delta from create pass (b):** create pass (b) `select`s the **one** milestone whose title equals `env.t`; here you read **ALL** milestone titles (no `env.t` filter — e.g. `--jq '.[] | .title'`) and scan them for the **highest** semver, since you are finding a reference version rather than matching one exact title (the delta is noted here exactly as `skills/update/SKILL.md` notes its own pass-(b) delta). The matched milestone's **NAME part is reused** for the title; its (highest) semver is the **REFERENCE** version. Provenance `inferred from <milestone>`.
 2. **ELSE the latest `vX.Y.Z` git tag.** Use a cross-platform `git tag` read (plain `git tag` works identically on bash and PowerShell 7+; e.g. `git tag --list 'v*'` then pick the highest semver — keep any sort shell-neutral, do not rely on a shell-specific sort flag). The **reference** version is that tag; the **name** falls back to today's goal-derived name. Provenance `inferred from <tag>`.
 
-**On EITHER infer path:** the inferred/composed title carries the **REFERENCE (highest existing) semver VERBATIM**, and the surfaced plan-file line is **WHERE THE USER ADJUSTS the patch / minor / major bump** — the feeder cannot know whether this milestone is a patch, minor, or major bump, so it proposes the reference version verbatim and lets the user adjust the bump on the surfaced line (`docs/specs/v0.3.1-driver-handoff.md` §2 rung 3). The feeder PROPOSES; it does not silently finalize.
+**On EITHER infer path:** the inferred/composed title carries the **REFERENCE (highest existing) semver VERBATIM**, and the surfaced plan-file line is **WHERE THE USER ADJUSTS the patch / minor / major bump** — the feeder cannot know whether this milestone is a patch, minor, or major bump, so it proposes the reference version verbatim and lets the user adjust the bump on the surfaced line — propose-not-finalize, per rung 3 above (`docs/specs/v0.3.1-driver-handoff.md` §2 rung 3).
 
-**The resolved exact title always carries the semver INSIDE the title string** — there is no separate version field (`docs/specs/v0.3.1-driver-handoff.md` §2, §10). It lands in the plan file's `Milestone title (exact)` identity field (Step 7; `docs/specs/v0.3.1-driver-handoff.md` §6), with its `Version provenance` line, **both SURFACED for the user to confirm or override BEFORE running `create`** (`docs/specs/v0.3.1-driver-handoff.md` §2, §3). A `"none"` declaration (rung 2) yields a goal-derived name with **no semver** and provenance `declaration`; non-versioned projects are left alone.
+**The resolved exact title always carries the semver INSIDE the title string** (no separate version field — stated at the 5.1 ladder intro above). It lands in the plan file's `Milestone title (exact)` identity field (Step 7; `docs/specs/v0.3.1-driver-handoff.md` §6), with its `Version provenance` line, **both SURFACED for the user to confirm or override BEFORE running `create`** (`docs/specs/v0.3.1-driver-handoff.md` §2, §3). A `"none"` declaration (rung 2) yields a goal-derived name with **no semver** and provenance `declaration`; non-versioned projects are left alone.
 
 ### Step 6 — Self-check gate (the keystone)
 
@@ -761,21 +336,17 @@ Before writing the plan file, vet **every generated issue** with the same gate t
 1. **Pass 1 — triage batch.** Dispatch all N `triage-reviewer` calls concurrently (one per generated issue), under the cap-4 rolling window. **Barrier:** await the whole triage batch before opening Pass 2.
 2. **Pass 2 — design batch.** Dispatch the U `design-reviewer` calls concurrently — **only** for the issues whose triage returned `NEEDS_DESIGN_REVIEW: yes` — under the same cap-4 rolling window. (When `uiSurfaceGlobs` is absent, U = 0: no triage block flags a design review, so Pass 2 is empty — the existing degradation already covers this. U = 0 / U = 1 are trivial.)
 
-**Quality hold — why batching is verdict-neutral.** The reviewers are read-only verdict functions over the provided text and make **no `gh` call of their own** (stated above; `skills/plan/SKILL.md:206`), so batching a single pass cannot change any verdict — the aggregated `GAPS` for each issue are identical to a serial fan-out. **Three invariants the batching MUST preserve (the gate logic is unchanged):**
+**Quality hold — why batching is verdict-neutral.** Because the reviewers are read-only verdict functions over the provided text (the Step 6 intro above), batching a single pass cannot change any verdict — the aggregated `GAPS` for each issue are identical to a serial fan-out. **Three invariants the batching MUST preserve (the gate logic is unchanged):**
 
 - **(a) Within-issue staged ordering.** An issue's design review runs **only after that issue's triage returns `NEEDS_DESIGN_REVIEW: yes`** — so the two batches are STAGED, never interleaved per issue: the whole triage batch (Pass 1) barriers first, **then** Pass 2 opens for the flagged subset. No design dispatch starts before its issue's triage verdict is known.
-- **(b) §6.1 degrade-decided-once survives batching.** §6.1's runtime degrade-to-internal trigger still decides the backend **once**, on the **first** triage return that lands — evaluate it on that first return, then batch/continue the remainder of Pass 1 under the chosen backend. Concurrency does not retry the degrade per issue, and the per-issue internal-fallback for a *later* non-resolution (§6.1) is likewise unchanged.
+- **(b) §6.1 degrade-decided-once survives batching.** §6.1's runtime degrade-to-internal trigger decides the backend **once**, on the **first** triage return that lands (the mechanics are in §6.1) — concurrency does not retry the degrade per issue, and the per-issue internal-fallback for a *later* non-resolution (§6.1) is likewise unchanged.
 - **(c) Between-pass retry/re-render stay SERIAL.** The concurrency applies **only** to the within-a-single-pass fan-out (Pass 1 triage, Pass 2 design). The between-pass operations — §6.5's ≤2 `issue-author` re-dispatches per FAILed issue, and §6.6's absorb-edge → re-render-the-milestone-description (before any §6.5 re-dispatch) → re-run §6.3 — are **NOT** batched: they run serially, with the §6.6-before-§6.5 ordering and the ≤2-per-issue cap untouched.
 
 #### 6.1 — Resolve the `reviewer` backend
 
-The `reviewer` value read at Step 0 selects the backend. Resolve it as follows:
+The `reviewer` value read at Step 0 selects the backend. What each of `"milestone-driver"` (default), `"internal"`, and `false` means — which reviewer it backs the gate with, or that it turns the gate off — is defined by `SPEC.md` §5 and the `reviewer` key in `docs/profile-schema.md`; resolve that value here and run the gate accordingly. `"milestone-driver"` dispatches the driver's reviewers (the Step 6 intro and the staged batch above) and degrades to `"internal"` if they do not resolve (the runtime trigger below); `"internal"` runs the internal checklist (§6.4 — the feeder's own check mirroring the five triage criteria, same pass/Blocker verdict shape, so the gate logic downstream is backend-agnostic).
 
-| `reviewer` | Backend |
-|---|---|
-| `"milestone-driver"` (default) | Dispatch `milestone-driver:triage-reviewer` per generated issue, and `milestone-driver:design-reviewer` for issues whose triage returns `NEEDS_DESIGN_REVIEW: yes`. **If the reviewers do not resolve at dispatch time, degrade to `"internal"` (see the runtime trigger below) — a notice, never a failure.** |
-| `"internal"` | Run the **internal checklist** (§6.4) — the feeder's own check mirroring the five triage criteria. Same pass/Blocker verdict shape, so the gate logic downstream is backend-agnostic. |
-| `false` | **Skip the gate.** Print a **visible 🔴 warning** to the user — `🔴 Self-check DISABLED (reviewer:false) — generated issues were NOT vetted against the driver's entry gate; they may not pass triage.` — and record `SKIPPED (reviewer:false)` in the plan-file verdict line (Step 7). Proceed straight to writing the plan file; run no reviewer and no checklist. |
+**`reviewer: false` — skip the gate** (operational, owned here). Print a **visible 🔴 warning** to the user — `🔴 Self-check DISABLED (reviewer:false) — generated issues were NOT vetted against the driver's entry gate; they may not pass triage.` — and record `SKIPPED (reviewer:false)` in the plan-file verdict line (Step 7). Proceed straight to writing the plan file; run no reviewer and no checklist.
 
 **Runtime degrade-to-internal trigger (`"milestone-driver"` → `"internal"`).** The degrade is decided at **dispatch time, not config time** (mirrors the *config*-time reviewer-resolve probe in `skills/setup/SKILL.md` Phase 1 — the reviewer-availability signal, but applied live here because availability can differ between setup and this run). On the **first** issue's `triage-reviewer` dispatch: attempt the dispatch; if the agent **does not resolve** (no such agent in the session — `milestone-driver` not installed) **or the dispatch returns no usable block** (the return does not contain a parseable `ISSUE:` / `GAPS:` block), then:
 
@@ -878,21 +449,7 @@ New-Item -ItemType Directory -Force -Path .milestone-feeder | Out-Null
 if (-not (Test-Path .milestone-feeder/.gitignore)) { Set-Content -LiteralPath .milestone-feeder/.gitignore -Value '*' -Encoding utf8NoBOM }
 ```
 
-**The plan-file contract.** The plan file is the load-bearing build artifact: `create` and `update` read it and write GitHub from it — they regenerate nothing. It MUST carry every field below, unambiguously (`SPEC.md` §3):
-
-| Field | Requirement |
-|---|---|
-| **Milestone title (exact)** | The exact milestone title, on its own labeled line — **distinct** from the one-line goal. Now **user-owned** and carrying the resolved **semver inside the string** (no separate version field), resolved at Step 5.1 by the version ladder and **surfaced for the user to confirm or override BEFORE `create`** (`docs/specs/v0.3.1-driver-handoff.md` §3, §6). `create` / `update` still resolve the milestone by this exact title (creating it if absent, adopting it if it already exists), and the driver parses the version from it — this remains the load-bearing identity field; the one-line goal is descriptive only. |
-| **Version provenance** | One line, one of `explicit` \| `declaration` \| `inferred from <tag/milestone>` \| `prompted` (the Step 5.1 ladder rung that resolved the title — `docs/specs/v0.3.1-driver-handoff.md` §6 "Version provenance" row). It makes the surfaced default **legible** so the user can trust or correct it. |
-| **Multi-milestone advisory** | **ADDITIVE and OPTIONAL** — present **ONLY** on the **retained** path: the architect raised `SCOPE_SPANS_MULTIPLE_MILESTONES` (Step 3) **AND** the front-door (Step 3.6) did **NOT** route this brief into `build-roadmap` (`roadmapRouteTaken` false — the signal was raised but the route degraded, was declined, or resolved to a single milestone). On that path it carries the flag + the proposed split (milestone names + their candidate tags) **VERBATIM** from the architect — `plan` does not re-partition. **OMITTED entirely** when the signal is `none` (single-milestone plan byte-for-byte unchanged) **OR** when the front-door **took the route** (`roadmapRouteTaken` true — the confirmed roadmap was surfaced in its place, so this passive advisory is **SUPERSEDED**; on the route path the single-milestone Steps 4–7 do not run for the whole brief anyway). **Non-blocking** — it does not change what gets deployed; the plan stays a deployable single-milestone plan. Sourced from the architect's structural read of `CANDIDATES`, so on the retained path it is written even if every candidate is parked/dropped (Step 6). Grounding: `docs/specs/v0.3.1-driver-handoff.md` §6 (the additive plan-file field) and §5. |
-| **One-line goal** | The milestone goal in one line — the header. |
-| **Milestone description (Wave order)** | The Step 5 build-order / Wave description, verbatim, with local slugs (`#A`/`#B`). This is what `create` PATCHes onto the milestone after issue numbers exist. |
-| **Per surviving issue** | For each surviving (gate-clean / Advisory-only) issue: its slug, title, the FULL §4 `ISSUE_BODY` verbatim, its labels, and its surface/risk. `create` reads these — no regeneration. An `implied` candidate (architect `disposition: implied`) additionally carries the `[implied — review / trim / augment]` marker on its issue heading (the `## Issues` template below); a grounded candidate renders without it. |
-| **Parked issues** | Each parked issue: slug, title, and kind (`product-gap` \| `needs-human-direction`). Marked, never created. |
-| **Dropped issues** | Each dropped issue: slug, title, and the parked dependency that dropped it. Marked, never created. |
-| **Self-check verdict line** | The Step 6 outcome (PASS / INTERNAL / PARKED / SKIPPED(reviewer:false)). `create` trusts it; no re-vet. |
-| **Source brief reference** | `inline` \| `file:<path>` \| `epic #<n>` — drives the downstream report routing and the brief↔plan match. Record `epicIssueNumber` here when the brief was an epic. |
-| **Original brief (full text)** | The **full** brief text this plan run received — persisted verbatim and multi-line as the `## Original brief` … `## End original brief` delimited section below (a brief is multi-line, so a SECTION, not a `Label: value` header line; `Source brief reference` records only the form token; the paired end-delimiter keeps a brief that contains its own `## ` headings intact for the consumer, never truncated at its first internal heading). It is the durable single-milestone fallback `create`'s closing brief-coverage verification reads to audit the deploy against the original brief (`skills/create/SKILL.md` Step 3V — the brief-resolution ladder). Mirrors the roadmap manifest's `## Original brief`, which persists the whole-app brief for a roadmap run (`skills/build-roadmap/SKILL.md` "Manifest format"). |
+**The plan-file contract.** The plan file is the load-bearing build artifact: `create` and `update` read it and write GitHub from it — they regenerate nothing. It MUST carry every field defined in the **Plan-file field table** (`docs/plan-file-contract.md#plan-file-field-table`), unambiguously (`SPEC.md` §3) — that table is normative: render every field exactly as it specifies.
 
 **Surface the resolved identity for confirm/override.** Both the resolved `Milestone title (exact)` (carrying the semver per the Step 5.1 ladder) **and** its `Version provenance` line are written to the plan file and **surfaced for the user to confirm or override BEFORE running `create`** — `plan` never silently finalizes a milestone identity the user cannot see or change (`docs/specs/v0.3.1-driver-handoff.md` §2, §3, §6). On an infer rung the title carries the **reference version verbatim**, and this surfaced line is **where the user adjusts the patch / minor / major bump** before `create` deploys it.
 
@@ -921,85 +478,9 @@ When `rcpt` is non-empty, write it verbatim into the new plan file as the siblin
 
 **Persist the original brief in full (the durable coverage-verification copy).** Write the **full** brief text this plan run received into a multi-line `## Original brief` section of the plan file — verbatim, every section the author wrote, NOT a single `Label: value` header line (a brief is multi-line; the `Source brief:` header records only the *form* token). **Close the section with a literal `## End original brief` line emitted immediately after the brief text** — the paired opening/closing delimiters let the downstream consumer read strictly between them, so a brief that contains its own `## ` headings is captured intact and is never truncated at its first internal heading (`skills/create/SKILL.md` Step 3V, rung 2). For a `file:<path>` or `epic #<n>` brief, persist the resolved text `plan` already read to do its work; for an inline brief, the argument text. This mirrors the roadmap manifest's `## Original brief` section (`skills/build-roadmap/SKILL.md` "Manifest format") and is the **durable single-milestone fallback** `create`'s closing brief-coverage verification reads when the in-session brief is unavailable (`skills/create/SKILL.md` Step 3V — the brief-resolution ladder, rung 2; `.project/design-philosophy.md#Layering & boundaries` — the plan file is the build artifact downstream consumers read). On a **roadmap run** this per-milestone plan persists the **brief-slice** the inner routine received; the whole-app brief lives in the manifest's `## Original brief`, which is what `create` reads for a roadmap run. **Never fabricate** — persist what was received; if the brief text genuinely cannot be captured, omit the section rather than inventing one (the downstream verification degrades gracefully on an absent copy).
 
-**Plan-file format.** Write the file in this shape — the **Milestone title (exact)** line is its own labeled field, separate from the goal in the header:
+**Plan-file format.** Write the file in the shape defined by the **Plan-file output template** (`docs/plan-file-contract.md#plan-file-output-template`) — instantiate that scaffold byte-exact (the **Milestone title (exact)** line is its own labeled field, separate from the goal in the header). The template is normative: the rendered plan file matches it exactly, including each optional section's presence condition and every canonical marker it carries.
 
-```markdown
-# Milestone plan — <milestone goal, one line>
-
-Milestone title (exact): <the exact milestone title — carries the resolved semver INSIDE the string; create/update resolve the milestone by THIS string. SURFACED for the user to confirm/override before `create`; on an infer rung it carries the reference version verbatim — adjust the patch/minor/major bump on this line>
-Version provenance: <explicit | declaration | inferred from <tag/milestone> | prompted>
-Self-check: <the Step 6 outcome — one of:
-  PASS — all <N> issues GAPS: none (milestone-driver reviewers)
-  INTERNAL — all <N> issues GAPS: none (internal checklist; milestone-driver reviewers did not resolve)
-  PARKED — <M> issue(s) → needs product input; <K> issue(s) → needs human direction (still-Blocker after 2 retries)
-  SKIPPED (reviewer:false) — 🔴 gate disabled; generated issues were NOT vetted>
-Source brief: <inline | file:<path> | epic #<n>>
-Milestone number (GitHub): <n>   # OPTIONAL sibling header line — carried forward verbatim from a prior plan file if present; omitted on first plan (create writes it post-deploy, skills/create/SKILL.md Step 3 pass (b))
-
-## Original brief
-<The full brief text this plan run received, persisted verbatim and multi-line — every
- section the author wrote, in full. A brief is multi-line, so this is a SECTION, not a
- `Label: value` header line. `create`'s closing brief-coverage verification reads it to
- audit the deploy against the original brief (the durable single-milestone fallback —
- `skills/create/SKILL.md` Step 3V brief-resolution ladder). Mirrors the roadmap manifest's
- `## Original brief` (`skills/build-roadmap/SKILL.md` "Manifest format"). On a roadmap run
- this persists the per-milestone brief-slice; the whole-app brief lives in the manifest.
- The brief is delimited by the paired `## Original brief` … `## End original brief` markers
- (the literal closing line below), so a brief that contains its OWN `## ` headings is
- captured intact — the consumer reads strictly between the markers and is NOT truncated at
- the first internal `## ` heading.>
-## End original brief
-
-## Milestone description (Wave order)
-<the Step 5 Wave-ordered description, verbatim — the §4 template with local slugs>
-
-## Issues
-### #A — <title>   [<ui|logic>, <risk:*>]   [self-check: PASS]
-<the full §4 ISSUE_BODY for #A>
-
-### #F — <title>   [<ui|logic>, <risk:*>]   [self-check: PASS]   [implied — review / trim / augment]
-<the full §4 ISSUE_BODY for #F — a `disposition: implied` candidate (architect clause 8) renders DISTINCTLY, carrying the `[implied — review / trim / augment]` marker (the verbatim words `implied — review / trim / augment` inside the brackets) alongside the [ui|logic, risk:*] / self-check tags; a grounded candidate (#A above) omits the marker and renders exactly as today>
-
-### #B — <title>   [parked — needs product input]
-<marker only; no fabricated body — see the needs-product-input report>
-
-### #C — <title>   [parked — needs human direction (self-check Blocker, non-converging after 2 retries)]
-<marker only; the issue did not clear the self-check gate — see the report>
-
-### #D — <title>   [dropped — depends on parked #B]
-<marker only; a dependent of a parked issue cannot build, so it is not carried (Step 6 §6.6)>
-
-### … (one block per surviving candidate, in Wave order; only PASS / Advisory-only issues carry a full body; a `disposition: implied` candidate additionally carries the `[implied — review / trim / augment]` marker on its heading, as #F above)
-
-## Multi-milestone advisory   <!-- OPTIONAL section — written ONLY on the retained path: the architect raised SCOPE_SPANS_MULTIPLE_MILESTONES (Step 3) AND the front-door did NOT route into build-roadmap (Step 3.6, roadmapRouteTaken false). OMITTED ENTIRELY when the signal is `none` (file byte-for-byte the pre-#61 shape) OR when the front-door took the route (roadmapRouteTaken true — superseded by the confirmed roadmap). Advisory only — does not change what gets deployed; the plan stays a deployable single-milestone plan. -->
-🔴 This brief looks like ~<N> milestones. Deploy the one big milestone below, or split the brief and re-run. Proposed split (carried verbatim from the architect):
-- <proposed milestone 1 name>: #A, #C
-- <proposed milestone 2 name>: #B
-
-## Project-docs grounding
-- <each design call carried forward> — grounded in <.project/<doc>.md#<section> | sibling file:line>
-- Degradations: <e.g. "uiSurfaceGlobs absent → all candidates treated as logic"; "none" otherwise>
-
-## Needs human input
-<pointer: "see .milestone-feeder/needs-product-input-<slug>.md" when productGaps is non-empty OR the self-check parked any issue as needs-human-direction; "none" otherwise>
-
----
-This plan file is the build artifact — run `/milestone-feeder:create` to deploy it to GitHub (it ensures the labels, creates-or-adopts the milestone by the exact title above, opens each surviving issue, rewrites the slug references to real issue numbers, and patches the milestone description with the Wave order). `plan` wrote no GitHub state.
-```
-
-If `productGaps[]` is **non-empty** OR the self-check parked any issue as **needs-human-direction** (§6.5), also write a **"needs product input" report** to `.milestone-feeder/needs-product-input-<slug>.md` (same deterministic slug). The scratch dir already self-ignores by now (the plan-file write above ensured `.milestone-feeder/.gitignore` contains `*`), so this report is git-invisible too. The report carries a **Kind** column so the human can tell a product decision (no conventional default — decide and record it) from a non-converging self-check Blocker (the candidate's design is likely wrong — redirect it):
-
-```markdown
-🔴 Needs human input — <milestone goal, one line>
-
-These items blocked the milestone and were NOT guessed. Resolve each, then re-run plan.
-
-| # | Kind | Item | Why blocked | Blocks |
-|---|---|---|---|---|
-| 1 | product-gap | <the product decision with no conventional default> | <why the project docs / a convention cannot answer it> | <which candidate(s) / the whole scope> |
-| 2 | needs-human-direction | <the self-check Blocker that did not clear in 2 retries> | <the reviewer's `description` / `to_clear`> | <which candidate(s) + any dropped dependents> |
-| … | … | … | … | … |
-```
+If `productGaps[]` is **non-empty** OR the self-check parked any issue as **needs-human-direction** (§6.5), also write a **"needs product input" report** to `.milestone-feeder/needs-product-input-<slug>.md` (same deterministic slug). The scratch dir already self-ignores by now (the plan-file write above ensured `.milestone-feeder/.gitignore` contains `*`), so this report is git-invisible too. The report carries a **Kind** column so the human can tell a product decision (no conventional default — decide and record it) from a non-converging self-check Blocker (the candidate's design is likely wrong — redirect it). Write it in the shape defined by the **Needs-product-input report template** (`docs/plan-file-contract.md#needs-product-input-report-template`) — instantiate that scaffold byte-exact.
 
 The plan file and the report are local scratch. **Nothing is posted to GitHub** — no milestone is created, no issue is opened, no label is applied, no comment is added to any epic. The `create` skill is the only thing that writes GitHub state, reading this plan file.
 
