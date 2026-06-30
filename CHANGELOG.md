@@ -3,6 +3,39 @@
 Release notes for milestone-feeder. Each tagged release is also published on the
 [GitHub Releases page](https://github.com/kenmulford/milestone-feeder/releases).
 
+## v0.8.0 — progressive-disclosure skill trim
+
+**Theme:** A behavior-neutral refactor that brings the plugin's own oversized `SKILL.md` files into line with Claude's skill-authoring size standards. The heavy reference text, the canonical output templates, and the duplicated one-time-notice machinery that had accumulated inside the skills are relocated into on-demand `docs/` reference files, so each `SKILL.md` is now a lean overview plus a step skeleton that points at the reference it needs. **No consumer-facing behavior change** — every skill does exactly what it did before, and the `tests/scenarios/` end-to-end suite is byte-identical. This is internal maintainability work only.
+
+### 🧹 Progressive-disclosure skill trim
+
+| Issue | PR | What |
+|---|---|---|
+| #197 One-time-notices reference | #212 | New `docs/one-time-notices.md` — the canonical text for the five Step-0 one-time, per-clone notices, so the duplicated notice machinery lives in one place the skills point at. |
+| #198 Plan-file-contract reference | #210 | New `docs/plan-file-contract.md` — extracts the plan-file contract and the canonical output templates into one shared reference. |
+| #199 Trim `plan` Step 0 | #217 | `plan/SKILL.md` Step 0 trimmed to point the five notices and the key table at their `docs/` references. |
+| #200 Trim `plan` Steps 1–5 | #213 | `plan/SKILL.md` Steps 1–5 trimmed — point at the agent contracts, dedupe repeated prose. |
+| #201 Trim `plan` Step 6 keystone | #211 | `plan/SKILL.md` Step 6 self-check keystone trimmed (relocate-and-dedupe), the largest single region. |
+| #202 Trim `plan` Step 7 | #216 | `plan/SKILL.md` Step 7 trimmed — point its templates and contract at the shared reference. |
+| #203 Trim `setup` | #215 | `setup` trimmed 279 → 152 lines — Step-0 notices point at the shared reference; the tier prose is leaned out. |
+| #204 Trim `update` | #218 | `update` trimmed — its Step-0 notice and plan-file contract point at the shared references. |
+| #205 Trim `create` + deploy-sequence reference | #219 | New `docs/create-deploy-sequence.md`; `create` relocates its heavy deploy mechanics there (~57% smaller). |
+| #206 Trim `build-roadmap` + manifest-format reference | #214 | New `docs/roadmap-manifest-format.md`; `build-roadmap` extracts its manifest-format scaffold there. |
+| #208 Standing-docs sweep | — | Sweeps the standing docs that name the skill shape so the exemplar and contents pointers stay accurate after the trims (lands as a concurrent sibling of this release sync). |
+| #209 v0.8.0 release sync | (this PR) | Re-synced the version stamps (`.claude-plugin/plugin.json` already `0.8.0`, the README `## Status` line, and `.project/library-manifest.md`) and authored this changelog entry — which doubles as the GitHub-release body. Documentation + version metadata only; no `skills/`, `agents/`, or `hooks/` file touched. |
+
+### ⏸️ Deferred
+
+| Issue | PR | What |
+|---|---|---|
+| #207 Byte-parity guard for the extracted twins | — | **Parked — needs design.** The mechanism for guaranteeing the bash and PowerShell twins of an extracted reference stay byte-for-byte in lockstep is underspecified (the two shells escape differently in the source bytes). Not in this release. |
+
+### Consumer notes (upgrading from v0.7.0)
+
+- **Nothing changes for you.** This release is a pure internal refactor of how the plugin's own skill files are organized. Every skill — `plan`, `create`, `update`, `setup`, `build-roadmap` — does exactly what it did before. The `tests/scenarios/` end-to-end suite is byte-identical, which is how the no-behavior-change guarantee is verified.
+- **No config changes.** No schema changes to `.milestone-config/driver.json` or `.milestone-config/feeder.json`, no new config keys, and no changed defaults.
+- **Version bump only in the source-of-truth locations.** `.claude-plugin/plugin.json` is `0.8.0`, the README `## Status` line is re-synced to match, and the `.project/library-manifest.md` version stamp is updated; the `SPEC.md` as-built header carries no version by design.
+
 ## v0.7.0 — implied surfaces: capability-aware completeness
 
 **Theme:** A brief that names a capability — "add email", "user management", "sync" — or introduces a new kind of record quietly commits to a standard set of companion surfaces (screens, endpoints, jobs, settings) it never spells out. The feeder used to break down only what was literally written, so those companions surfaced one-at-a-time mid-build as unplanned rework. Now, during breakdown, the architect consults a curated, stack-agnostic **implied-surfaces reference** and, for each capability or new entity your brief invokes, proposes the standard companions it implies as reviewable `implied` candidates — each marked `[implied — review / trim / augment]` in the plan, with a built-in `this is a starting set for YOUR app — what's missing?` prompt so you trim or augment before any issue is created. It is a **floor, not a ceiling**: a genuine product-call with no conventional default still **parks** for your decision, never silently pre-included. A brief that invokes no capability and no new entity is unchanged.
