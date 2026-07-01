@@ -248,6 +248,22 @@ layer the work sits in. The field is additive: every downstream consumer reads
 and it reuses the existing `projectDocs` grounding — **no new config key** (`SPEC.md`
 §3.1, layer-aware breakdown).
 
+### Config pointers (reference, not pre-solve)
+
+With the feeder no longer reviewing (the driver's triage is the single automated entry
+gate), its job is to make sure the driver has the right config — so the issue-author
+also POINTS each issue at the `.project` config the driver reads at **build time**. In
+the same `## Design` block that carries `Convention followed:` and `Layer:`, keyed to
+what the issue touches: styling → `.project/tokens.json` / `.project/design-system.md#<section>`;
+deployment/env → `.project/environment.md` (a touched convention already rides the
+`Convention followed:` line). The pointer **names the path**; it never copies or parses
+the values into the body — no resolved hex, no parsed token values, no pre-solved
+render. The render and tokens are the **driver's** to consume at build time; the feeder
+only reminds the driver where they live. The line is additive: an issue touching none
+of these, or a project missing the doc, carries no pointer, byte-for-byte as today — a
+missing doc is no error and no fabricated reference. It reuses the existing `projectDocs`
+grounding — **no new config key** (`SPEC.md` §4, config pointers).
+
 ### The create deploy / write order
 
 `create` reads the plan file (running `plan` first only when no plan file exists)
