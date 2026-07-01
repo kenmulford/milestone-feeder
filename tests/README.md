@@ -47,6 +47,7 @@ tests/
     10-nested-layout/             { brief.md, project/, feeder-env.md, expected.md }
     11-roadmap-fan-out/           { brief.md, project/, feeder-env.md, expected.md }
     12-implied-surfaces/          { brief.md, project/, feeder-env.md, expected.md }
+    13-layer-aware-breakdown/     { brief.md, project/, feeder-env.md, expected.md }
   RESULTS.md                      # scorecard + claim→evidence map (the metric)
 ```
 
@@ -75,6 +76,7 @@ loaded as plugin skills.
 | 10 | nested layout | a nested monorepo (`siteroot/{web,api}`) where source lives only under app roots, never the repo root | bootstrapper-v0.2.0-baked nested `sourceGlobs` route issue file scope into the nested app roots, never the repo root | ✅ |
 | 11 | roadmap fan-out | an oversized whole-app brief (auth, data model, invoicing, billing, screens) that spans several milestones, seeded from its own author sections | a whole-app brief routes into `build-roadmap`: **split → confirm → parallel-plan** emits the roadmap manifest + N per-milestone plan files; the **create deploy-loop** deploys them; single-milestone collapse falls back cleanly; an undecided product call parks one issue and siblings continue | plan-side ✅ now / create-loop sandbox follow-up |
 | 12 | implied surfaces | a terse brief names a capability (admins emailing members) but never spells out its companion surfaces; one companion (suppression/unsubscribe) is a genuine product-call with no conventional default | the architect consults the implied-surfaces reference, fans the conventional companions (delivery-failure log + retry + audit) out as **`implied`-labeled review candidates**, **parks** the genuine product-call to needs-product-input instead of inventing it, and `plan` surfaces the implied set with the verbatim anti-fixation prompt — no auto-dump, no invented scope; a control slice with no capability/entity triggers neither | ✅ |
+| 13 | layer-aware breakdown | a small backend brief (list + create notes + a slug helper) against a project stating a strict layering convention (`util` ← `data` ← `services` ← `controllers` ← `routes`); the service's repository is constructor-injected, so no textual type reference relates them | the architect assigns each candidate its architectural `layer` (CRUD→`data`, helper→`util`, validation→`controllers`), grounds each in the stated architecture, and keys the Wave order to the **layer** dependency — the `#C depends_on #A` layer edge a type-reference heuristic would miss — threading the `layer` into each issue body's Design block; a no-layering control degrades to today's dependency-only breakdown byte-for-byte | ✅ |
 
 ### 06 — the flagship, in detail
 

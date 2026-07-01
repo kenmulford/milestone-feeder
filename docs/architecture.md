@@ -19,7 +19,7 @@ The plan file is the **build artifact** (see [The plan file as build artifact](#
 | Plan skill | `skills/plan/SKILL.md` | Orchestrator preview: brief → a reviewable plan file. Runs Steps 0–5 and emits at Step 7 — the plan file at `.milestone-feeder/plan-<slug>.md`. **No GitHub writes.** `/milestone-feeder:plan <brief>`. |
 | Create skill | `skills/create/SKILL.md` | Deploys the approved plan: reads the plan file and performs the GitHub writes (labels, create-or-adopt milestone, issues, slug→`#n` rewrite, description PATCH). Runs `plan` first only if no plan file exists. `/milestone-feeder:create <brief>`. See [The create deploy / write order](#the-create-deploy--write-order). |
 | Build-roadmap skill | `skills/build-roadmap/SKILL.md` | **Internal** (invoked by `plan` Step 3.6 on an oversized whole-app brief, never a user command): dispatch `roadmap-splitter` once, surface the proposed split for confirm / merge / split / reorder / reject, and on confirmation write a roadmap manifest to `.milestone-feeder/roadmap-<slug>.md`. **No GitHub writes.** See [The roadmap](#the-roadmap). |
-| Architect agent | `agents/architect.md` | Architect lens: brief + standing docs + repo → candidate issue set + dependency edges + Wave order. One heavy reasoning step, dispatched once. Read-only. Raises `SCOPE_SPANS_MULTIPLE_MILESTONES` — the signal that triggers the roadmap route. Also consults the implied-surfaces reference and labels each conventional companion surface it proposes with the `disposition: implied` field (see [Implied surfaces](#implied-surfaces)). |
+| Architect agent | `agents/architect.md` | Architect lens: brief + standing docs + repo → candidate issue set + dependency edges + Wave order. One heavy reasoning step, dispatched once. Read-only. Raises `SCOPE_SPANS_MULTIPLE_MILESTONES` — the signal that triggers the roadmap route. Also consults the implied-surfaces reference and labels each conventional companion surface it proposes with the `disposition: implied` field (see [Implied surfaces](#implied-surfaces)). When the project states a layering convention, assigns each candidate its architectural `layer` and keys the Wave order to the layer dependency (see [Layer-aware breakdown](#layer-aware-breakdown)). |
 | Issue-author agent | `agents/issue-author.md` | Per-issue subagent: authors one issue's full spec to the §4 output contract so it passes the driver's triage clean. Read-only; returns issue text, never opens the issue. |
 | Roadmap-splitter agent | `agents/roadmap-splitter.md` | Roadmap lens: an oversized whole-app brief + standing docs → a strict, build-ordered partition into named milestones (the `ROADMAP` block). Dispatched once by `build-roadmap`. Read-only. Supersedes the architect's passive multi-milestone advisory with a real, ordered split. |
 | Hook: `no-source-edit` | `hooks/` (`hooks.json`, `run-hook.cmd`, `.sh`, `.ps1`) | `PreToolUse` (`Write`/`Edit`/`MultiEdit`/`NotebookEdit`): unconditionally deny edits to the feeder's own `sourceGlobs`. The only mechanical gate the feeder needs — it authors no code and opens no PRs. See [The mechanical gate](#the-mechanical-gate). |
@@ -218,6 +218,35 @@ overlay is discovered by that fixed path — **no new config key**
 ([`profile-schema.md`](profile-schema.md)); an absent overlay (the common case) is
 never an error. A one-time per-clone notice in `plan` / `update` Step 0 announces the
 overlay to existing users (`SPEC.md` §3.1, the discovery-path principle).
+
+### Layer-aware breakdown
+
+When the project's standing docs state a **stack + layering convention**, the
+architect assigns each candidate its architectural **layer** and derives the issue
+order from the **layer dependency** — not only from ad-hoc type references
+(`agents/architect.md` clause 9). It consults the stated architecture — primarily
+`.project/design-philosophy.md#Layering & boundaries` (the layers and their allowed
+dependency directions), with `.project/conventions.md#File & folder layout` (where
+each layer's files live) and `.project/library-manifest.md#Runtime & frameworks`
+(the stack) — places each CRUD / helper task in the layer the convention dictates,
+records it as an optional per-candidate `layer` field, and emits a dependency **edge
+keyed by layer** so a layer precedes the layers that depend on it. The layer edge
+rides the **same Waves / topological sort** the dependency graph already uses; a
+concrete artifact `depends_on` edge stays **authoritative**, and a layer edge only
+orders candidates that are otherwise independent — the two compose, never conflict.
+
+Every layer assignment and layer edge **cites the project's stated architecture**
+(the same rigor gate every design call clears); a layer that cannot be grounded is
+**not** assigned. A project that states **no** layering convention (the section
+absent / `[TBD]`, or an unlayered stack) produces the **dependency-only** breakdown
+it does today — no `layer` field, no layer edge, byte-for-byte unchanged, no
+fabricated layering. `plan` threads the optional `layer` from the architect (Step 3)
+through the issue-author brief (Step 4), and the issue-author **records** it as a
+`Layer:` line in the issue's existing `## Design` block — so the driver sees which
+layer the work sits in. The field is additive: every downstream consumer reads
+`tag` / `title` / `surface` / `risk` / `sketch` and is unaffected by its presence,
+and it reuses the existing `projectDocs` grounding — **no new config key** (`SPEC.md`
+§3.1, layer-aware breakdown).
 
 ### The create deploy / write order
 
