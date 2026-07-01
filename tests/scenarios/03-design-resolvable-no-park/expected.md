@@ -11,7 +11,7 @@ opposite of 02: the gaps are design-resolvable, not product gaps.
   - avatar → reuse `ImageUploader` (cited).
 - Each design decision is recorded in the issue's Design section with a `Convention followed:` citation to the provided pattern — not invented from scratch and not parked.
 - needs-product-input report is absent / "none" — there is no product gap here.
-- Self-check passes (`GAPS: none`).
+- The issue is drafted to pass the driver's triage clean (`GAPS: none`) — resolved-and-cited, not parked.
 
 ## FAIL if
 - The feeder PARKS any of these (treats a convention-answerable detail as a product gap — **over-parking**); OR invents a design with no citation; OR leaves a required detail unspecified for the implementer to guess.

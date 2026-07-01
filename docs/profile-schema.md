@@ -44,7 +44,6 @@ optional in the file. Every key except `versioning` has a bundled default;
 | Key | Type | Default | Purpose |
 |---|---|---|---|
 | `projectDocs` | string | `.project/` | Where your project's standing docs live. |
-| `reviewer` | `"milestone-driver" \| "internal" \| false` | `"milestone-driver"` | Which reviewer checks each issue before it's created; `false` = off. |
 | `autoHandoff` | `"prompt" \| "auto" \| "off"` | `"prompt"` | After `create` builds a milestone, whether the feeder offers to hand it to milestone-driver to start building (prompt = ask; auto = start immediately; off = never). |
 | `architectAgent` | string | `milestone-feeder:architect` | Override the breakdown agent (default-filled). |
 | `issueAuthorAgent` | string | `milestone-feeder:issue-author` | Override the authoring agent (default-filled). |
@@ -57,12 +56,6 @@ optional in the file. Every key except `versioning` has a bundled default;
 **`projectDocs`.** Points the plan procedure at your project's standing docs
 (vision, architecture, conventions) it grounds issue authoring in. Default
 `.project/`.
-
-**`reviewer`.** Selects the reviewer that checks each issue before it's created —
-the keystone that prevents the feeder from authoring issues it cannot itself
-substantiate. `"milestone-driver"` (default) backs the review with the driver's
-review agents; `"internal"` uses the feeder's own reviewer; `false` turns the
-review off.
 
 **`autoHandoff`.** After `create` finishes building a milestone and its issues,
 this key decides whether the feeder offers to hand the milestone **straight to
@@ -79,13 +72,9 @@ to invoke the driver yourself. It is **build-kickoff only**: it invokes
   today's no-handoff behavior).
 
 **Three gates — all must hold for the handoff to be offered:** (1) **clean run
-only — no gaps/parks AND the self-check actually ran** — the run produced no
-product gap and parked / dropped nothing (the plan file's needs-input pointer is
-"none") **and** its `Self-check:` verdict is a real `PASS` / `INTERNAL`, **not**
-`SKIPPED(reviewer:false)`; a `reviewer: false` run skips the self-check gate
-entirely, leaving its issues unvetted against the driver's entry gate, so it is a
-clean-run fail even with a "none" pointer. A gapped **or** unvetted run surfaces
-its gaps / 🔴 reviewer-skipped warning as today and offers no handoff; (2) **driver
+only — no gaps/parks** — the run produced no product gap and parked / dropped
+nothing (the plan file's needs-input pointer is "none"). A gapped run surfaces its
+gaps as today and offers no handoff; (2) **driver
 installed, else silent skip** — `create` detects
 whether `/milestone-driver:solve-milestone` resolves in this session and, if it
 does **not**, silently skips with no prompt and no error (the same way the optional
@@ -178,16 +167,6 @@ wins. The consumer's shared `sourceGlobs` here is the path set the feeder uses
 when authoring issues for a target repo — distinct from the self-protection
 `sourceGlobs` of resolution chain 1.
 
-**`nonNegotiables` — the reviewer gate's additional reviewer input.** Beyond the
-three shared keys above, the reviewer gate (plan Step 6) also reads
-`nonNegotiables` from the driver profile, resolved down the **same chain**
-(`.milestone-config/driver.json` → root `milestone-driver.json` → absent →
-**omitted**, never invented). It is **not** a fourth shared key — it is the
-additional reviewer-profile input the gate passes through to the driver's
-`triage-reviewer`: the framework / platform / version constraints the reviewer
-checks each issue against. Absent → the reviewer simply has no version/platform
-constraints to check.
-
 ### `.milestone-config/` migration note
 
 Adopting `.milestone-config/` suite-wide means the driver resolves its profile
@@ -251,12 +230,12 @@ empty `{}` is a valid profile.
 
 ## Minimal example
 
-The two most commonly-set own-keys, with everything else defaulted:
+A couple of commonly-set own-keys, with everything else defaulted:
 
 ```json
 {
   "projectDocs": ".project/",
-  "reviewer": "milestone-driver"
+  "issueSize": "≤1 PR, ≤1 new screen"
 }
 ```
 
@@ -267,7 +246,6 @@ Adds an optional sizing rule and the self-protection `sourceGlobs`:
 ```json
 {
   "projectDocs": ".project/",
-  "reviewer": "milestone-driver",
   "issueSize": "≤1 PR, ≤1 new screen",
   "sourceGlobs": ["skills/**", "agents/**", "hooks/**"]
 }

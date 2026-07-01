@@ -41,8 +41,8 @@ isolates: a glob-ignoring feeder FAILS here; it cannot pass by prose-transcripti
 - Each issue body has all five §4 sections. Acceptance criteria include empty/error states (per
   convention). The web-banner issue records the shared API-client + `useToast()` conventions.
 - The milestone description encodes the Wave order (§4 template).
-- Self-check gate: every emitted issue returns `GAPS: none` **or Advisory-only** (advisories are
-  non-gating). No re-author, or at most a bounded one that clears.
+- Every emitted issue is drafted to pass the driver's triage clean (`GAPS: none`) — well-formed,
+  ready for the driver to triage.
 - ZERO parks; needs-product-input report absent or "none" — the brief is fully specified and the
   conventions ground every design call.
 

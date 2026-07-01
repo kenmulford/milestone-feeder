@@ -27,7 +27,7 @@ None. Synchronous skill execution; agents are dispatched as subagents within a `
 
 ## External services & integrations
 Third-party services the app depends on: auth / identity, payments, email / SMS, object storage, analytics, other APIs.
-**GitHub** via the `gh` CLI (the only external service) — `gh label create`, `gh api .../milestones` (POST/PATCH), `gh issue create/edit/list/view/comment`. Optional sibling plugins: `milestone-driver` (reviewer backend) and `milestone-coherence-reviewer` (post-build review). Hard dependency: `superpowers`. No auth / payments / email / storage. (Grounded in `docs/consumer-setup.md` Before you start, §1; `README.md` Before you start.)
+**GitHub** via the `gh` CLI (the only external service) — `gh label create`, `gh api .../milestones` (POST/PATCH), `gh issue create/edit/list/view/comment`. Optional sibling plugins: `milestone-driver` (the build engine whose triage bar the feeder drafts to) and `milestone-coherence-reviewer` (post-build review). Hard dependency: `superpowers`. No auth / payments / email / storage. (Grounded in `docs/consumer-setup.md` Before you start, §1; `README.md` Before you start.)
 
 ## Runtime & hosting
 Where it runs and the runtime/version targets (hosting platform, language-runtime versions, regions). For mandated frameworks and packages, cross-reference `library-manifest.md`.
