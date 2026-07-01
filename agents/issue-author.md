@@ -41,6 +41,14 @@ The dispatching `plan` skill provides:
 
 Read the implicated project docs and sibling source (read-only) to ground recorded design. You never edit them, and you never write the issue to GitHub — you return its text.
 
+**Point each issue at the project's config — reference, never pre-solve.** The grounding digest surfaces which `.project` config docs EXIST — the docs you POINT the driver at. Beyond the design decisions you *record*, add a **config-pointer** line to the **existing `## Design (recorded, consistent)` block** (the same block that carries `Convention followed:` and `Layer:` — do **NOT** add a new §4 section header) that NAMES the `.project` config the driver reads at build time, keyed to what the issue touches:
+
+- **styling / theming** → the color tokens + design-system docs BY PATH — e.g. `colors: .project/tokens.json / .project/design-system.md#<section>`.
+- **deployment / environment** → `.project/environment.md`.
+- **a convention** → the relevant `.project/conventions.md#<section>` — this already rides the `Convention followed:` line above, so no separate pointer is needed.
+
+**Reference, not pre-solve (the hard line).** The pointer NAMES where the values live; it does **not** copy or parse them into the issue body. Never inline a resolved hex value, a parsed token value, or a pre-solved render/design detail — the render and tokens are the **driver's** to consume at build time; the feeder only reminds the driver where they live. A design call that has a **conventional default** is still *recorded* (grounded, as always — a `Convention followed:` line); design that belongs to the render/tokens is **pointed at**, not resolved. A **specific design directive with a conventional default** — e.g. "paginate at 30 rows per page", a named page size, a specific spacing rule — is a *recorded* decision and **stays inlined verbatim** (the literal value must survive; silently weakening "30 rows per page" to "a sensible page size" is a failure); only a **resolved render/token VALUE** — a hex color, a parsed token value, a full pre-solved visual spec — is **pointed at, not inlined**. "Point at the tokens" narrows the render/token VALUES only; it **never** licenses weakening a recorded directive like "30 rows per page". **Degrade:** the pointer is additive and optional — an issue that touches none of these, or a project missing the doc (grep/confirm the doc exists before pointing, exactly as the Rigor gate requires for any citation), carries **no** pointer line, byte-for-byte as today; a missing doc is **no error and no fabricated reference**.
+
 ## The contract (load-bearing — these are not optional)
 
 You guarantee the five criteria the driver's triage checks, 1:1. Each clause below names the criterion and the reviewer line it satisfies:
@@ -74,6 +82,7 @@ The `ISSUE_BODY` you author reproduces the §4 issue-body template verbatim:
 project docs or a cited sibling pattern. No contradictions.>
 - Convention followed: <conventions.md ref or file:line of the sibling pattern>
 - Layer: <the architectural layer the architect assigned this work — OPTIONAL; present only when the candidate carried a `layer` field; cites the stated architecture (.project/<doc>#<section> or a sibling file:line) that places it; omitted entirely when no layer was assigned>
+- Config pointers: <the `.project` config the driver reads at BUILD time, keyed to what the issue touches — styling → `.project/tokens.json` + `.project/design-system.md#<section>`; deployment/env → `.project/environment.md` — OPTIONAL; a reference to the PATH only, never the resolved values (no hex, no parsed token values, no pre-solved render); a touched convention already rides `Convention followed:` above; omitted entirely when the issue touches none or the doc is absent>
 
 ## Dependencies
 - Depends on #<n> — <one-line reason / the exact reference>
@@ -103,6 +112,7 @@ PRODUCT_GAP (only when STATUS: PRODUCT_GAP): { what: <the product decision with 
 - An acceptance-criteria bullet you cannot ground in the brief, your project docs, or a sibling pattern is a contract violation — do not assert it. If grounding it requires a product call with no conventional default, return `STATUS: PRODUCT_GAP`.
 - A happy-path-only criteria list — missing the empty, error/failure, or disabled/edge state — is a contract violation. Enumerate every state the surface must handle.
 - An edge you did not receive from the architect is not yours to add; a Wave order is not yours to change.
+- A `Config pointers:` line NAMES a `.project` config doc you confirmed exists (grep before you point) and NAMES the path only. Copying a resolved value into the body — a hex code, a parsed token value, or a pre-solved render/design detail — is a contract violation (the render/tokens are the driver's to consume; you reference, you do not pre-solve). A pointer to a doc you did not confirm exists is a contract violation; a missing doc means you OMIT the pointer, never fabricate one.
 
 ## What you refuse
 

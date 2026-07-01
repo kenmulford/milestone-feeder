@@ -188,6 +188,7 @@ Maps 1:1 to the five criteria the driver's triage checks. The issue-author guara
 project docs or a cited sibling pattern. No contradictions.>
 - Convention followed: <conventions.md ref or file:line of the sibling pattern>
 - Layer: <architectural layer the architect assigned — OPTIONAL; present only when a layer was assigned; cites the stated architecture (.project/<doc>#<section> or a sibling file:line)>
+- Config pointers: <the .project config the driver reads at build time, keyed to what the issue touches — styling → .project/tokens.json + .project/design-system.md#<section>; deployment/env → .project/environment.md — OPTIONAL; a reference to the PATH only, resolved values NOT inlined (no hex, no parsed token values, no pre-solved render); omitted when the issue touches none or the doc is absent>
 
 ## Dependencies
 - Depends on #<n> — <one-line reason / the exact reference>
@@ -198,6 +199,8 @@ project docs or a cited sibling pattern. No contradictions.>
 ```
 
 Labels applied by **`create`**: a UI/logic label, and `risk:light` / `risk:heavy` when the feeder is confident — aligned with the driver's existing taxonomy so triage and solve read them natively. The four-label set (`ui`, `logic`, `risk:light`, `risk:heavy`) is provisioned by `setup` and ensured idempotently by `create`.
+
+**Config pointers (reference, never pre-solve).** With the feeder no longer reviewing (the driver's triage is the single automated entry gate, §5), its job is to make sure the driver has the right config — so the `## Design (recorded, consistent)` block also POINTS each issue at the `.project` config the driver reads at **build time**, keyed to what the issue touches — styling → `.project/tokens.json` / `.project/design-system.md#<section>`; deployment/env → `.project/environment.md` (a touched convention already rides the `Convention followed:` line). The pointer NAMES the path; it never copies or parses the values into the body — no resolved hex, no parsed token values, no pre-solved render. The render and tokens are the **driver's** to consume; the feeder only reminds the driver where they live. The line is **additive**: an issue touching none of these, or a project missing the doc, carries no pointer, byte-for-byte as today — a missing doc is no error and no fabricated reference. It reuses the existing `projectDocs` grounding — **no new config key**.
 
 ### Milestone description template (encodes the Wave order)
 
