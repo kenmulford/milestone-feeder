@@ -19,7 +19,7 @@ One approved choice per purpose, so a redundant alternative is easy to spot.
 | GitHub writes/reads | `gh` (GitHub CLI) | `gh label/issue/api` — the only way the feeder touches GitHub (`docs/consumer-setup.md` Before you start). |
 | JSON parsing in hooks | `jq` (bash path) | The bash hook form; the PowerShell 7+ twin uses native `ConvertFrom-Json`. |
 | Cross-platform shell | bash + PowerShell 7+ | Every hook/script ships as a twin (`.sh` + `.ps1`) via the `run-hook.cmd` polyglot launcher. |
-| Reviewer backend (optional) | `milestone-driver` plugin | Backs `reviewer: "milestone-driver"`; absent → degrades to `"internal"`. |
+| Build engine (optional) | `milestone-driver` plugin | The builder whose triage bar the feeder drafts to; also the optional `create` build-handoff target. Absent → the feeder still plans and deploys. |
 | Plan pipeline dependency | `superpowers` plugin | Hard dependency — a required prerequisite the user installs themselves (no longer manifest-declared; see `README.md`). |
 
 ## Adding a dependency (the gate)

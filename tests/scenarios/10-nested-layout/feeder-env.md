@@ -7,7 +7,7 @@ the already-resolved, **root-absolute** globs into `.milestone-config/driver.jso
 consumes those globs verbatim; it has no `appRoot` key of its own (that's why feeder #112 was
 closed as superseded — the prefix is resolved upstream, not re-applied by the feeder).
 
-- `feeder.json`: defaults (`reviewer: "milestone-driver"`, `projectDocs: project/`).
+- `feeder.json`: defaults (`projectDocs: project/`).
 - Driver shared keys (as if from `.milestone-config/driver.json`, baked from
   `appRoots: ["siteroot/web", "siteroot/api"]`):
   - `sourceGlobs`: `["siteroot/web/**", "siteroot/api/**"]`  ← root-absolute nested roots; NO bare repo-root glob

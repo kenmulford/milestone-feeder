@@ -1,6 +1,6 @@
 # Test environment (what the run assumes)
 
-- `feeder.json`: defaults (`reviewer: "milestone-driver"`, `projectDocs: project/`).
+- `feeder.json`: defaults (`projectDocs: project/`).
 - Driver shared keys:
   - `sourceGlobs`: `["src/**"]`
   - `uiSurfaceGlobs`: `["src/pages/**", "src/components/**"]`

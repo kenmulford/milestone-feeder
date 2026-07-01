@@ -70,6 +70,14 @@ A candidate breakdown that satisfies this contract — every clause, not a subse
 
    **Dedupe:** a companion already covered by a candidate you have written is **not** double-emitted. **States** (empty / loading / error / unauthorized) are *considered* so they are never overlooked, but they land as **acceptance criteria inside their own screen issue** (`agents/issue-author.md` Completeness clause), never as standalone candidates. Fanned-out surfaces reuse the existing **~1-PR sizing (clause 1)** — granularity is not this clause's job. When the reference is **absent or empty** (see *What you receive*), this clause is a **no-op**: you break the brief down exactly as you would without it.
 
+**9. Architectural layer — assign, then order by the layer dependency.** When the project's standing docs state a **stack + layering convention**, consult it during breakdown — primarily `.project/design-philosophy.md#Layering & boundaries` (the layers and their allowed dependency directions), with `.project/conventions.md#File & folder layout` for where each layer's files live and `.project/library-manifest.md#Runtime & frameworks` for the stack (all handed in as digest slices — see *What you receive*). Then:
+
+   - **Assign each candidate a layer.** For **every** candidate, record the architectural **layer** the convention dictates — a CRUD / persistence task in the data layer, a view-model in the view-model layer, a formatting helper in the utility layer, and so on — as the candidate's optional `layer` field (see the return block). The convention places it; you do not invent a layering the docs do not state.
+   - **Order by the layer dependency.** Emit a dependency EDGE keyed by layer so a layer precedes the layers that depend on it — `#B depends_on #A — layer: <B-layer> depends on <A-layer> per <.project layering citation>` — reusing clause 4's topological sort, so the Wave order is keyed by the **layer** dependency, not only by ad-hoc type references. A layer edge uses the **same `EDGES` shape** as clause 3; it is grounded "by the recorded project-docs line", which the rigor gate already permits.
+   - **Composes with, never overrides, a concrete edge.** A concrete artifact `depends_on` edge (clause 3) is **authoritative**. A layer edge only orders candidates that are **otherwise independent** — it never contradicts, and is never emitted against, a concrete edge's direction. The two compose: the artifact edge is never violated; the layer edge adds ordering between candidates no artifact edge already relates.
+   - **Ground or degrade — never invent (the floor).** Each layer assignment and each layer edge **cites the project's stated architecture** (`.project/<doc>#<section>` or a sibling `file:line`). A layer you cannot ground in a stated layering convention is **not** assigned — the candidate carries **no** `layer` field and the breakdown falls back to clause 3's concrete-artifact edges only. This is the same never-invent floor as clause 2: ground the layer or omit it, never a fabricated layering.
+   - **Additive / no-op when unstated.** A project whose standing docs state **no** layering convention (the section is absent / `[TBD]`, or the stack is unlayered) gets **no** `layer` field on any candidate, **no** layer edge, and the **dependency-only** Wave order it produces today — byte-for-byte. This clause adds nothing to that path.
+
 ## Structured return block
 
 Return **only** this block — no prose before or after it, no issues opened, no recommendations:
@@ -85,9 +93,15 @@ CANDIDATES:
                                        #   conventional companion surface proposed for review; its sketch carries the
                                        #   "implied — review / trim / augment" instruction + the cluster it came from.
                                        #   Additive: consumers reading tag/title/surface/risk/sketch are unaffected.
+    layer: <the architectural layer this candidate belongs to>   # OPTIONAL — omitted when the project
+                                       #   states no groundable layering convention (clause 9). When present it
+                                       #   cites the project's stated architecture and keys a layer-ordering EDGE.
+                                       #   Additive: consumers reading tag/title/surface/risk/sketch are
+                                       #   unaffected; the issue-author records it in the issue's Design block.
   - … (one per candidate)
 EDGES:
   - "#B depends_on #A — <reason / the exact artifact reference>"
+  - "#D depends_on #C — layer: <D-layer> depends on <C-layer> per <.project layering citation>"   # clause 9 layer edge — same shape, grounded by the recorded project-docs layering line; orders otherwise-independent candidates
   - …                       # [] when no candidate depends on another
 WAVES:
   - "Wave 1 (parallel): #A, #C"
@@ -121,12 +135,15 @@ SCOPE_SPANS_MULTIPLE_MILESTONES:
 
 The optional per-candidate `disposition` field defaults to `grounded` when omitted; `implied` marks a conventional companion surface proposed for review (clause 8). It is **additive** — every downstream consumer reads `tag` / `title` / `surface` / `risk` / `sketch` and is unaffected by its presence or absence. An `implied` candidate is otherwise a complete candidate that flows to the issue-author and the plan file like any other; its sketch carries the "implied — review / trim / augment" review instruction plus the cluster it came from.
 
+The optional per-candidate `layer` field records the architectural layer a candidate belongs to (clause 9); it is **omitted** when the project states no groundable layering convention. It is **additive** in exactly the same way as `disposition` — every downstream consumer reads `tag` / `title` / `surface` / `risk` / `sketch` and is unaffected by its presence or absence — and it **composes** with `disposition` (a candidate may carry both, either, or neither). When present it cites the project's stated architecture and keys a layer-ordering edge (clause 9); `plan` threads it to the issue-author, which records it in the issue's Design block so the driver sees which layer the work sits in.
+
 ## Rigor gate (hard — this enforces the seniority, not the title)
 
 Every design default **cites its grounding**: a project-docs ref, or `file:line` for a sibling pattern read in the repo. No exceptions.
 
 - A design call you cannot ground in your project docs or an established repo convention, and for which there is **no conventional default**, is a `PRODUCT_GAP` — never invented, never silently resolved to a plausible-sounding guess.
 - Every dependency edge cites the **actual artifact reference** (the type, screen, or contract one candidate introduces and another consumes) at `file:line` or by the recorded brief/project-docs line. An edge you cannot ground is not emitted.
+- Every **layer** assignment and layer edge (clause 9) cites the project's **stated architecture** (`.project/<doc>#<section>` or a sibling `file:line`). A layer you cannot ground in a stated layering convention is **not** assigned and **not** ordered on — the candidate carries no `layer` field and the breakdown degrades to concrete-artifact edges only. Ground the layer or omit it; never fabricate a layering the docs do not state.
 - A candidate is in exactly one of **three recognized dispositions**: **(a)** grounded in the brief or project docs; **(b)** a grounded **conventional** surface proposed-for-review, labeled **"implied"** (clause 8) — a recognized *grounded* disposition, **not a relaxation**: it rests on a conventional default and lands in a plan the human reviews before any issue is created; or **(c)** a parked product-gap. There is still **no** un-grounded-assumption state — a surface with **no** conventional default still **parks** to `PRODUCT_GAPS`, it never proceeds as an implied guess. A gapped candidate is **not** a third state: every tag a gap names in `blocks:` **MUST** appear in `CANDIDATES` and so carries a sketch (so its parked marker has a title), and its tag appears in the blocking gap's `blocks:` list — you surface the gap and name the candidate it blocks, you do not invent the missing decision to make the candidate buildable.
 - **"Looks reasonable / probably / should be fine"** are contract violations. If you catch yourself writing one, stop: either ground the call in the project docs/convention, or park it to `PRODUCT_GAPS`.
 

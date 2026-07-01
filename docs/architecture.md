@@ -10,36 +10,34 @@ stack, the conventions, and the design defaults the engine grounds the breakdown
 
 The as-built components. `plan` previews to a plan file, `create` deploys the
 approved plan, and `update` reconciles a refreshed plan onto an existing milestone
-(see [The reviewer gate](#the-reviewer-gate) and [The plan procedure](#the-plan-procedure)).
+(see [The quality bar](#the-quality-bar) and [The plan procedure](#the-plan-procedure)).
 The plan file is the **build artifact** (see [The plan file as build artifact](#the-plan-file-as-build-artifact)).
 
 | Component | Path | Purpose |
 |---|---|---|
 | Setup skill | `skills/setup/SKILL.md` | First-run profile bootstrap: infer keys from repo signals, write `.milestone-config/feeder.json`, provision the label taxonomy aligned to the driver's. Auto-invoked by `plan`/`create` when the profile is absent. Mirrors `milestone-driver:setup`. |
-| Plan skill | `skills/plan/SKILL.md` | Orchestrator preview: brief → a reviewable plan file. Runs Steps 0–6 (incl. the reviewer gate) and emits at Step 7 — the plan file at `.milestone-feeder/plan-<slug>.md`. **No GitHub writes.** `/milestone-feeder:plan <brief>`. |
+| Plan skill | `skills/plan/SKILL.md` | Orchestrator preview: brief → a reviewable plan file. Runs Steps 0–5 and emits at Step 7 — the plan file at `.milestone-feeder/plan-<slug>.md`. **No GitHub writes.** `/milestone-feeder:plan <brief>`. |
 | Create skill | `skills/create/SKILL.md` | Deploys the approved plan: reads the plan file and performs the GitHub writes (labels, create-or-adopt milestone, issues, slug→`#n` rewrite, description PATCH). Runs `plan` first only if no plan file exists. `/milestone-feeder:create <brief>`. See [The create deploy / write order](#the-create-deploy--write-order). |
 | Build-roadmap skill | `skills/build-roadmap/SKILL.md` | **Internal** (invoked by `plan` Step 3.6 on an oversized whole-app brief, never a user command): dispatch `roadmap-splitter` once, surface the proposed split for confirm / merge / split / reorder / reject, and on confirmation write a roadmap manifest to `.milestone-feeder/roadmap-<slug>.md`. **No GitHub writes.** See [The roadmap](#the-roadmap). |
-| Architect agent | `agents/architect.md` | Architect lens: brief + standing docs + repo → candidate issue set + dependency edges + Wave order. One heavy reasoning step, dispatched once. Read-only. Raises `SCOPE_SPANS_MULTIPLE_MILESTONES` — the signal that triggers the roadmap route. Also consults the implied-surfaces reference and labels each conventional companion surface it proposes with the `disposition: implied` field (see [Implied surfaces](#implied-surfaces)). |
+| Architect agent | `agents/architect.md` | Architect lens: brief + standing docs + repo → candidate issue set + dependency edges + Wave order. One heavy reasoning step, dispatched once. Read-only. Raises `SCOPE_SPANS_MULTIPLE_MILESTONES` — the signal that triggers the roadmap route. Also consults the implied-surfaces reference and labels each conventional companion surface it proposes with the `disposition: implied` field (see [Implied surfaces](#implied-surfaces)). When the project states a layering convention, assigns each candidate its architectural `layer` and keys the Wave order to the layer dependency (see [Layer-aware breakdown](#layer-aware-breakdown)). |
 | Issue-author agent | `agents/issue-author.md` | Per-issue subagent: authors one issue's full spec to the §4 output contract so it passes the driver's triage clean. Read-only; returns issue text, never opens the issue. |
 | Roadmap-splitter agent | `agents/roadmap-splitter.md` | Roadmap lens: an oversized whole-app brief + standing docs → a strict, build-ordered partition into named milestones (the `ROADMAP` block). Dispatched once by `build-roadmap`. Read-only. Supersedes the architect's passive multi-milestone advisory with a real, ordered split. |
-| Brief-coverage-verifier agent | `agents/brief-coverage-verifier.md` | Coverage-audit lens: audits the read-back content of every created milestone + issue against the **original** brief and returns a coverage punch-list. Dispatched once by `create` Step 3V. Read-only; runs no `gh` of its own — `create` does the read-back and hands it the content. See [The create deploy / write order](#the-create-deploy--write-order). |
 | Hook: `no-source-edit` | `hooks/` (`hooks.json`, `run-hook.cmd`, `.sh`, `.ps1`) | `PreToolUse` (`Write`/`Edit`/`MultiEdit`/`NotebookEdit`): unconditionally deny edits to the feeder's own `sourceGlobs`. The only mechanical gate the feeder needs — it authors no code and opens no PRs. See [The mechanical gate](#the-mechanical-gate). |
 | Manifest + registration | `.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`, `hooks/hooks.json` | Plugin metadata (`superpowers` is a documented prerequisite, not a manifest dependency — see `README.md`), marketplace registration, and Claude-side hook registration. |
-| Update skill | `skills/update/SKILL.md` | Plan-driven reconcile against an existing milestone: re-triage live issues through the reviewer gate, patch gapped bodies, fill missing edges, re-render the Wave order. `/milestone-feeder:update <brief>`. Creates and deletes no issues; a clean milestone is a no-op. Reuses the reviewer gate (Step 6) and `create`'s write-primitives by reference. |
+| Update skill | `skills/update/SKILL.md` | Plan-driven reconcile against an existing milestone: reconcile the recorded plan onto the live milestone — patch gapped bodies, fill missing edges, re-render the Wave order. `/milestone-feeder:update <brief>`. Creates and deletes no issues; a clean milestone is a no-op. Reuses `create`'s write-primitives by reference. |
 | Implied-surfaces reference | `docs/implied-surfaces.md` | The stack-agnostic implied-surfaces **reasoning reference** the architect consults during breakdown — the standard companion surfaces a capability or a new entity implies, framed as a reviewable floor (a robust start, never a scope-emitting catalog). Also **defines** the project-local overlay shape (`.milestone-config/implied-surfaces.md`, additive-merge: add / extend, never delete a global surface). PR-able; shipped so the capability set grows by community PR. |
 | One-time-notices reference | `docs/one-time-notices.md` | The canonical source for `plan` Step 0's five one-time notices — each announces a self-heal `plan` performed, flags a repo-state problem to fix by hand, or points at a new/optional capability — shown at most once per clone via a per-clone marker. Reference content only; the live emitter is `skills/plan/SKILL.md` Step 0. |
 | Plan-file-contract reference | `docs/plan-file-contract.md` | The shared definition of the plan file's fields and output templates — the field table, the plan-file output template, and the needs-product-input report template that `create` and `update` parse. Copied verbatim from `skills/plan/SKILL.md` Step 7 so downstream skills cite one contract, not each their own. |
 | Roadmap-manifest reference | `docs/roadmap-manifest-format.md` | The exact shape of the roadmap manifest `build-roadmap` writes to `.milestone-feeder/roadmap-<slug>.md` — the cross-milestone build artifact recording which milestones to plan, in what order, plus the full original brief. Read on demand by `build-roadmap` (Step 4) and its downstream `plan` / `create` consumers. |
-| Create-deploy-sequence reference | `docs/create-deploy-sequence.md` | The full mechanics of `create`'s heavy deploy steps (Step 1R, the Step 3 write-sequence passes a–d, Step 3V, Step 4), relocated byte-for-byte from `skills/create/SKILL.md` so the skill keeps a lean orchestration skeleton. `create` reads it on demand; behavior-neutral. |
-| Reviewer gate | (in `plan`, Step 6 §6.1–§6.6; `SPEC.md` §5) | Dispatches the driver's `triage-reviewer` / `design-reviewer` against each generated issue before any emit; it writes no GitHub state. Three backends — `"milestone-driver"`, `"internal"`, `false`. See [The reviewer gate](#the-reviewer-gate). |
-| `create` GitHub write path | (in `create`, §7-apply deploy sequence) | Ensures the labels idempotently, creates-or-adopts the milestone by title, opens each gate-surviving issue, rewrites slug→`#n` references, PATCHes the Wave-encoded milestone description, and files the needs-product-input report (epic comment for a GitHub-epic brief / local file otherwise). Idempotent re-run via adopt + match-by-title. |
+| Create-deploy-sequence reference | `docs/create-deploy-sequence.md` | The full mechanics of `create`'s heavy deploy steps (Step 1R, the Step 3 write-sequence passes a–d, Step 4), relocated byte-for-byte from `skills/create/SKILL.md` so the skill keeps a lean orchestration skeleton. `create` reads it on demand; behavior-neutral. |
+| `create` GitHub write path | (in `create`, §7-apply deploy sequence) | Ensures the labels idempotently, creates-or-adopts the milestone by title, opens each surviving issue, rewrites slug→`#n` references, PATCHes the Wave-encoded milestone description, and files the needs-product-input report (epic comment for a GitHub-epic brief / local file otherwise). Idempotent re-run via adopt + match-by-title. |
 
-**Reused, not rebuilt (composability):** the reviewer gate dispatches
-`milestone-driver:triage-reviewer` and `:design-reviewer` directly against the
-generated issue text (no `gh` call of their own), so the feeder's quality bar *is*
-the driver's entry gate — no second, drifting definition of "well-formed"
-(`SPEC.md` §3, §5). `update` reuses the same gate and `create`'s write-primitives
-by reference rather than re-deriving a drifting copy.
+**Targets the driver's triage, does not run it.** The feeder authors every issue
+to the same five criteria `milestone-driver`'s `triage-reviewer` / `design-reviewer`
+check (`SPEC.md` §4), so its quality bar *is* the driver's entry gate — no second,
+drifting definition of "well-formed" (`SPEC.md` §3, §5). The feeder runs **no**
+reviewer of its own; the driver's triage is the single automated gate. `update`
+reuses `create`'s write-primitives by reference rather than re-deriving a drifting copy.
 
 ## The plan file as build artifact
 
@@ -58,9 +56,9 @@ the milestone goal so `create`/`update` can find it from the same brief:
 The plan file carries, unambiguously: the exact milestone title + one-line goal;
 the wave-encoded milestone description (local slugs `#A`/`#B`); per surviving issue
 its slug, title, full §4 body, labels, and surface/risk; the parked and dropped
-issues (marked, never created); the reviewer-gate verdict line; and the source-brief
+issues (marked, never created); and the source-brief
 reference. `create` reads it and deploys **exactly** it — no pipeline re-run, no
-re-vet (it trusts the recorded gate verdict). The slug→`#n` rewrite still happens at
+re-check. The slug→`#n` rewrite still happens at
 write time, because issue numbers do not exist until creation; what changed from
 v0.2.0 is **only** the source of the issue bodies/labels/waves — read from the plan
 file, not regenerated.
@@ -130,20 +128,19 @@ repo (`SPEC.md` §7; `docs/profile-schema.md`).
 
 ## The plan procedure
 
-The `plan` skill runs `SPEC.md` §6 Steps 0–6 (the reviewer gate is Step 6) and
-emits the plan file at Step 7. It writes **no GitHub state** — the reviewer gate
-writes none either. `create` then deploys the emitted plan file (see
+The `plan` skill runs `SPEC.md` §6 Steps 0–5 and
+emits the plan file at Step 7. It writes **no GitHub state**. `create` then deploys the emitted plan file (see
 [The create deploy / write order](#the-create-deploy--write-order)).
 
 | Step | Action |
 |---|---|
-| 0 | Read `.milestone-config/feeder.json` (absent → auto-invoke `setup`); read your project's standing docs under `projectDocs` (best-effort); resolve the shared keys (`sourceGlobs`, `uiSurfaceGlobs`, `integrationBranch`) from the driver config, plus `nonNegotiables` (the additional reviewer-profile input the gate passes through). |
+| 0 | Read `.milestone-config/feeder.json` (absent → auto-invoke `setup`); read your project's standing docs under `projectDocs` (best-effort); resolve the shared keys (`sourceGlobs`, `uiSurfaceGlobs`, `integrationBranch`) from the driver config. |
 | 1 | Ingest the brief — a GitHub epic issue (`#<n>`), a file path, or inline text — and normalize it internally first. |
 | 2 | **Product-gap check (the park boundary):** separate product decisions (no conventional default) from design/implementation decisions (resolvable from the standing docs/convention). Product gaps are recorded, not guessed. |
 | 3 | Dispatch the architect (`architectAgent`) **once**: candidate issue set + dependency edges + Wave order, with local tags (not GitHub numbers). |
+| 3.5 | **Park candidates blocked by a shared product gap** before the fan-out, and drop their dependents (no doomed author dispatches). |
 | 4 | Dispatch the `issue-author` **per candidate** (parallelizable) → each issue's full §4 spec. |
-| 5 | Assemble the dependency graph; render the milestone description to the §4 Wave template (local slugs). |
-| 6 | **Reviewer gate** (the keystone): vet every generated issue against the same gate that fronts the driver's build loop. Iterate each FAILed issue to clean (≤2 `issue-author` re-dispatches) or park it. **No GitHub writes.** See [The reviewer gate](#the-reviewer-gate). |
+| 5 | **Drop parked issues + their dependents**; assemble the dependency graph; render the milestone description to the §4 Wave template (local slugs). |
 | 7 | **Emit the plan file.** Write the reviewable plan file to `.milestone-feeder/plan-<slug>.md` — the build artifact `create`/`update` deploy — plus a "needs product input" report when product gaps remain. **No GitHub writes.** |
 
 ### The roadmap
@@ -222,6 +219,51 @@ overlay is discovered by that fixed path — **no new config key**
 never an error. A one-time per-clone notice in `plan` / `update` Step 0 announces the
 overlay to existing users (`SPEC.md` §3.1, the discovery-path principle).
 
+### Layer-aware breakdown
+
+When the project's standing docs state a **stack + layering convention**, the
+architect assigns each candidate its architectural **layer** and derives the issue
+order from the **layer dependency** — not only from ad-hoc type references
+(`agents/architect.md` clause 9). It consults the stated architecture — primarily
+`.project/design-philosophy.md#Layering & boundaries` (the layers and their allowed
+dependency directions), with `.project/conventions.md#File & folder layout` (where
+each layer's files live) and `.project/library-manifest.md#Runtime & frameworks`
+(the stack) — places each CRUD / helper task in the layer the convention dictates,
+records it as an optional per-candidate `layer` field, and emits a dependency **edge
+keyed by layer** so a layer precedes the layers that depend on it. The layer edge
+rides the **same Waves / topological sort** the dependency graph already uses; a
+concrete artifact `depends_on` edge stays **authoritative**, and a layer edge only
+orders candidates that are otherwise independent — the two compose, never conflict.
+
+Every layer assignment and layer edge **cites the project's stated architecture**
+(the same rigor gate every design call clears); a layer that cannot be grounded is
+**not** assigned. A project that states **no** layering convention (the section
+absent / `[TBD]`, or an unlayered stack) produces the **dependency-only** breakdown
+it does today — no `layer` field, no layer edge, byte-for-byte unchanged, no
+fabricated layering. `plan` threads the optional `layer` from the architect (Step 3)
+through the issue-author brief (Step 4), and the issue-author **records** it as a
+`Layer:` line in the issue's existing `## Design` block — so the driver sees which
+layer the work sits in. The field is additive: every downstream consumer reads
+`tag` / `title` / `surface` / `risk` / `sketch` and is unaffected by its presence,
+and it reuses the existing `projectDocs` grounding — **no new config key** (`SPEC.md`
+§3.1, layer-aware breakdown).
+
+### Config pointers (reference, not pre-solve)
+
+With the feeder no longer reviewing (the driver's triage is the single automated entry
+gate), its job is to make sure the driver has the right config — so the issue-author
+also POINTS each issue at the `.project` config the driver reads at **build time**. In
+the same `## Design` block that carries `Convention followed:` and `Layer:`, keyed to
+what the issue touches: styling → `.project/tokens.json` / `.project/design-system.md#<section>`;
+deployment/env → `.project/environment.md` (a touched convention already rides the
+`Convention followed:` line). The pointer **names the path**; it never copies or parses
+the values into the body — no resolved hex, no parsed token values, no pre-solved
+render. The render and tokens are the **driver's** to consume at build time; the feeder
+only reminds the driver where they live. The line is additive: an issue touching none
+of these, or a project missing the doc, carries no pointer, byte-for-byte as today — a
+missing doc is no error and no fabricated reference. It reuses the existing `projectDocs`
+grounding — **no new config key** (`SPEC.md` §4, config pointers).
+
 ### The create deploy / write order
 
 `create` reads the plan file (running `plan` first only when no plan file exists)
@@ -252,20 +294,7 @@ path is the **N=1** case, byte-for-byte unchanged; a mid-loop failure stops and
 reports, deletes nothing, and a re-run resumes (already-deployed milestones adopted
 by exact title, the rest deployed).
 
-**Closing verification — coverage against the original brief (Step 3V).** After the
-deploy loop (single-plan Step 3 / roadmap Step 1R) and before the optional Step-4
-handoff, `create` reads **every** deployed milestone + issue back from live GitHub
-and dispatches `brief-coverage-verifier` once against the **original** brief
-(resolved in-session, else from the persisted `## Original brief` … `## End original
-brief` copy — the roadmap manifest on a roadmap run, the plan file otherwise; else a
-non-blocking "original brief unavailable" notice, never a fabricated brief). It surfaces a coverage
-punch-list — uncovered / duplicated / distorted brief parts, plus any read-errors —
-routed exactly like the needs-input report. It is **always-on** (every `create`,
-single-milestone included) and **best-effort / non-blocking**: it never blocks
-`create`, the handoff, or any merge, and never auto-fixes, edits, reopens, or
-comments-to-fix any deployed issue or milestone (`SPEC.md` §3.1).
-
-After the write sequence (a–e) and the closing verification, `create` runs a
+After the write sequence (a–e), `create` runs a
 top-level **Step 4 — the driver handoff**. It is **not** a GitHub write and is **not** part of the pass-(d)
 idempotent-re-run guarantee — it is a post-deploy skill invocation; see
 [The create → driver handoff](#the-create--driver-handoff).
@@ -285,54 +314,45 @@ a–e write sequence, not as a sixth write pass.
 The `autoHandoff` own-key (default `"prompt"`) governs it: `"prompt"`
 asks first, `"auto"` kicks off immediately, `"off"` never offers. Three gates must
 all hold: the run is **clean** — no product gap, nothing parked/dropped (the
-`## Needs human input` pointer is "none") **AND** the self-check actually ran (the
-plan file's `Self-check:` verdict is a real `PASS` / `INTERNAL`, **not**
-`SKIPPED(reviewer:false)` — a `reviewer: false` run skips the gate, leaving its
-issues unvetted, so it is a clean-run fail even with a "none" pointer); the driver
+`## Needs human input` pointer is "none"); the driver
 resolves in this session (absent → **silently skipped**, no prompt / no error); and
 the handoff is **build-kickoff only** — `solve-milestone` merges to the integration
 branch and `develop → main` stays a manual human call. It never auto-merges to a
 protected branch and never removes the release gate.
 
-## The reviewer gate
+## The quality bar
 
-Before emitting, `plan` vets **every generated issue** with the same gate
-that fronts the driver's build loop, so what the feeder emits passes the driver's
-triage clean (`SPEC.md` §5; Step 6 §6.1–§6.6). Each reviewer is dispatched
-**read-only against the generated text** — no `gh` call of its own. `update` runs
-the same gate against a milestone's **live** issues (real comments, the live
-description, real `#n`).
+The feeder's quality bar *is* the driver's entry gate: every issue it drafts is
+authored to pass the driver's `triage-reviewer` (and `design-reviewer` for UI
+issues) clean (`GAPS: none`) — one shared definition of "well-formed," never a
+second drifting copy (`SPEC.md` §5). But the feeder runs **no** reviewer gate of its
+own: it **DRAFTS** issues that **TARGET** that bar; the driver's own triage is the
+**single automated entry gate**, run once after `create` when the driver picks the
+milestone up. Between them stands the human, who reviews the plan file before
+`create` deploys.
 
-### Backends (`reviewer`)
+The `reviewer` own-key and its `"milestone-driver" | "internal" | false` backends
+are **retired** — there is no in-feeder gate to configure. An existing profile that
+still carries a `reviewer` key is ignored gracefully (unknown key → no error).
 
-| `reviewer` | Backend |
+### How the feeder targets the bar (`SPEC.md` §5)
+
+| Concern in the issue | How the feeder targets the bar |
 |---|---|
-| `"milestone-driver"` (default) | Dispatch `milestone-driver:triage-reviewer` per generated issue (and `:design-reviewer` when its triage returns `NEEDS_DESIGN_REVIEW: yes`). If the reviewers do not resolve at dispatch time, **degrade to `"internal"`** for the run (a notice, never a failure); a later single-issue non-resolution falls back to the internal checklist for that one issue. |
-| `"internal"` | Run the built-in checklist mirroring the five triage criteria (consistency, buildability, completeness, dependencies, UI flag). Same pass/Blocker verdict shape, so the gate logic is backend-agnostic. |
-| `false` | **Skip the gate** with a visible 🔴 warning to the user, recorded as `SKIPPED (reviewer:false)` in the plan-file status line. Generated issues are NOT vetted. |
+| Design / implementation decision with a conventional default | Recorded and cited (`.project/<doc>.md#<section>` or a sibling `file:line`), so the driver's Buildability check clears. |
+| Genuine **product** gap (no conventional default) | Parked to the "needs product input" report; never invented (`SPEC.md` §2 park boundary). |
+| UI issue | Carries the states, affordances, accessibility, and existing pattern to mirror that the driver's `design-reviewer` checks. |
 
-### Result → action (`SPEC.md` §5)
-
-| Aggregated result | Action |
-|---|---|
-| `GAPS: none` for every dispatched block | **PASS** — the issue clears the gate; proceed to emit (Step 7). |
-| Blocker, design/implementation-resolvable | **Re-dispatch `issue-author`** to fix, bounded to **≤2** re-dispatches per issue (the same cap the driver uses on every gate), then re-run the gate. |
-| Blocker, genuine **product** gap | **Park** to the "needs product input" report; never invented. |
-| Still-Blocker after 2 retries | **Park as needs-human-direction** (the candidate's design is likely wrong). |
-
-`severity: Advisory` entries do **not** fail the gate — they are recorded as notes,
-not retried. An `undeclared-dependency` Blocker is absorbed into the graph and the
-Wave order re-rendered (§6.6), not routed through the re-author path. A parked issue
-and every issue that transitively depends on it are dropped from the emitted
-milestone.
+A parked (product-gap) issue and every issue that transitively depends on it are
+dropped from the emitted milestone (`plan` Step 5 drop pass).
 
 ## Modes & autonomy
 
 | Mode | Trigger | Behavior |
 |---|---|---|
-| Plan | `/milestone-feeder:plan <brief>` | Full procedure, Steps 0–6 (incl. the reviewer gate); stops at the plan file. **No GitHub writes.** |
+| Plan | `/milestone-feeder:plan <brief>` | Full procedure, Steps 0–5; stops at the plan file. **No GitHub writes.** |
 | Create | `/milestone-feeder:create <brief>` | Deploys the approved plan: ensures the labels, creates the milestone + issues (and an epic comment for a GitHub-epic brief). Runs `plan` first only when no plan file exists. |
-| Update | `/milestone-feeder:update <brief>` | Reconcile a refreshed plan onto an **existing** milestone (matched by exact title) through the reviewer gate — patch gapped bodies, fill missing edges, re-render the Wave order, showing the diff before it writes. **Never closes/deletes**; a live issue absent from the plan is flagged for your decision; a clean milestone is a true no-op (writes nothing). |
+| Update | `/milestone-feeder:update <brief>` | Reconcile a refreshed plan onto an **existing** milestone (matched by exact title) — patch gapped bodies, fill missing edges, re-render the Wave order, showing the diff before it writes. **Never closes/deletes**; a live issue absent from the plan is flagged for your decision; a clean milestone is a true no-op (writes nothing). |
 
 **Authoring-autonomy boundary.** The feeder makes design/implementation calls
 grounded in your project's standing docs or a stated repo convention — and cites
