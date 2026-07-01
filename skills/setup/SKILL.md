@@ -26,7 +26,6 @@ Before asking anything, gather signals from the repo. Run these checks silently 
 |---|---|---|
 | Project docs directory | `.project/` present at repo root? | `projectDocs` default `.project/`; if the standing docs live elsewhere, that path is the suggested value |
 | Resolvable driver profile | `.milestone-config/driver.json` present, else legacy root `milestone-driver.json` present? | Confirms the shared keys the feeder reads (`uiSurfaceGlobs`, `integrationBranch`, the consumer's `sourceGlobs`) are available from the driver config (`SPEC.md` §7) — informational, not written into `feeder.json` |
-| Reviewer availability | Does `milestone-driver:triage-reviewer` resolve in this session? | `reviewer` default `"milestone-driver"` when it resolves, else `"internal"` (degrade to the feeder's own checklist mirroring the five triage criteria, `SPEC.md` §5) |
 | Existing profile | Read `.milestone-config/feeder.json` if present | Pre-fill any already-set keys (re-run handling below) |
 
 ### Phase 2 — Tier-by-tier confirmation
@@ -45,7 +44,6 @@ Every tier below is optional and one-keystroke accept-or-skip — there is **no 
 | Key | Plain-language label | Skip-consequence |
 |---|---|---|
 | `projectDocs` | "Where do your project's standing docs (vision, architecture, conventions) live? `plan` grounds issue authoring in them." | Skip → default `.project/` used at runtime. |
-| `reviewer` | "Which reviewer checks each generated issue before any GitHub write? (Detected: `milestone-driver` if its reviewers resolve, else `internal`.)" | Skip → default `"milestone-driver"` (or `"internal"` when the driver's reviewers don't resolve); `false` disables the gate. |
 | `autoHandoff` | "After `create` builds a milestone, should the feeder offer to hand it straight to milestone-driver to start building? `prompt` (ask), `auto` (start immediately), or `off` (never)." | Skip → default `prompt` — offer only on a clean run when milestone-driver is installed; you decide each time. |
 
 **Tier: Agents** (optional; auto-filled with the bundled defaults — show, confirm, move on)
@@ -95,8 +93,7 @@ Writing the file is sufficient for `plan` to read it immediately this session �
 .milestone-config/feeder.json written.
 
 {
-  "projectDocs": ".project/",
-  "reviewer": "milestone-driver"
+  "projectDocs": ".project/"
 }
 ```
 

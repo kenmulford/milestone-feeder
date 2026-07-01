@@ -1,8 +1,8 @@
 # Roadmap manifest format
 
-`build-roadmap` writes the roadmap manifest to `.milestone-feeder/roadmap-<slug>.md` on confirmation — the authoritative cross-milestone build artifact that records WHICH milestones to plan and in WHAT order, plus the full original brief. This reference is its exact shape: `build-roadmap` Step 4 reads it on demand to write the manifest, and the downstream consumers read the manifest this shape produces (`skills/plan/SKILL.md` Step 3.7; `skills/create/SKILL.md` Step 1R / Step 3V).
+`build-roadmap` writes the roadmap manifest to `.milestone-feeder/roadmap-<slug>.md` on confirmation — the authoritative cross-milestone build artifact that records WHICH milestones to plan and in WHAT order, plus the full original brief. This reference is its exact shape: `build-roadmap` Step 4 reads it on demand to write the manifest, and the downstream consumers read the manifest this shape produces (`skills/plan/SKILL.md` Step 3.7; `skills/create/SKILL.md` Step 1R).
 
-Write the manifest in this shape. It carries the source-brief reference, the **full** original brief (persisted in full — required downstream by the brief-coverage verification, #158), the cross-milestone build order, and one entry per confirmed milestone. It does **NOT** carry the per-milestone §4 issue bodies or Wave order — those live in each milestone's own `plan-<slug>.md` (`.project/design-philosophy.md#Layering & boundaries`):
+Write the manifest in this shape. It carries the source-brief reference, the **full** original brief (a durable record of the whole-app brief this roadmap was built from), the cross-milestone build order, and one entry per confirmed milestone. It does **NOT** carry the per-milestone §4 issue bodies or Wave order — those live in each milestone's own `plan-<slug>.md` (`.project/design-philosophy.md#Layering & boundaries`):
 
 ```markdown
 # Milestone roadmap — <whole-app brief one-line goal>
@@ -14,13 +14,12 @@ Build order: <milestone 1 name> → <milestone 2 name> → … → <milestone N 
 ## Original brief
 <The FULL original whole-app brief text, persisted verbatim and multi-line — every
  section the author wrote, in full. This is a MULTI-LINE section, NOT a single
- header line: the downstream brief-coverage verification (#158) reads it to confirm
- the roadmap covers everything the brief asked for. Persisting it here is the manifest
- owner's contract, shared with #158 / #157. The brief is delimited by the paired
+ header line: a durable record of the whole-app brief this roadmap was built from.
+ Persisting it here is the manifest owner's contract. The brief is delimited by the paired
  `## Original brief` … `## End original brief` markers (the literal closing line below),
- so a brief that contains its OWN `## ` headings is captured intact — the consumer reads
+ so a brief that contains its OWN `## ` headings is captured intact — a consumer reads
  strictly between the two markers and is NOT truncated at the brief's first internal
- `## ` heading (`skills/create/SKILL.md` Step 3V, rung 2).>
+ `## ` heading.>
 ## End original brief
 
 ## Milestones (in build order)

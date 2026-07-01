@@ -14,28 +14,27 @@ or from a marketplace once published). Confirm it is enabled with `/plugin`.
 | Plugin | Status | Why |
 |---|---|---|
 | [`superpowers`](https://github.com/anthropics/claude-code) | **Required** | A hard dependency — a required prerequisite you install yourself (no longer auto-installed; see `README.md`). The plan pipeline depends on it. |
-| `milestone-driver` | **Optional** | The backend for the `reviewer: "milestone-driver"` mode — the feeder dispatches the driver's own `triage-reviewer` / `design-reviewer` as its pre-emit reviewer gate. **Absent → degrades to `"internal"`**, and the pipeline still runs. |
+| `milestone-driver` | **Optional** | The feeder drafts every issue to pass the driver's triage clean, and on a clean run `create` can hand the milestone straight to the driver to start building. **Absent → the feeder still plans and deploys**; you run the driver later (or not at all). |
 
-**The `milestone-driver` soft dependency.** `milestone-driver` is the **optional
-backend** for the `"milestone-driver"` reviewer mode. When it is installed, the
-reviewer gate backs each generated (or, in `update`, each live) issue with the
-driver's real reviewers, so the feeder's quality bar *is* the driver's entry gate.
-When it is **absent**, `reviewer` degrades to `"internal"` at runtime — the
-feeder's own checklist mirroring the five triage criteria — and the pipeline still
-runs. (Setting `reviewer: false` skips the gate entirely, with a visible 🔴
-warning that the issues were not vetted.) The feeder also reads the driver's
-profile (`.milestone-config/driver.json`) for shared keys (`sourceGlobs`,
-`uiSurfaceGlobs`, `integrationBranch`) and `nonNegotiables` (the version/platform
-constraints the gate's reviewer checks against); these resolve to documented
-defaults when no driver profile is present, so a driver-less repo still works.
+**The `milestone-driver` soft dependency.** The feeder writes issues meant to be
+built by `milestone-driver`, so it drafts every issue to pass the driver's triage
+clean — one shared definition of "well-formed." The feeder itself runs **no**
+reviewer: it *targets* that bar, and the driver's own triage is where the bar is
+enforced when the driver later picks the milestone up. So `milestone-driver` is
+**optional** for planning and deploying — absent, the feeder still plans and
+deploys, and you run the driver whenever you like (or, on a clean run, let `create`
+hand it off for you; see `autoHandoff`). The feeder also reads the driver's profile
+(`.milestone-config/driver.json`) for shared keys (`sourceGlobs`, `uiSurfaceGlobs`,
+`integrationBranch`); these resolve to documented defaults when no driver profile is
+present, so a driver-less repo still works.
 
 ## 2. Add the project profile
 
 The first time you run `/milestone-feeder:plan` (or `create`), the plugin
 **auto-invokes `/milestone-feeder:setup`** if `.milestone-config/feeder.json` is
 absent. The bootstrap infers every key it can from repo signals (the standing-docs
-directory (`projectDocs`), the resolvable driver profile, whether the driver's
-reviewers resolve) and presents detected defaults — you accept, edit, or skip. It
+directory (`projectDocs`), the resolvable driver profile) and presents detected
+defaults — you accept, edit, or skip. It
 writes the profile to `.milestone-config/feeder.json`, provisions the label
 taxonomy, and returns control so the original plan continues immediately.
 
@@ -55,15 +54,14 @@ and CI has the same `no-source-edit` behavior. Minimal example:
 
 ```json
 {
-  "projectDocs": ".project/",
-  "reviewer": "milestone-driver"
+  "projectDocs": ".project/"
 }
 ```
 
 **The optional `versioning` key.** `versioning` tells the feeder whether your
 project uses version numbers. Set it to `"semver"` if your project is versioned
 (every milestone gets a version), or `"none"` if it isn't (no version is ever
-added and you're never asked). It is **optional** — like `reviewer`, you can leave
+added and you're never asked). It is **optional** — you can leave
 it out, and the feeder degrades gracefully: **if you skip it, the feeder figures
 out whether you version by looking at your repo** — your existing milestone titles
 first, then your git tags — and only **asks you once at plan time** if it can't
@@ -75,7 +73,6 @@ question:
 ```json
 {
   "projectDocs": ".project/",
-  "reviewer": "milestone-driver",
   "versioning": "semver"
 }
 ```
@@ -107,11 +104,10 @@ shape that matters:
 
 | Stage | What happens |
 |---|---|
-| Read config + project docs | Loads `feeder.json` (auto-invokes `setup` if absent), reads the standing docs best-effort, resolves shared keys (and `nonNegotiables`) from the driver config. |
+| Read config + project docs | Loads `feeder.json` (auto-invokes `setup` if absent), reads the standing docs best-effort, resolves shared keys from the driver config. |
 | Plan | Dispatches the architect once → candidate issues + dependency edges + Wave order. |
-| Author | Dispatches the `issue-author` per candidate → each issue's full §4 spec (acceptance criteria covering empty/error/disabled states, recorded consistent design, declared edges, UI/logic + risk). |
-| Reviewer gate | Vets every generated issue against the same gate that fronts the driver's build loop (the driver's reviewers when `reviewer: "milestone-driver"`, else the internal checklist). FAILed issues are re-authored (≤2 retries) or parked. Runs on every path — **no GitHub writes.** |
-| Emit | Writes a plan file to `.milestone-feeder/plan-<slug>.md` — the milestone description (Wave order) plus every gate-surviving issue body — and a "needs product input" report when product gaps remain. **No GitHub writes** — the GitHub artifacts are built later by `create`. |
+| Author | Dispatches the `issue-author` per candidate → each issue's full §4 spec (acceptance criteria covering empty/error/disabled states, recorded consistent design, declared edges, UI/logic + risk), drafted to pass the driver's triage clean. |
+| Drop + emit | Drops parked issues and their dependents, then writes a plan file to `.milestone-feeder/plan-<slug>.md` — the milestone description (Wave order) plus every surviving issue body — and a "needs product input" report when product gaps remain. **No GitHub writes** — the GitHub artifacts are built later by `create`. |
 
 **The park boundary.** A decision with no conventional default — what to build, or
 user-facing behavior the standing docs and conventions do not answer — is **parked**
@@ -179,9 +175,9 @@ fully autonomous creation. End to end:
 
 | Step | Command | What happens |
 |---|---|---|
-| 1. Plan | `/milestone-feeder:plan <brief>` | Runs the full pipeline including the reviewer gate and stops at a **plan file** (`.milestone-feeder/plan-<slug>.md`). **No GitHub state is written** — no milestone, no issue, no label, no comment. |
-| 2. Review | *(read the plan file)* | Read the milestone description (Wave order), every gate-surviving issue body, and the "needs product input" report. Resolve any parked product gaps and re-run the plan until it is right. |
-| 3. Create | `/milestone-feeder:create <brief>` | Deploys **exactly the plan you approved** — reads the plan file (running `plan` first only if none exists yet), then creates the GitHub artifacts: ensures the four labels, **creates-or-adopts the milestone by title** (reopening it if closed, never deleting), opens each gate-surviving issue, rewrites the slug references to real issue numbers in the issue bodies and the milestone description, and files the needs-product-input report (a comment on the epic for a GitHub-epic brief, else a local file). On a **clean** run, if `milestone-driver` is installed, `create` can then **offer to hand the milestone straight to the driver to start building** — see the handoff note below. |
+| 1. Plan | `/milestone-feeder:plan <brief>` | Runs the full pipeline and stops at a **plan file** (`.milestone-feeder/plan-<slug>.md`). **No GitHub state is written** — no milestone, no issue, no label, no comment. |
+| 2. Review | *(read the plan file)* | Read the milestone description (Wave order), every surviving issue body, and the "needs product input" report. Resolve any parked product gaps and re-run the plan until it is right. |
+| 3. Create | `/milestone-feeder:create <brief>` | Deploys **exactly the plan you approved** — reads the plan file (running `plan` first only if none exists yet), then creates the GitHub artifacts: ensures the four labels, **creates-or-adopts the milestone by title** (reopening it if closed, never deleting), opens each surviving issue, rewrites the slug references to real issue numbers in the issue bodies and the milestone description, and files the needs-product-input report (a comment on the epic for a GitHub-epic brief, else a local file). On a **clean** run, if `milestone-driver` is installed, `create` can then **offer to hand the milestone straight to the driver to start building** — see the handoff note below. |
 
 `create` is **idempotent on re-run**: it adopts the existing milestone and matches
 issues by exact title, so re-running reuses what exists rather than duplicating it.
@@ -224,7 +220,7 @@ showing the diff before it writes:
 
 | Step | Command | What happens |
 |---|---|---|
-| 1. Refresh the plan | `/milestone-feeder:plan <brief>` | Re-runs the pipeline on your edited brief and refreshes the plan file. Because the plan going in is always gate-clean, reconciling it inherently repairs any issue that drifted from spec. **No GitHub writes.** |
+| 1. Refresh the plan | `/milestone-feeder:plan <brief>` | Re-runs the pipeline on your edited brief and refreshes the plan file. Because the plan going in is always drafted to the driver's triage bar, reconciling it inherently repairs any issue that drifted from spec. **No GitHub writes.** |
 | 2. Update | `/milestone-feeder:update <brief>` | Resolves the existing milestone by title, then reconciles the refreshed plan against its live issues (matched by exact title): creates an issue in the plan but not on GitHub, patches a live body whose plan differs (**showing the diff first**), adds new dependency edges and re-renders the Wave order. A live issue **not** in the refreshed plan is **flagged for your decision** — never auto-closed. Nothing differs → a **true no-op**. |
 
 `update` **never closes and never deletes** — a live issue absent from your

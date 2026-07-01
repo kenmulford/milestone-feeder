@@ -4,12 +4,12 @@ This is an **oversized whole-app brief** — many features, a data model, auth, 
 billing — so it spans **several milestones** and `plan`'s front-door (Step 3.6)
 routes it into the `build-roadmap` flow instead of the single-milestone pipeline.
 
-- `feeder.json`: defaults (`reviewer: "milestone-driver"`, `projectDocs: project/`).
+- `feeder.json`: defaults (`projectDocs: project/`).
 - Driver shared keys (as if from `.milestone-config/driver.json`):
   - `sourceGlobs`: `["src/**"]`
   - `uiSurfaceGlobs`: `["src/pages/**", "src/components/**"]`  ← **set**, so the
-    portal / dashboard / report page-issues classify as **UI** and the
-    `design-reviewer` engages (as in scenario 06)
+    portal / dashboard / report page-issues classify as **UI** and their issues
+    carry the design spec the driver's design lens checks (as in scenario 06)
   - `integrationBranch`: `"develop"`
   - `nonNegotiables`: `["Python 3.11 + FastAPI backend; React 18 + TypeScript frontend"]`
 - Project docs dir for this scenario: `project/`
