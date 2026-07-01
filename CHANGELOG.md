@@ -3,6 +3,32 @@
 Release notes for milestone-feeder. Each tagged release is also published on the
 [GitHub Releases page](https://github.com/kenmulford/milestone-feeder/releases).
 
+## v0.9.0 — lean plan
+
+**Theme:** `plan` becomes a lean, architecture-aware drafter. The feeder no longer re-runs the driver's reviewers as an in-feeder self-check gate before anything is written — that gate was a redundant pre-audit of issues that don't exist yet (~63% of a plan run's token cost), because the driver's own triage runs the same reviewers on the created issues anyway. The feeder now **drafts** well-formed issues that **target** the driver's triage bar; the driver's triage is the single automated entry gate (you still review the plan before `create`). Freed of the gate, `plan` gains real value: the architect **breaks the work down along your project's architecture** — assigning each issue to the layer your `.project` layering convention dictates and ordering by layer dependency — and every issue **points at the relevant `.project` config** (tokens, design-system, environment) by path, a reference the driver reads at build time rather than a value pre-solved into the issue.
+
+### ✨ Lean, architecture-aware plan
+
+| Issue | PR | What |
+|---|---|---|
+| #223 Remove the plan self-check gate | #226 | Removes the feeder's `plan` self-check/reviewer gate and `create`'s post-deploy `brief-coverage-verifier`; the feeder **drafts** issues that **target** the driver's triage bar (the single automated entry gate) instead of running the reviewers itself. Product-gap parking is **kept** — its drop-parked-issues-and-dependents behavior relocated into the surviving pipeline. The `reviewer` config key is retired (an existing key is ignored gracefully). Net −454 lines. |
+| #224 Layer-aware breakdown | #227 | The architect reads your project's stack + layering convention from `.project` and assigns each candidate an architectural **layer**, keying the Wave order to the layer dependency (not only ad-hoc type references). The `layer` threads through to the issue body, so the driver sees which layer the work sits in. Additive: a project stating no layering convention degrades to today's dependency-only breakdown, byte-for-byte. |
+| #225 Point each issue at project config | #228 | Each generated issue records a **config-pointer** line in its Design block, naming the relevant `.project` config (`tokens.json` / `design-system.md#<section>` / `environment.md`) **by path** — a reference the driver reads at build time, never a pre-solved or inlined value. A recorded design directive (e.g. a literal "30 rows per page") still stays inlined; only resolved render/token values are pointed at. Degrades cleanly when a doc is absent. |
+
+### Consumer notes (upgrading from v0.8.0)
+
+- **`plan` is faster and no longer runs an in-feeder review gate.** The feeder used to dispatch the driver's `triage-reviewer` + `design-reviewer` against every generated issue and gate/retry on their findings before writing the plan — roughly 63% of a plan run's token cost. That gate is removed: `plan` now drafts issues that *target* the driver's triage bar, and the driver's own triage (which runs the same reviewers on the created issues) is the single automated entry gate. You still review the plan before `create`, exactly as before. Product-gap parking is unchanged — a brief that needs a human decision still parks to the needs-product-input report.
+- **The `reviewer` config key is retired — this is the only schema change.** If your `.milestone-config/feeder.json` still carries a `reviewer` key, it is now ignored gracefully (unknown key → no error). No action needed.
+- **`create` no longer runs a post-deploy coverage audit** (the `brief-coverage-verifier`). `create` still deploys and reads back for its own correctness; it just no longer re-audits coverage against the brief — consistent with "create is not a gatekeeper."
+- **New — layer-aware breakdown.** When your `.project` declares a layering convention (a `#Layering & boundaries` section, or a stated layered stack), the architect assigns each issue its layer and orders by layer dependency. When no layering is declared you get today's dependency-only breakdown — no change, no fabricated layering.
+- **New — config pointers in each issue.** Issues that touch styling/deployment/conventions now name the relevant `.project` doc by path so the driver reads the source of truth; they don't copy resolved token or design values into the issue body.
+
+### ⚖️ Post-run audit trail
+
+Judgment-call PRs for this release: **#226** (deferred the regenerated `tests/RESULTS.md` + scenario transcripts — they still show the removed self-check format), **#227** (the `SPEC.md` §4 template line was applied on the main thread, as `SPEC.md` is a doc outside `sourceGlobs`).
+
+Deferred follow-up: `tests/RESULTS.md` and the per-scenario `run-log.md` / `run-output.md` transcripts still narrate the removed self-check gate — they are regenerated-not-hand-edited by convention (`tests/RESULTS.md`), so they refresh on the next `tests/scenarios/` harness re-run, not by hand.
+
 ## v0.8.0 — progressive-disclosure skill trim
 
 **Theme:** A behavior-neutral refactor that brings the plugin's own oversized `SKILL.md` files into line with Claude's skill-authoring size standards. The heavy reference text, the canonical output templates, and the duplicated one-time-notice machinery that had accumulated inside the skills are relocated into on-demand `docs/` reference files, so each `SKILL.md` is now a lean overview plus a step skeleton that points at the reference it needs. **No consumer-facing behavior change** — every skill does exactly what it did before, and the `tests/scenarios/` end-to-end suite is byte-identical. This is internal maintainability work only.
