@@ -81,10 +81,11 @@ Two things make that work, in plain terms:
 
 The richer your project docs, the better the issues and the fewer decisions land back on your plate. Nothing here is new machinery — it's the grounding and the drafting-to-the-bar, described in plain terms.
 
-Two more things the feeder does for you:
+A few more things the feeder does for you:
 
 - **Name your milestone with a version up front.** Add a line like `Milestone: myapp v1.2.0` to your brief (or just say it inline). The feeder reads the version straight from the milestone's name so its sibling, `milestone-driver`, knows exactly what version to build toward. If you don't name one, the feeder proposes a version — pulled from your existing milestones or git tags — and shows it to you to confirm or change before it builds anything. You're never handed a milestone whose name you didn't get to see.
 - **A whole-app brief becomes a sequenced roadmap of milestones.** If your idea really reads as several separate releases, `plan` hands it to a roadmap step first: it carves the brief into a build-ordered set of milestones and shows you the split, so you can confirm it, merge or split a milestone, reorder them, or reject it — before it plans anything. Once you confirm, `plan` plans every milestone in the roadmap (in parallel), and `create` deploys them in build order. A normal, single-release brief is unchanged — no roadmap step, no extra prompt. Never a silent giant milestone, and never a hard stop — the call is yours.
+- **It puts your milestone on your Trello board, if you use one.** When your `milestone-driver` is set up with Trello, `create` also drops a card for the new milestone on your board — with its issues as a checklist — so the work shows up where you track it the moment it's created. There's no Trello setting of your own to add: `create` reads the board from your driver config, and if you don't use Trello, nothing changes.
 
 ## Config
 
