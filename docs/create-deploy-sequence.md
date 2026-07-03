@@ -4,6 +4,7 @@ This is the create-scoped reference holding the **full mechanics** of `create`'s
 
 - [Step 1R — Resolve the deploy target](#step-1r--resolve-the-deploy-target-a-single-plan-or-a-roadmap-of-n-milestones)
 - [Step 3 — deploy write-sequence (passes a-d)](#step-3--deploy-write-sequence-passes-a-d)
+- [Step 3 — pass f (mirror the milestone to Trello)](#step-3--pass-f-mirror-the-milestone-to-trello)
 - [Step 4 — Offer the driver handoff](#step-4--offer-the-driver-handoff-clean-run-only)
 
 ### Step 1R — Resolve the deploy target: a single plan, or a roadmap of N milestones
@@ -225,6 +226,87 @@ gh api --method PATCH "repos/{owner}/{repo}/milestones/<number>" -f "description
 ```
 
 After (d), every `#n` on GitHub is a real issue number and the milestone description encodes the Wave order in real numbers — exactly the ordering source the driver's `solve-milestone` / `triage` read (`SPEC.md` §4).
+
+### Step 3 — pass f (mirror the milestone to Trello)
+
+The **final** deploy pass, added after passes a–d above (pass e — the needs-input report — stays inline in `skills/create/SKILL.md` Step 3). It runs **after passes a–e succeed and the milestone + issues exist** — it needs the milestone number from pass (b), the real `#n` issue numbers from pass (c), and the Wave order from pass (d) — and **before** the Step-4 driver handoff. Its job: make a freshly-planned milestone visible on the PM board immediately, instead of waiting for `milestone-driver` to seed a card on its first build run.
+
+This pass **reuses the driver's existing Trello mechanism by reference** — it does **not** re-author it and adds **no** feeder-side Trello config key. The card shape, target list, auth, and idempotency conventions live in `milestone-driver`'s `skills/solve-milestone/trello-sync.md`, **Conventions 1–7** (point at that file — do not copy the conventions inline):
+
+| Convention | What it governs |
+|---|---|
+| Conv 1 | Best-effort wrapper — every Trello call logs one line on failure and continues; never a gate. |
+| Conv 2 | Availability probe — probe `mcp__trello__get_health` first; MCP tools absent → log once, skip the rest. |
+| Conv 3 | Misconfiguration guard — `integrations.trello` present but `boardId` missing → log one line, skip. |
+| Conv 4 | Ensure the **queue** list (case-sensitive name match, auto-create if absent). |
+| Conv 5 | Card resolution — back-link anchor → name-match → create on the queue list. |
+| Conv 6 | `<!-- trello: <card-url> -->` back-link on the milestone description; idempotent (skip when already present). |
+| Conv 7 | "Issues" checklist — one `#<n> — <title>` item per open milestone issue. |
+
+**Read seam (which profile, and when to skip).** Resolve the **driver** profile via the established feeder resolution chain — `.milestone-config/driver.json` (primary), root `milestone-driver.json` (legacy fallback) — best-effort, exactly as `skills/plan/SKILL.md` Step 0 resolves the shared keys. Read `integrations.trello` from it. **`integrations.trello` absent, OR the driver profile unreadable → silent no-op** (absent-means-skip; the driver's `docs/profile-schema.md` "Note on `integrations.trello`"; `.project/design-philosophy.md#Error & failure philosophy`): no card, no checklist, no back-link, and the GitHub deploy result (milestone + issues + Wave description) stays byte-unchanged. No new feeder key — the driver already resolves the destination.
+
+**Target list = queue.** The card is created-or-adopted on the board's **queue** list, its name resolved from `integrations.trello.lists.queue` (default `"Queue"`; the driver's `docs/profile-schema.md` `integrations.trello.lists.queue` key + `trello-sync.md` Conv 4). This pass touches only the queue list — it never moves the card between lists (that is the driver's Conv 8 state machine, out of scope here).
+
+**Execution order (the seed subset of `trello-sync.md`'s run-start order).** Run best-effort (Conv 1 throughout):
+
+1. **Conv 2 — availability probe.** Probe `mcp__trello__get_health`. If the `mcp__trello__*` tools are not loaded in this session, log the one documented line and skip every remaining Trello step. This "configured but tools absent" log is what distinguishes a degrade from the silent absent-config case.
+2. **Conv 3 — misconfiguration guard.** If `integrations.trello` is present but `boardId` is missing, log the one documented line and skip.
+3. **Conv 4 — ensure the queue list.** Resolve `lists.queue` (default `"Queue"`) by case-sensitive name on the configured `boardId`; create it if absent.
+4. **Conv 5 — card resolution (create-or-adopt).** Back-link anchor (the milestone description already carries `<!-- trello: <card-url> -->` → adopt that card) → name-match (a card whose name equals the milestone name on the queue list → adopt) → otherwise create the card on the queue list.
+5. **Conv 7 — "Issues" checklist (creation path only).** On **creation**, add one `#<n> — <title>` item per **open** milestone issue, **ordered by the Wave order pass (d) deployed** — read the `## Waves` block of the milestone description (equivalently the plan file's Wave order). This pins Conv 7's otherwise-unspecified ordering; it does not contradict it. On **adoption**, leave the existing checklist as-is (Conv 7 adoption path — no reconciliation).
+6. **Conv 6 — back-link.** Record `<!-- trello: <card-url> -->` as the final line of the milestone description, idempotent (skip the PATCH when the description already contains `<!-- trello:`). This is the only shell the pass emits — shipped as a bash + PowerShell 7+ twin below.
+
+**Scope boundary (feeder seeds; driver drives).** This pass **seeds** the queue card only — create-or-adopt + checklist + back-link. It does **not** run the driver's card **state machine** (Conv 8) or the phase / loop / finish hooks (`trello-sync.md` Conv 10) — those stay the driver's build-time job. Because the feeder writes the same Conv 6 back-link, the driver's later `solve-milestone` Conv 5 resolution **adopts the same card** (no duplicate) when it picks the milestone up.
+
+**Best-effort, non-blocking.** The GitHub deploy has already succeeded before this pass runs. Every Trello call is wrapped best-effort (Conv 1): a failure logs one line — `Trello: <operation> skipped — <error>` — and continues. It **never** fails the deploy, **never** parks, **never** blocks (`.project/design-philosophy.md#Error & failure philosophy`).
+
+**The back-link read-modify-write (Conv 6 command shape) — bash + PowerShell 7+ twins.** Fetch the current milestone description, then PATCH it with the back-link appended as the final line **only when the back-link is not already present** (Conv 6 idempotency — no second line, no duplicate). `<number>` is the milestone number from pass (b); `<card-url>` is the card URL resolved at step 4:
+
+```bash
+# bash — record the Conv 6 back-link, idempotently (skip if already present).
+current=$(gh api "repos/{owner}/{repo}/milestones/<number>" --jq '.description')
+case "$current" in
+  *'<!-- trello:'*)
+    # back-link already present → skip the PATCH (Conv 6 idempotency; adoption re-run)
+    echo "Trello: back-link already present — description PATCH skipped"
+    ;;
+  *)
+    gh api --method PATCH "repos/{owner}/{repo}/milestones/<number>" \
+      -f description="${current}
+
+<!-- trello: <card-url> -->"
+    ;;
+esac
+```
+
+```powershell
+# PowerShell 7+ — same idempotent Conv 6 back-link. Assign the multi-line description to a
+# variable first, then pass it, so gh's -f reads it as a literal string (never @file).
+$current = gh api "repos/{owner}/{repo}/milestones/<number>" --jq '.description'
+if ($current -like '*<!-- trello:*') {
+  # back-link already present → skip the PATCH (Conv 6 idempotency; adoption re-run)
+  Write-Output "Trello: back-link already present — description PATCH skipped"
+} else {
+  $desc = @"
+$current
+
+<!-- trello: <card-url> -->
+"@
+  gh api --method PATCH "repos/{owner}/{repo}/milestones/<number>" -f "description=$desc"
+}
+```
+
+Wrap this read-modify-write best-effort (Conv 1): a `gh` failure logs one line and continues — the deploy already succeeded. **Empty-description edge:** when the milestone description is empty the back-link becomes its only content (Conv 6 empty-description edge case) — the twins above write it as the trailing line either way.
+
+**How each acceptance criterion is met.**
+
+| Criterion | Where it is satisfied |
+|---|---|
+| **Happy path** — one queue card + Wave-ordered checklist + back-link | Conv 5 create + Conv 7 (Wave-ordered) + Conv 6, above. |
+| **Empty / no-op** — silent, deploy byte-unchanged | Read seam: `integrations.trello` absent OR profile unreadable → silent no-op. |
+| **Error / degrade** — logged skip, deploy still succeeds | Conv 2 (tools absent) / Conv 3 (`boardId` missing) log one line and skip; Conv 1 best-effort throughout. |
+| **Idempotent re-run** — adopt, no duplicate, PATCH skipped | Conv 5 step 1 (back-link anchor adopts), Conv 7 adoption path (checklist as-is), Conv 6 idempotency (PATCH skipped — both twins above). |
+| **Cross-platform** — bash + pwsh twins, identical behavior | The two twins above (the only shell the pass emits). |
 
 ### Step 4 — Offer the driver handoff (clean-run only)
 
