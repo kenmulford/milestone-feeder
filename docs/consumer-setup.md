@@ -14,7 +14,7 @@ or from a marketplace once published). Confirm it is enabled with `/plugin`.
 | Plugin | Status | Why |
 |---|---|---|
 | [`superpowers`](https://github.com/anthropics/claude-code) | **Required** | A hard dependency — a required prerequisite you install yourself (no longer auto-installed; see `README.md`). The plan pipeline depends on it. |
-| `milestone-driver` | **Optional** | The feeder drafts every issue to pass the driver's triage clean, and on a clean run `create` can hand the milestone straight to the driver to start building. **Absent → the feeder still plans and deploys**; you run the driver later (or not at all). |
+| `milestone-driver` | **Optional** | The feeder drafts every issue to pass the driver's triage clean, and on a clean run `create` can hand the milestone straight to the driver to start building — and, if the driver is set up with Trello, mirror the milestone onto your board. **Absent → the feeder still plans and deploys**; you run the driver later (or not at all). |
 
 **The `milestone-driver` soft dependency.** The feeder writes issues meant to be
 built by `milestone-driver`, so it drafts every issue to pass the driver's triage
@@ -27,6 +27,21 @@ hand it off for you; see `autoHandoff`). The feeder also reads the driver's prof
 (`.milestone-config/driver.json`) for shared keys (`sourceGlobs`, `uiSurfaceGlobs`,
 `integrationBranch`); these resolve to documented defaults when no driver profile is
 present, so a driver-less repo still works.
+
+**The optional Trello mirror.** If you use the driver's Trello integration — its
+`integrations.trello` in `.milestone-config/driver.json` — `create` **also drops a
+milestone card on your board** when it finishes deploying: one card on the board's
+queue list, with the milestone's issues as a checklist, so a freshly-planned
+milestone shows up on your project board the moment it's created (instead of waiting
+for the driver's first build run). It reads that setting from the **driver's**
+profile — **there is no feeder-side Trello setting to add** (the driver already owns
+the board destination). If you don't use the driver's Trello integration — or run no
+driver at all — **nothing changes**: `create` deploys to GitHub exactly as before and
+the mirror is a silent no-op. The card's shape and its best-effort, never-blocking
+behavior are the driver's; `create` just seeds the card — see milestone-driver's
+`skills/solve-milestone/trello-sync.md` for the details, and
+[`create-deploy-sequence.md`](create-deploy-sequence.md) → "Step 3 — pass f" for
+where `create` records the mirror pass.
 
 ## 2. Add the project profile
 

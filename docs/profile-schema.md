@@ -7,7 +7,7 @@ the feeder reads those from the driver's profile (see
 documents `.milestone-config/feeder.json`: the contract Step 0 of every skill
 and the `no-source-edit` hook read.
 
-> **See also:** the [milestone-driver profile schema](https://github.com/kenmulford/milestone-driver/blob/main/docs/profile-schema.md) — the source of the shared keys the feeder consumes (`uiSurfaceGlobs`, `integrationBranch`, the consumer's `sourceGlobs`).
+> **See also:** the [milestone-driver profile schema](https://github.com/kenmulford/milestone-driver/blob/main/docs/profile-schema.md) — the source of the shared keys the feeder consumes (`uiSurfaceGlobs`, `integrationBranch`, the consumer's `sourceGlobs`, and the `integrations.trello` that `create` reads to mirror the milestone to Trello).
 
 ## Location
 
@@ -131,8 +131,9 @@ the dogfood consumer — the feeder protecting its own source — under the
 
 ## Shared keys (resolved from the driver profile)
 
-Two distinct resolutions apply. Neither shared chain duplicates the driver's keys
-into `feeder.json`.
+Two distinct resolution chains apply, and neither duplicates the driver's keys
+into `feeder.json`. A third read — `create`'s Trello mirror (below) — adds no new
+chain: it rides the second chain to read one more driver key.
 
 ### 1. The `no-source-edit` hook's `sourceGlobs` (self-protection)
 
@@ -166,6 +167,35 @@ a target repo. They resolve in this order:
 wins. The consumer's shared `sourceGlobs` here is the path set the feeder uses
 when authoring issues for a target repo — distinct from the self-protection
 `sourceGlobs` of resolution chain 1.
+
+### 3. `create` reads `integrations.trello` (the milestone mirror)
+
+`create`'s final deploy pass reads one more key from the **driver** profile:
+`integrations.trello`. When the resolved driver config carries it, `create`
+mirrors the freshly-deployed milestone to Trello — **one** milestone-level card on
+the board's **queue** list, its "Issues" checklist in Wave order, and a
+`<!-- trello: <card-url> -->` back-link on the milestone description. It resolves
+the driver profile via the **same chain as resolution 2** —
+`.milestone-config/driver.json` (primary), root `milestone-driver.json` (legacy
+fallback).
+
+Like `uiSurfaceGlobs` and `integrationBranch`, this is a **driver-config read the
+feeder consumes — not a `feeder.json` own-key.** There is deliberately **no row
+for it in the [Own keys](#own-keys) table** and nothing to set in `feeder.json`;
+the driver already owns the destination, so the feeder reads it rather than
+duplicating a Trello key of its own (the same "read from the driver config, not
+duplicated into `feeder.json`" discipline as the keys above). When
+`integrations.trello` is **absent** from the driver profile (or no driver profile
+resolves), `create` does nothing new — a **silent no-op**, the GitHub deploy
+result byte-unchanged, so a driver-less or Trello-less repo is unchanged.
+
+The card mechanics, target list, auth, and the best-effort / never-gating
+behavior are the **driver's** — this pass mirrors them **by reference**, it does
+not restate them. See milestone-driver's `skills/solve-milestone/trello-sync.md`
+(Conventions 1–7) and the `integrations.trello` rows of its
+[`docs/profile-schema.md`](https://github.com/kenmulford/milestone-driver/blob/main/docs/profile-schema.md)
+for the source of truth; where `create`'s pass records the seed mechanics is
+[`create-deploy-sequence.md`](create-deploy-sequence.md) → "Step 3 — pass f".
 
 ### `.milestone-config/` migration note
 
