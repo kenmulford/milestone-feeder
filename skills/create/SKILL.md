@@ -46,9 +46,13 @@ Check for a **roadmap manifest** at `.milestone-feeder/roadmap-<slug>.md` (slug 
 
 **Once the loop has deployed all N milestones, `create` runs one more pass, exactly once:** it ensures the `md-epic` label, creates or adopts the roadmap's single parent issue, renders and PATCHes its `md-epic-order` body block, and writes the manifest's `Parent issue (GitHub): #<n>` receipt, before continuing to Step 4. This produces the driver's cross-milestone parent issue (`docs/specs/v0.11.0-md-epic-parent-issue.md`). A roadmap manifest existing at all already means N is at least 2 (`docs/roadmap-manifest-format.md`: the `Parent title:`/`Parent intro:` fields are written only for a confirmed multi-milestone split), so the single-plan path above never reaches this pass and an N=1 deploy stays byte-unchanged.
 
+Immediately after that receipt write, in the same run, `create` links every deployed milestone's surviving issues to the parent as native GitHub sub-issues, in build order, and re-asserts each freshly linked child's own milestone right after its own fresh link (never for a child already linked). A 100-sub-issue-per-parent cap, a per-milestone nested `md-epic` refusal, and a per-child linked/failed/skipped report all apply; a `gh` failure never fails the deploy, and a re-run of this pass links nothing twice.
+
 Full mechanics — the resolution table, the outer-loop per-milestone steps, and the build-order-line assembly twins — live in **`docs/create-deploy-sequence.md` → "Step 1R — Resolve the deploy target"**.
 
 Mechanics for the new md-epic parent-issue pass live in that same reference, immediately after the build-order-line assembly twins.
+
+Mechanics for the sub-issue-linking pass, the cap, the nested-epic refusal, and the per-child failure/idempotency handling, live in that same reference, immediately after the md-epic parent-issue pass.
 
 ### Step 1 — Resolve the plan file for the brief
 
