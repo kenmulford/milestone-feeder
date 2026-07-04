@@ -1,4 +1,6 @@
-# milestone-feeder
+<p align="center">
+  <img src="assets/milestone-feeder.svg" alt="milestone-feeder — a milestone suite plugin" width="590">
+</p>
 
 Turn a rough idea into a build-ready GitHub milestone — a tidy list of small, well-formed issues, in the order they should be built.
 
