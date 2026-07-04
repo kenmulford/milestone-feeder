@@ -249,6 +249,159 @@ try {
 
 **Failure semantics.** The label ensure, the parent resolve-or-create, and the body PATCH are load-bearing writes, not best-effort: a `gh` error in any of them STOPS this pass immediately. Report which step failed and what already succeeded (the label may already be ensured; the parent may already exist under a captured number), then stop; nothing is deleted. A re-run resumes safely: the label upsert is a no-op if it already ran, parent resolution retries receipt-then-title-match before ever creating a second issue, and the body PATCH is REPLACE-form, safe to reapply. Only the closing manifest-receipt write (step 5) is report-don't-block, mirroring pass b: by the time it runs, the parent issue itself already exists with its correct body, so a receipt-write failure is reported as a notice and the run continues; the next `create` re-derives the same number from the title-match fallback (step 4(b)) and rewrites the receipt.
 
+**The sub-issue-linking pass (Step 1R, roadmap-only, runs ONCE immediately after the md-epic parent-issue pass, same run).** Once the parent issue exists (created or adopted at step 4 above, its number captured as `$parent`), `create` runs one further pass, exactly once per roadmap deploy, before continuing to Step 4: it links every deployed milestone's surviving issues to the parent as native GitHub sub-issues, in build order, then re-asserts each freshly linked child's own milestone. This satisfies the driver's read-contract Precondition, "Each milestone's issues are linked to it as native GitHub sub-issues" (`milestone-driver` design spec, "Precondition"), while keeping every child on its OWN milestone, never the parent's (the parent itself carries no milestone at all). The re-assert step is defense-in-depth, not load-bearing: the live probe run for this feature confirmed linking an already-milestoned child under a milestone-less parent preserves the child's own milestone (issue #246, first comment: "PRESERVED ... this issue's re-assert-after-link step is defense-in-depth, not load-bearing"). See "Re-assert timing" below for exactly when the re-assert call fires.
+
+Order: milestone position 1 to N (the manifest's build order, the same `numbers` array the parent-issue pass's step 2 already gathered, reused here, not re-derived), then, within each milestone, its own Wave order (the same ordering pass (c) and pass (d) already used to deploy that milestone's issues).
+
+**1. Fetch the parent's already-linked sub-issues, once for the whole pass.** List `$parent`'s current sub-issues before touching any child, so every later idempotency check (step 4 below) is a cheap in-memory lookup instead of a call per child. Paginate: a parent can carry up to 100 sub-issues (the cap below, GitHub's documented limit) and the endpoint's default page size is 30, so mirror pass (b)'s `per_page=100 --paginate` milestone-list form exactly (confirmed live against `docs.github.com/en/rest/issues/sub-issues`: `per_page`, max 100, default 30):
+
+```bash
+# bash. Once per parent: list its already-linked sub-issue numbers, paginated (mirrors pass
+# (b)'s milestone-list form: per_page=100 plus --paginate, since a parent can carry up to
+# 100 sub-issues and the endpoint's default page is 30).
+already_linked=()
+skip_pass=0
+if already_linked_raw="$(gh api "repos/{owner}/{repo}/issues/$parent/sub_issues?per_page=100" --paginate --jq '.[].number' 2>&1)"; then
+  if [ -n "$already_linked_raw" ]; then
+    while IFS= read -r c; do already_linked+=("$c"); done <<< "$already_linked_raw"
+  fi
+else
+  echo "create: could not list #$parent's existing sub-issues ($already_linked_raw); skipping the sub-issue-linking pass this run. The deploy above already succeeded; re-run create/update to retry."
+  skip_pass=1
+fi
+```
+
+```powershell
+# PowerShell 7+. Same once-per-parent, paginated fetch.
+$alreadyLinked = @()
+$skipPass = $false
+try {
+  $raw = gh api "repos/{owner}/{repo}/issues/$parent/sub_issues?per_page=100" --paginate --jq '.[].number' 2>&1
+  if ($LASTEXITCODE -ne 0) { throw $raw }
+  if ($raw) { $alreadyLinked = @($raw) }
+} catch {
+  Write-Output "create: could not list #$parent's existing sub-issues ($_); skipping the sub-issue-linking pass this run. The deploy above already succeeded; re-run create/update to retry."
+  $skipPass = $true
+}
+```
+
+**Failure handling for this one listing call (fail-open, report-dont-block).** A failure here means `create` cannot safely tell what is already linked, not that nothing is linked; treating a failed fetch as "zero sub-issues" would risk mis-attempted re-links for children a prior run already linked. So a failure here **skips this whole pass, for this run only** (`skip_pass`/`$skipPass` above), goes straight to the end-of-pass report (step 5) naming every candidate child as "not attempted, listing failed", and **never aborts the already-succeeded deploy** (`.project/design-philosophy.md#Error & failure philosophy`, the same fail-open, non-blocking discipline every other best-effort read in this file already follows). Re-running `create`/`update` retries this listing call fresh.
+
+**2. Per milestone, resolve its title and its Wave-ordered surviving issue numbers (skip this step entirely when step 1 set `skip_pass`).** Reuse the SAME per-milestone `number` and `planfile` the outer loop and the parent-issue pass's step 2 already resolved for this milestone (do not re-derive them). The milestone's exact title is not always already in hand (the parent-issue pass's step 2 only reads it on its title-lookup fallback branch), and this pass always needs the title text itself for the `--milestone` re-assert flag below, so read it fresh, once per milestone, by the identical extraction the parent-issue pass's step 2 fallback already uses. Then read this milestone's LIVE, already pass-(d)-PATCHed description (the same `gh api .../milestones/<number> --jq '.description'` read pass (f)'s Conv 6 back-link already uses, above) and pull every `#<n>` token out of it, in first-appearance order. A milestone description carries `#<n>` references only inside its `## Waves` block (the goal paragraph and the `build order: milestone X of N` line carry none), so this is exactly that milestone's surviving-issue list in Wave order, with no separate `## Waves` parsing needed:
+
+```bash
+# bash. Per milestone: its title (for step 4's re-assert flag) plus its Wave-ordered
+# surviving issues (first-appearance order, deduped). number/planfile are the values the
+# outer loop / parent-issue pass's step 2 already resolved for this milestone.
+title="$(grep -m1 '^Milestone title (exact):' "$planfile" | sed -E 's/^Milestone title \(exact\): *//')"
+desc="$(gh api "repos/{owner}/{repo}/milestones/$number" --jq '.description')"
+children=()
+while IFS= read -r c; do children+=("$c"); done < <(printf '%s\n' "$desc" | grep -oE '#[0-9]+' | tr -d '#' | awk '!seen[$0]++')
+```
+
+```powershell
+# PowerShell 7+. Same two reads.
+$titleLine = Get-Content -LiteralPath $planfile | Where-Object { $_ -match '^Milestone title \(exact\): *(.+)' } | Select-Object -First 1
+$null = $titleLine -match '^Milestone title \(exact\): *(.+)'
+$title = $Matches[1]
+$desc = gh api "repos/{owner}/{repo}/milestones/$number" --jq '.description'
+$children = [regex]::Matches($desc, '#(\d+)') | ForEach-Object { $_.Groups[1].Value } | Select-Object -Unique
+```
+
+**Empty milestone (AC2).** When `$children` comes back empty (every candidate for this milestone parked or dropped, or this milestone's own plan produced no surviving issue at all), this milestone contributes nothing: move on to the next milestone. This needs no special-case code; an empty list simply drives zero iterations below, and is not an error.
+
+**3. Nested-epic refusal, before linking any of this milestone's issues.** If, before starting this milestone, `already_linked` already holds 100 entries (a prior milestone in this same pass already filled the cap, step 4 below), skip this check entirely and every one of this milestone's children go straight to "skipped, cap" in the report (step 5); there is no reason to spend a `gh` call checking a label on an issue that will not be linked regardless. Otherwise, for each number in `$children`, check whether it already carries the `md-epic` label, the same label-check form the driver's own parent-detection unit (U1) uses (`milestone-driver` design spec, "The 5 units" → "(U1) Parent detection": `gh issue view <n> --json labels`, exact match against `.labels[].name`):
+
+```bash
+# bash. Nested-epic check for one child n of this milestone.
+if gh issue view "$n" --json labels --jq '.labels[].name' | grep -qx 'md-epic'; then
+  echo "create: milestone #$number (\"$title\") skipped: sub-issue #$n already carries md-epic (linking it would create a nested epic); no issue in this milestone was linked"
+  refuse_milestone=1
+fi
+```
+
+```powershell
+# PowerShell 7+. Same check.
+$labels = gh issue view $n --json labels --jq '.labels[].name'
+if ($labels -contains 'md-epic') {
+  Write-Output "create: milestone #$number (`"$title`") skipped: sub-issue #$n already carries md-epic (linking it would create a nested epic); no issue in this milestone was linked"
+  $refuseMilestone = $true
+}
+```
+
+If any of this milestone's issues carries the label, refuse the WHOLE milestone: none of its issues are linked (each is recorded "skipped, nested-epic" in step 5's report), the one warning above names the milestone and the offending issue, and the pass continues with the remaining milestones (`milestone-driver` design spec, "Error handling & edge cases": no cycle detection, this refusal is the flag that spec asks the feeder to resolve). A milestone that clears this check (none of its issues carry `md-epic`) proceeds to step 4.
+
+**4. Per child in `$children` (Wave order), for a milestone that passed step 3.** In this fixed order, per child `$n`:
+
+a. **Already linked?** If `$n` is already in `already_linked` (step 1's fetch, or a number a prior child in this same run already added below), it needs nothing further: record it "already linked" in step 5's report and take no other action for it, including no re-assert call (see "Re-assert timing" below). This is the pass's re-run no-op: nothing double-links, and an already-correct child is not touched again.
+
+b. **Cap.** Otherwise, if `already_linked` already holds 100 entries, `$n` is not linked this run: record it "skipped, cap" and move to the next child. `already_linked` only grows on a fresh successful link (step c below), so once it reaches 100 this same check keeps every later child, in every remaining milestone, on this same path with no further `gh` calls, in build order, until the pass ends.
+
+c. **Otherwise, link it.** Run the three steps below, each wrapped so a `gh` failure is caught, reported by this child's number and the error, and never silently marked linked; a failure at any of the three stops for THIS child only, and the pass continues with the next child:
+
+```bash
+# bash. Per child n: resolve numeric id, link, re-assert. parent is this pass's resolved
+# parent number; title is this milestone's own (step 2, above). `-F` sends sub_issue_id
+# as an integer (gh CLI's typed-field flag: gh api --help, "-F/--field has magic type
+# conversion ... integer numbers get converted to appropriate JSON types"). The sub_issues
+# endpoint needs the numeric database id, never the issue number (confirmed against
+# docs.github.com/en/rest/issues/sub-issues, and live by the issue #246 probe).
+if ! child_id="$(gh api "repos/{owner}/{repo}/issues/$n" --jq '.id' 2>&1)"; then
+  echo "create: sub-issue link failed for #$n: could not resolve its numeric id ($child_id)"
+elif ! link_err="$(gh api --method POST "repos/{owner}/{repo}/issues/$parent/sub_issues" -F sub_issue_id="$child_id" 2>&1)"; then
+  echo "create: sub-issue link failed for #$n ($link_err)"
+else
+  already_linked+=("$n")
+  if ! reassert_err="$(gh issue edit "$n" --milestone "$title" 2>&1)"; then
+    echo "create: #$n linked as a sub-issue of #$parent, but re-asserting its own milestone failed ($reassert_err); check #$n's milestone by hand"
+  else
+    echo "create: linked #$n as a sub-issue of #$parent and confirmed its milestone"
+  fi
+fi
+```
+
+```powershell
+# PowerShell 7+. Same three steps, same order, same catch-and-continue per child.
+try {
+  $childId = gh api "repos/{owner}/{repo}/issues/$n" --jq '.id'
+  if ($LASTEXITCODE -ne 0) { throw $childId }
+} catch {
+  Write-Output "create: sub-issue link failed for #$n: could not resolve its numeric id ($_)"
+  continue
+}
+try {
+  gh api --method POST "repos/{owner}/{repo}/issues/$parent/sub_issues" -F "sub_issue_id=$childId" | Out-Null
+} catch {
+  Write-Output "create: sub-issue link failed for #$n ($_)"
+  continue
+}
+$alreadyLinked += $n
+try {
+  gh issue edit $n --milestone $title | Out-Null
+  Write-Output "create: linked #$n as a sub-issue of #$parent and confirmed its milestone"
+} catch {
+  Write-Output "create: #$n linked as a sub-issue of #$parent, but re-asserting its own milestone failed ($_); check #$n's milestone by hand"
+}
+```
+
+**Re-assert timing (states the AC-versus-Design ordering plainly, so both agree).** The re-assert call fires in exactly one case: immediately after THIS run's own fresh link succeeds (step 4c above), the Design section's ordering, chosen because it rides the same per-child pass rather than adding a second, separate top-level sweep over every child on every run (the cheaper of the two readings). A child skipped at step 4a's idempotency check (already linked, whether from this run or an earlier one) gets no re-assert call: it is already correct, and the live probe confirmed linking never clears a child's own milestone (issue #246, first comment: "linking an already-milestoned child as a native sub-issue of a milestone-less parent keeps the child on its own milestone"). So each surviving issue ends this run confirmed on its own milestone either because THIS run just linked and re-asserted it, or because an earlier run already did and this run correctly left it alone.
+
+**A link that succeeds but whose re-assert fails (a named, known edge).** Reported under "failed" in step 5, never folded into "linked": the sub-issue link itself is real and will be found by a later run's step 1 listing, so a later run's step 4a will treat it as already linked and will not attempt the re-assert again automatically. Given the probe's confirmed-preserved finding this is a low-probability, defense-in-depth-only edge; when it happens, the report names the child so a human can re-assert its milestone by hand.
+
+**5. End-of-pass report.** Whether the pass ran to completion, degraded at the cap, was refused for some milestones, or was skipped entirely (step 1's listing failure), report three lists, by child issue number: **linked** (this run: id resolved, link succeeded, re-assert succeeded), **failed** (with the reason: id-resolve error, link error, or link-succeeded-but-reassert-failed), and **skipped** (with the reason: already linked, cap, or nested-epic, naming the milestone for the nested-epic case). When any child was skipped for the cap, print exactly one summary line naming the parent's resulting sub-issue total and the remaining issue numbers that were not linked, for example: `create: sub-issue cap reached on #$parent (100 total); not linked this run: #58, #61, #64`. Nothing is ever silently dropped from this report.
+
+**How each acceptance criterion is met.**
+
+| Criterion | Where it is satisfied |
+|---|---|
+| Every surviving issue linked, confirmed on its own milestone | Step 4c: link then re-assert, in build order (milestone position, then Wave order). |
+| Empty milestone contributes nothing | Step 2's empty-`children` case: zero iterations, not an error. |
+| Re-run is a no-op (no double-link) | Step 1's once-per-parent fetch plus step 4a's idempotency skip; no re-assert on an idempotent skip (see "Re-assert timing"). |
+| Cap warn, never a silent drop | Step 4b's per-child gate plus step 5's single summary line naming the total and the not-linked numbers. |
+| Nested-epic refusal | Step 3: whole-milestone skip on any offending issue, one warning naming the milestone and the issue. |
+| Per-child failure reported, never silently linked | Step 4c's catch-and-continue per child; step 5's linked/failed/skipped report. |
+| bash + PowerShell 7+ twins | Every `gh` form above ships both. |
+
 ### Step 3 — deploy write-sequence (passes a-d)
 
 The full mechanics of the deploy write-sequence passes **a, b, c, d** — every `gh` form with its bash + PowerShell 7+ twin, the create-or-adopt resolution table, the deploy-receipt back-write, the slug→`#n` map, and the substring-safe rewrite rule. Pass **e** (the needs-input report) stays in `skills/create/SKILL.md` Step 3. (`create`'s Step 3 skeleton names all five passes in fixed order and points here for a–d.)
