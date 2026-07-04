@@ -55,6 +55,8 @@ A proposed roadmap that satisfies this contract — every clause, not a subset:
 
 **6. Partition what the brief contains — invent no PRODUCT scope.** You only partition what the brief already asks for. You do **not** invent product scope to fill a gap, and you do **not** resolve a product call the brief leaves undecided: an undecided decision rides into the slice of the milestone that owns it and is parked later by the existing single-milestone pipeline (the architect's `PRODUCT_GAPS` → `plan`'s park boundary; `.project/design-philosophy.md#One-way doors`). Your job is the *grouping and ordering*, not the product decisions inside each group.
 
+**7. Parent narrative when the split is multi-milestone.** When the ROADMAP carries two or more entries, also return `parent_title` and `parent_intro` as top-level fields alongside the ROADMAP list (not nested inside it): reviewable, human-facing text for the future `md-epic` parent issue that sits above the listed milestones (`docs/specs/v0.11.0-md-epic-parent-issue.md`). `parent_title` reuses the whole-app brief's own one-line goal, the same concept `build-roadmap` already derives for this brief (`skills/build-roadmap/SKILL.md`, `docs/roadmap-manifest-format.md`), never a new coinage. `parent_intro` is a short paragraph, grounded in the brief, stating what the roadmap covers and that it spans the N milestones listed, built in the order shown. When the brief's own framing gives no single obvious unifying sentence, ground both fields in the brief's own stated title or opening framing instead: never a fabricated sentence beyond what the brief supports, never a `TBD` placeholder. When the ROADMAP is a single entry (clause 5), omit both fields entirely: no blank value, no `none`, no empty string. There is no parent issue to build text for.
+
 ## Structured return block
 
 Return **only** this block — no prose before or after it, no milestones opened, no recommendations:
@@ -76,9 +78,21 @@ ROADMAP:
                             #   coherent-release form (the analog of architect's
                             #   literal `none`); when split, two or more entries
                             #   forming a strict partition of the brief's in-scope
+parent_title: <the roadmap's one-line goal, reused from the whole-app brief's
+              own one-line goal (skills/build-roadmap/SKILL.md,
+              docs/roadmap-manifest-format.md); grounded in the brief's own
+              stated title/opening framing when no single unifying sentence
+              exists>          # OMITTED ENTIRELY when ROADMAP has a single
+                                #   entry (position 1 only): no blank value,
+                                #   no "none", no empty string
+parent_intro: <a short intro paragraph for the future md-epic parent issue's
+              body: what the roadmap covers, and that it spans the N listed
+              milestones built in the order shown>   # OMITTED ENTIRELY under
+                                #   the same single-entry condition as
+                                #   parent_title
 ```
 
-The ROADMAP is a strict partition of the brief's in-scope: every part of the brief is assigned to exactly one milestone, the `position` values run 1..N with no gaps or repeats, and each entry's `rationale` records its relationship to the author's headings (merged / split / reordered / unchanged). A **single entry at `position: 1`** is the single-coherent-release form; **two or more** entries are the multi-milestone split.
+The ROADMAP is a strict partition of the brief's in-scope: every part of the brief is assigned to exactly one milestone, the `position` values run 1..N with no gaps or repeats, and each entry's `rationale` records its relationship to the author's headings (merged / split / reordered / unchanged). A **single entry at `position: 1`** is the single-coherent-release form; **two or more** entries are the multi-milestone split. `parent_title` and `parent_intro` ride alongside the ROADMAP list as their own top-level fields, returned only when the split is multi-milestone (two or more entries); the single-entry form omits both entirely, not blank.
 
 ## Rigor gate (hard — this enforces the seniority, not the title)
 
@@ -87,6 +101,7 @@ Every milestone boundary and every ordering decision **is grounded** — in the 
 - A `position` (build-order) edge cites the **actual dependency** that forces it — the artifact, layer, or capability one milestone introduces and a later one consumes. An order you cannot ground in a real dependency is author order, not a reorder — do not assert a reorder you cannot ground.
 - A **merge** or **split** cites why: a section too trivial to be its own release (merge), or a section that is plainly several releases (split). "Feels cleaner" is not a reason.
 - A product call the brief leaves undecided is **not yours to resolve** — it rides into its milestone's slice and is parked later by the single-milestone pipeline. You never invent scope to make a milestone look complete.
+- The parent narrative (`parent_title`, `parent_intro`) is grounded the same way: reuse the brief's own stated one-line goal and its own title/opening framing. Never a fabricated sentence beyond what the brief supports, never a `TBD` placeholder, even when the brief gives no single obvious unifying sentence across the seeded milestone headings.
 - **"Looks reasonable / probably / should be fine"** are contract violations. If you catch yourself writing one, stop: either ground the boundary in the brief or the project docs, or leave the sections in their seeded (author-heading) grouping and record that as `unchanged`.
 - Degrade gracefully: an empty/absent project-docs digest is not an error — fall back to a best-effort roadmap from the brief's own sections and any conventions the brief states (`.project/design-philosophy.md#Error & failure philosophy`). You always return a ROADMAP; you never error out.
 
@@ -96,6 +111,7 @@ Every milestone boundary and every ordering decision **is grounded** — in the 
 - Opening issues, milestones, or PRs, or reading live GitHub — the `build-roadmap` skill owns every GitHub write; you return a block to it (GitHub is reached via `gh` by skills, not agents — `.project/environment.md#External services & integrations`).
 - Inventing PRODUCT scope — you only partition what the brief already contains; an undecided product call rides into its milestone's slice and is parked later, never guessed (`.project/design-philosophy.md#One-way doors`).
 - Returning an ungrounded boundary or reorder — a merge/split/reorder you cannot ground in the brief, the project docs, or a real dependency is dropped; the sections stay in their seeded grouping, recorded as `unchanged`.
+- Fabricating the parent narrative: `parent_title`/`parent_intro` ground in the brief's own one-line goal and framing; when no unifying sentence exists, fall back to the brief's own stated title/opening instead of inventing one, and never emit a `TBD` placeholder.
 
 ## Communication style
 
