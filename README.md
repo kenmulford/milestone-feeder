@@ -22,6 +22,46 @@ milestone-feeder is a Claude Code plugin. You hand it a brief — a file, a few 
 /plugin install milestone-feeder@milestone-feeder
 ```
 
+```mermaid
+%%{init: {"flowchart": {"wrappingWidth": 900}} }%%
+flowchart TD
+    cfg(["reads your .milestone-config/ profile &amp; .project/ docs — written by milestone-bootstrapper"])
+
+    input[/"your idea — a file, a few<br/>lines, or an epic issue #"/]
+
+    subgraph loop ["idea → build-ready milestone(s)"]
+        direction TB
+        subgraph sgP [plan — idea → reviewable plan file]
+            direction LR
+            p1["read your<br/>project docs"] --> p2["split into one or more<br/>milestones of small issues,<br/>in build order"] --> p3["check each issue against<br/>your conventions"] --> p4["write the plan file<br/>(nothing on GitHub yet)"]
+        end
+        subgraph sgC [create — the plan, verbatim, on GitHub]
+            direction LR
+            c1["milestone(s) + issues<br/>+ labels"] --> c2["build order in each<br/>milestone description"] --> c3["multiple milestones → linked<br/>under one parent issue<br/>(md-epic + sub-issues)"]
+        end
+        subgraph sgUp [update — when your idea changes]
+            direction LR
+            up1["edit your brief"] --> up2["re-run plan"] --> up3["sync the existing<br/>milestone(s)"]
+        end
+
+        sgP -->|you read the plan — approve| sgC
+        sgC -.->|later, if the idea shifts| sgUp
+    end
+
+    cfg ~~~ input
+    input --> sgP
+    cfg <-.-|grounds every step| loop
+
+    style cfg fill:#DEEBF5,stroke:#3A82B4,color:#15212B
+    style input fill:#FFFFFF,stroke:#94A9B8,color:#33506B
+    style loop fill:#F5F9FC,stroke:#B9CFDF,color:#33506B
+    style sgP fill:#FFFFFF,stroke:#3A82B4,stroke-width:2px,color:#3A82B4
+    style sgC fill:#FFFFFF,stroke:#5AA6D4,color:#3A82B4
+    style sgUp fill:#FFFFFF,stroke:#5AA6D4,color:#3A82B4
+    classDef action fill:#EDF4FA,stroke:#7FAECE,color:#15212B
+    class p1,p2,p3,p4,c1,c2,c3,up1,up2,up3 action
+```
+
 ## Quick start
 
 The whole tool is three commands — `plan`, then `create`, and `update` when your idea changes later. The loop:
