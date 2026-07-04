@@ -33,11 +33,26 @@ Read `.milestone-config/feeder.json`. **Absent → invoke `milestone-feeder:setu
 |---|---|---|
 | `autoHandoff` | `"prompt"` | After the deploy, whether `create` offers to hand the milestone to `milestone-driver` to start building (Step 4). `"prompt"` → ask (default); `"auto"` → kick off immediately, no prompt; `"off"` → never offer. An **unrecognized value** (anything that is not exactly `"prompt"`, `"auto"`, or `"off"`) is treated as the default `"prompt"` — mirrors how `versioning` treats an invalid value as absent (`docs/profile-schema.md` `versioning` per-key note); never error on the key. |
 
+**Surface the md-epic parent-issue notice once per clone (read-only, marker-gated, non-blocking).** A roadmap deploy of more than one milestone now also creates the driver's `md-epic`-labeled parent issue (Step 1R below); a single-milestone deploy is unchanged. This is a behavior change with no config key to flip, so existing users need a way to discover it: `create` prints a one-time, per-clone notice the first time it runs in a clone with the marker absent.
+
+Gate: print the 🟡 notice **verbatim** ONLY when the per-clone marker `.milestone-config/.runtime/md-epic-parent-notice` is **absent**. Otherwise unconditional: there is no repo-state condition, because the notice announces a behavior change. On print, ensure `.runtime/` exists (`mkdir -p .milestone-config/.runtime` / `New-Item -ItemType Directory -Force`), then create the marker. The marker is **shared with `update`'s Step 0**, so the notice shows at most once per clone across both verbs, mirroring how the Implied-surfaces notice shares a marker across `plan` and `update`. **Both emitter twins are best-effort:** swallow any failure (unwritable dir, permission error) and continue the `create` run. A failed detect/notice/marker write must never abort `create`. Read-only except the `.runtime/` dir and the marker.
+
+<!-- The md-epic-parent notice, its verbatim 🟡 text and both emitter twins (bash + PowerShell 7+), lives in `docs/one-time-notices.md` → "md-epic parent notice" (#248), the canonical unit. KEEP IN SYNC with `skills/update/SKILL.md` Step 0: `create` shares that notice's verbatim text and its per-clone marker `.milestone-config/.runtime/md-epic-parent-notice` with the update Step-0 twin, so the notice shows at most once per clone across both verbs. -->
+When the gate above fires, emit the notice **exactly as recorded** in `docs/one-time-notices.md` → "md-epic parent notice", the byte-exact 🟡 text **and** both emitter twins (the bash and PowerShell 7+ forms; run the one for your shell), then create the shared marker `.milestone-config/.runtime/md-epic-parent-notice`.
+
 ### Step 1R — Resolve the deploy target: a single plan, or a roadmap of N milestones
 
 Check for a **roadmap manifest** at `.milestone-feeder/roadmap-<slug>.md` (slug derived as in Step 1). **Absent → single-plan path, UNCHANGED:** fall through to Step 1 and run Steps 1 → 4 once (the **N=1** case). **Found → roadmap deploy:** read the manifest (**never** regenerate it) and loop the per-plan deploy (Step 2 → Step 3 passes a–e) over its milestones in build order, resolving each by its recorded `Plan file:` path and recording its `build order: milestone X of N` line **inside** pass (d)'s description PATCH (idempotent). A mid-loop failure stops, deletes nothing, and re-runs resume.
 
+**Once the loop has deployed all N milestones, `create` runs one more pass, exactly once:** it ensures the `md-epic` label, creates or adopts the roadmap's single parent issue, renders and PATCHes its `md-epic-order` body block, and writes the manifest's `Parent issue (GitHub): #<n>` receipt, before continuing to Step 4. This produces the driver's cross-milestone parent issue (`docs/specs/v0.11.0-md-epic-parent-issue.md`). A roadmap manifest existing at all already means N is at least 2 (`docs/roadmap-manifest-format.md`: the `Parent title:`/`Parent intro:` fields are written only for a confirmed multi-milestone split), so the single-plan path above never reaches this pass and an N=1 deploy stays byte-unchanged.
+
+Immediately after that receipt write, in the same run, `create` links every deployed milestone's surviving issues to the parent as native GitHub sub-issues, in build order, and re-asserts each freshly linked child's own milestone right after its own fresh link (never for a child already linked). A 100-sub-issue-per-parent cap, a per-milestone nested `md-epic` refusal, and a per-child linked/failed/skipped report all apply; a `gh` failure never fails the deploy, and a re-run of this pass links nothing twice.
+
 Full mechanics — the resolution table, the outer-loop per-milestone steps, and the build-order-line assembly twins — live in **`docs/create-deploy-sequence.md` → "Step 1R — Resolve the deploy target"**.
+
+Mechanics for the new md-epic parent-issue pass live in that same reference, immediately after the build-order-line assembly twins.
+
+Mechanics for the sub-issue-linking pass, the cap, the nested-epic refusal, and the per-child failure/idempotency handling, live in that same reference, immediately after the md-epic parent-issue pass.
 
 ### Step 1 — Resolve the plan file for the brief
 

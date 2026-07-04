@@ -51,7 +51,13 @@ ROADMAP:
     brief_slice: <…>
     rationale: <…>
   - …                       # one entry per proposed milestone, IN BUILD ORDER
+parent_title: <the roadmap's one-line goal, reused from the whole-app brief's
+              own one-line goal>   # top-level field, alongside ROADMAP
+parent_intro: <a short intro paragraph for the future md-epic parent issue's
+              body: what the roadmap covers and the build order it spans>
 ```
+
+`parent_title` and `parent_intro` are whole-roadmap fields, not per-milestone entries: the roadmap's one-line goal (the future `md-epic` parent issue's title) and a short intro paragraph for that issue's body (`agents/roadmap-splitter.md` clause 7). Both ride alongside the `ROADMAP` list only when the split is multi-milestone (two or more entries); the single-milestone return (Step 2's single-milestone row) omits them entirely, not blank.
 
 ### Step 2 — Validate the returned ROADMAP (partition / single-milestone / error)
 
@@ -61,11 +67,18 @@ Read the returned block and route to exactly one of three outcomes. **Nothing is
 |---|---|---|
 | **Multi-milestone partition** | The block parses; **two or more** entries; `position` values run `1..N` with no gaps or repeats; the `brief_slice` set is a **strict partition** of the brief's in-scope — every part of the brief assigned to exactly one milestone, none dropped, none duplicated. | Proceed to **Step 3** (surface for confirm). |
 | **Single-milestone (does not split)** | The block parses but carries **fewer than two** milestones (a single entry at `position: 1` — the analog of the architect's literal `none`, `agents/roadmap-splitter.md` clause 5). | **Write no manifest.** Tell the user it is a single milestone after all, and **return control** so `plan` proceeds with its existing single-milestone pipeline on the whole brief **unchanged**. **This is NOT an error.** |
-| **Error / malformed / non-partition** | The dispatch failed (no usable block returned), **or** the block is unparseable, **or** it is **not a strict partition** — a brief slice unassigned, a slice double-assigned, or `position` values with a gap or a repeat. | **Surface the failure** to the user (state what was wrong). **Write no partial or corrupt manifest.** **Return control without advancing** — `plan` does not proceed on a failed split. |
+| **Error / malformed / non-partition** | The dispatch failed (no usable block returned), **or** the block is unparseable, **or** it is **not a strict partition** (a brief slice unassigned, a slice double-assigned, or `position` values with a gap or a repeat), **or** it is a multi-milestone (two or more entries) return that omits `parent_title` and/or `parent_intro` (the fields `agents/roadmap-splitter.md` clause 7 requires whenever the split is multi-milestone): a well-formed but incomplete parent-field return is malformed under this row too. | **Surface the failure** to the user (state what was wrong). **Write no partial or corrupt manifest.** **Return control without advancing** (`plan` does not proceed on a failed split). |
 
 A partition check that the splitter's own contract guarantees is **re-verified here, not assumed** — the skill owns the manifest, so it gates what lands in it.
 
 ### Step 3 — Surface the proposed roadmap for confirm / merge / split / reorder / reject
+
+Step 2's multi-milestone route guarantees `parent_title`/`parent_intro` are present at this point (a return missing either field never reaches Step 3, per Step 2's error row). Surface them first, in a small key/value table:
+
+| Field | Value |
+|---|---|
+| Parent title | <parent_title> |
+| Parent intro | <parent_intro> |
 
 **Surface the proposed roadmap for the user to confirm BEFORE writing anything** — mirror `plan`'s surface-for-confirm (`skills/plan/SKILL.md` Step 7 — "Surface the resolved identity for confirm/override"; `.project/design-philosophy.md#One-way doors` — a one-way door is surfaced for sign-off, never silently finalized). Present the proposal as a table, one row per milestone:
 
@@ -82,6 +95,8 @@ The user may:
 | **Confirm** | Record the proposal as-is. Proceed to Step 4. |
 | **Merge / split / reorder** | Apply the user's edits to the roadmap, then **re-verify the partition** (Step 2's partition rule) — a user edit that drops or duplicates a brief slice, or that breaks the `1..N` positions, is **re-surfaced for correction, never silently written**. Once the edited roadmap is a valid partition and the user confirms it, proceed to Step 4 recording the **user-confirmed** roadmap (edits applied) — **not** the raw proposal. |
 | **Reject** | **Write no manifest.** Return control to `plan` (the user declined the split). |
+
+The same three choices govern `parent_title`/`parent_intro` too: Confirm records them as-is, an edit to either persists the edited value (never the raw proposal), and Reject discards them along with the rest of the rejected proposal, no manifest written.
 
 ### Step 4 — Write the roadmap manifest (on confirmation) and return control
 
@@ -102,6 +117,8 @@ if (-not (Test-Path .milestone-feeder/.gitignore)) { Set-Content -LiteralPath .m
 **Derive the manifest slug deterministically.** Write the manifest to `.milestone-feeder/roadmap-<slug>.md`, where `<slug>` is derived from the **whole-app brief's one-line goal / title** by the **same deterministic rule the plan file uses** (`.project/conventions.md#Naming`; `skills/plan/SKILL.md` Step 7): take the one-line goal, lowercase it, replace every run of non-alphanumeric characters with a single hyphen, strip any leading/trailing hyphens, and cap the length at a reasonable bound (trimming a trailing hyphen if the cut lands on one). A roadmap has no single milestone goal, so the slug derives from the whole-app brief's one-line goal/title; the manifest header carries the source-brief reference for the brief↔manifest match.
 
 **Write the manifest** (format in `docs/roadmap-manifest-format.md` — read it on demand). **A failed scratch-write is surfaced, not swallowed** — if the write fails, tell the user and **do not advance control** as if a manifest existed (`.project/design-philosophy.md#Error & failure philosophy` — surfaced, never silently dropped). Never leave a partial or corrupt manifest: on any write failure, the manifest must be absent, not half-written.
+
+The header block now also carries the user-confirmed `Parent title:` and `Parent intro:` fields immediately after `Build order:`, persisting the values confirmed at Step 3, never the raw splitter proposal.
 
 **Return control + the manifest path to `plan`.** On a successful write, return the manifest path so `plan` resumes and runs its single-milestone pipeline once per milestone the roadmap names, in build order. On the single-milestone (Step 2) or reject (Step 3) paths, return with **no** manifest path — signalling `plan` to proceed with its existing single-milestone pipeline on the whole brief, unchanged.
 

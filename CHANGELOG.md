@@ -3,6 +3,29 @@
 Release notes for milestone-feeder. Each tagged release is also published on the
 [GitHub Releases page](https://github.com/kenmulford/milestone-feeder/releases).
 
+## v0.11.0: md-epic parent issue
+
+**Theme:** The suite's two halves gain a shared handoff object. When a roadmap deploy produces more than one milestone, `create` now also opens one parent issue, labeled `md-epic`, whose body lists the milestones in build order. `milestone-driver` (already shipped on v1.15.0) reads that parent and drives the milestones in sequence on its own, instead of relying on the free-text `milestone X of N` line a human had to read. A single-milestone plan or create stays byte-unchanged: no parent issue, no label, nothing new to configure.
+
+### ✨ The roadmap gets a parent issue
+
+| Issue | PR | What |
+|---|---|---|
+| #243 `roadmap-splitter` returns the parent's title and intro | #251 | The roadmap-splitter agent now also returns a one-line parent title and a short intro paragraph for the whole roadmap, alongside the milestone split it already returns. |
+| #244 `build-roadmap` captures them into the manifest | #253 | The roadmap manifest gains `parent_title` and `parent_intro` fields, so the parent issue's text is reviewed alongside the milestone split before anything deploys. |
+| #245 `create` produces the parent issue | #254 | `create` ensures the `md-epic` label exists, then creates or adopts one parent issue carrying the reviewed title and intro plus a `md-epic-order` block listing the deployed milestones in build order. A manifest receipt records the parent's issue number for idempotent re-runs. |
+| #246 `create` links the milestones' issues | #255 | Each milestone's own issues are linked to the parent as native GitHub sub-issues, then each issue's own milestone is re-asserted, so linking never strands an issue on the parent's own (empty) milestone. |
+| #247 `update` reconciles the parent on a re-plan | #256 | When a roadmap is re-planned, `update` rewrites the `md-epic-order` block to the current build order, links any newly-added milestone's issues, and reconciles the parent by adopting it, never duplicating or deleting it. |
+| #248 One-time discovery notice | #252 | `plan` and `create` show a one-time, per-clone notice the first time the parent-issue behavior could apply, so an existing user learns about it without needing to read this changelog. |
+
+The verification probe (#242, PR #250) confirmed the GitHub behavior this design relies on before any skill was edited; this entry (#249, its own PR) is the narrative docs sweep recording the above. Neither is a behavior change, so neither appears in the table.
+
+### Consumer notes (upgrading from v0.10.0)
+
+- **New, roadmap-only: a parent issue ties your milestones together.** When your brief spans several releases and `create` deploys more than one milestone, it now also opens one parent issue (labeled `md-epic`) whose body lists every deployed milestone in build order. `milestone-driver` reads that parent and builds the milestones in sequence on its own, instead of relying on a human reading the `milestone X of N` line. A single-milestone brief is byte-unchanged: no parent issue, no label, nothing to configure.
+- **No new config key.** This is default behavior on the roadmap path. There is nothing to add to `.milestone-config/feeder.json`, and nothing in `/milestone-feeder:setup` changes.
+- **One edge worth knowing.** A roadmap whose milestones add up to more than GitHub's 100-sub-issue-per-parent cap cannot link every issue. `create` warns clearly when this happens rather than failing silently or linking only some of the issues without saying so.
+
 ## v0.10.0 — size-aware split + Trello mirror
 
 **Theme:** Two independent improvements to how a brief becomes milestones — and where the result shows up. The architect's roadmap nudge now also fires when a **single-theme** breakdown is simply too **large or heavy** to be one milestone — not only when a brief spans phased releases or release boundaries — so an oversized brief is steered toward a sequenced roadmap up front (a qualitative call, no numeric threshold). And when your `milestone-driver` is configured with Trello, `create` now **mirrors** each freshly-deployed milestone onto your board — one card on the queue list, its issues as a Wave-ordered checklist — so the work is visible on your project board the moment it's created, instead of waiting for the driver's first build run. The Trello destination is read from the **driver** profile; no new feeder config key is added.
