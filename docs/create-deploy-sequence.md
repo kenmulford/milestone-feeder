@@ -29,7 +29,7 @@ Before resolving a plan file, check whether `plan`'s roadmap flow left a **roadm
 | **iii. Deploy it** | **Step 3 passes a–e**, entirely unchanged — ensure labels (a) / create-or-adopt the milestone by exact title (b) / create-or-reuse each surviving issue by exact title (c) / slug→`#n` rewrite + Wave-description PATCH (d) / route the needs-input report (e). Per-milestone idempotency is the existing **create-or-adopt**, inherited per iteration: never delete a milestone or issue, never duplicate a same-title open issue. |
 | **iv. Record the build-order line** | When pass (d) PATCHes this milestone's description, include the canonical `build order: milestone X of N` line in the PATCHed description, alongside the `## Waves` block (see "The build-order line" below). |
 
-After the loop deploys all N, report each milestone's deploy receipt (`#`) and the recorded build order, then continue to **Step 4** (its multi-milestone note).
+After the loop deploys all N, run **the md-epic parent-issue pass** below exactly once: it ensures the `md-epic` label, creates or adopts the roadmap's single parent issue, renders and PATCHes its `md-epic-order` body block, and writes the manifest's `Parent issue (GitHub): #<n>` receipt. Then report each milestone's deploy receipt (`#`), the recorded build order, and the parent issue's own `#`, and continue to **Step 4** (its multi-milestone note).
 
 **The build-order line (the cross-milestone metadata).** Pin **one** canonical literal — `build order: milestone X of N` — where **X** is this milestone's `Build-order position` (1..N) and **N** is the manifest's milestone count. It extends the Wave-order-in-description convention (`SPEC.md` §4): the description already encodes the *intra*-milestone Wave order (`## Waves`); this single line encodes the *cross*-milestone position the driver reads to build the roadmap in sequence. Place it as a standalone line directly under the one-paragraph milestone goal and above the `## Waves` block, so milestone X's PATCHed description reads:
 
@@ -66,6 +66,188 @@ gh api --method PATCH "repos/{owner}/{repo}/milestones/<number>" -f "description
 ```
 
 Re-PATCHing on a re-run overwrites the line — idempotent by construction, so the `build order: milestone X of N` count stays exactly one per milestone, never growing.
+
+**The md-epic parent-issue pass (Step 1R, roadmap-only, runs ONCE after the outer loop).** Once the outer loop above has deployed all N milestones (every milestone's own Step 3 passes a through e complete), `create` runs one more pass, exactly once per roadmap deploy, before continuing to Step 4. This pass produces the driver's cross-milestone parent issue: an ordinary GitHub issue, labeled `md-epic`, whose body carries the ordered list of milestone numbers `milestone-driver` v1.15.0 reads to build the roadmap in sequence (`docs/specs/v0.11.0-md-epic-parent-issue.md`, "The read-contract"). A roadmap manifest existing at all already implies N is at least 2 (above: the `Parent title:`/`Parent intro:` fields, and therefore the manifest itself, are written only for a confirmed multi-milestone split); the single-plan path (this section's Absent row) never reaches this pass, so an N=1 deploy stays byte-unchanged.
+
+Run these steps, in this fixed order:
+
+**1. Ensure the `md-epic` label (mirrors pass a's flat upsert form, below).** Run this line before anything else in this pass touches an issue, so the later `--label "md-epic"` always resolves. `--force` upserts (creates if absent, updates color/description if present); re-runs never duplicate. Color and description are non-functional metadata, same as the four canonical labels; the label NAME is the only load-bearing part of the read-contract, exact and case-sensitive:
+
+```
+gh label create "md-epic" --color FBCA04 --description "Parent/epic grouping issue" --force
+```
+
+This line is identical on bash and PowerShell 7+ (same as pass a's four lines).
+
+**2. Gather every deployed milestone's number, in build order.** The parent's body needs every milestone's real number before it can be rendered, whether the parent is about to be created or re-PATCHed, so gather them BEFORE touching the parent issue at all: this is what keeps a mid-pass failure from ever half-writing a parent body. For each of the manifest's `## Milestones (in build order)` entries, in the order they appear (position 1..N), read this milestone's number:
+
+| Source | Read |
+|---|---|
+| Primary | This entry's `Plan file:` path (`$planfile` below; the same path the outer loop's step i resolved), then that plan file's own `Milestone number (GitHub): <n>` receipt line (the receipt pass b writes, below). |
+| Fallback (receipt line absent) | Pass b's receipt write is itself best-effort / report-don't-block, so a prior run may have deployed the milestone but failed to write its receipt. Re-resolve the number by an exact-title lookup against that same plan file's `Milestone title (exact):` line, using the identical quote-safe `env.t` form pass b already uses (below). |
+
+```bash
+# bash. Read this milestone's number: its own receipt, else the exact-title lookup (pass b's form).
+# planfile is this milestone's Plan file: path; append the result to the numbers array, in order.
+n="$(grep -m1 '^Milestone number (GitHub):' "$planfile" 2>/dev/null | sed -E 's/^Milestone number \(GitHub\): *([0-9]+).*/\1/')"
+if [ -z "$n" ]; then
+  title="$(grep -m1 '^Milestone title (exact):' "$planfile" | sed -E 's/^Milestone title \(exact\): *//')"
+  n="$(t="$title" gh api "repos/{owner}/{repo}/milestones?state=all&per_page=100" --paginate \
+        --jq '.[] | select(.title==env.t) | .number' | head -1)"
+fi
+numbers+=("$n")
+```
+
+```powershell
+# PowerShell 7+. Same two-tier read: this milestone's own receipt, else the exact-title lookup.
+$n = $null
+$recpt = Get-Content -LiteralPath $planfile | Where-Object { $_ -match '^Milestone number \(GitHub\): *(\d+)' } | Select-Object -First 1
+if ($recpt -match '^Milestone number \(GitHub\): *(\d+)') { $n = $Matches[1] }
+if (-not $n) {
+  $titleLine = Get-Content -LiteralPath $planfile | Where-Object { $_ -match '^Milestone title \(exact\): *(.+)' } | Select-Object -First 1
+  $null = $titleLine -match '^Milestone title \(exact\): *(.+)'
+  $env:t = $Matches[1]
+  $n = gh api "repos/{owner}/{repo}/milestones?state=all&per_page=100" --paginate `
+        --jq '.[] | select(.title==env.t) | .number' | Select-Object -First 1
+}
+$numbers += $n
+```
+
+If both the receipt and the title lookup fail to resolve a number for some milestone, STOP this pass right here (Failure semantics below): report which milestone could not be resolved, and do not touch the parent issue at all.
+
+**3. Render the body.** Prose first (the manifest's reviewed `Parent intro:` line, verbatim), then the ordered block. Opening fence is exactly ```` ```md-epic-order ```` (three backticks immediately followed by the string, no leading or trailing space), one `number: <n>` line per milestone gathered in step 2, in build order, never `#<n>` (per the read-contract, `docs/specs/v0.11.0-md-epic-parent-issue.md`), closed by a line that is exactly a closing fence. Build the body into a temp file, not an inline shell string, because the literal backticks in the fence are hazardous in BOTH shells when embedded in an expandable (double-quoted) string:
+
+- **Bash hazard.** Backticks inside a double-quoted string trigger old-style command substitution. Live repro of the hazard this pass avoids:
+
+  ```bash
+  x="before `echo INJECTED` after"; echo "$x"
+  # prints: before INJECTED after (the embedded "command" actually ran)
+  ```
+
+- **PowerShell hazard.** A backtick is the escape character inside a double-quoted string or a double-quoted here-string (`@"..."@`); a run of three backticks does not survive one, because backtick-backtick collapses to one literal backtick and the third backtick, followed by a non-escape letter, is dropped (Microsoft Learn `about_Quoting_Rules`; the PowerShell language specification's escaped-character table). Live repro of the hazard this pass avoids:
+
+  `````powershell
+  $test = @"
+  before ```md-epic-order after
+  "@
+  Write-Output $test
+  # prints: before `md-epic-order after (two of the three backticks were silently eaten)
+  `````
+
+Both shells below use single-quoted strings for the fence lines, where a backtick is always literal in both bash and PowerShell:
+
+`````bash
+# bash. Assemble the body into a temp file; single-quoted printf format strings keep every
+# backtick literal (never triggers command substitution). $intro is the manifest's Parent
+# intro: line; numbers is the array gathered in step 2, in build order.
+bodyfile="$(mktemp)"
+{
+  printf '%s\n\n' "$intro"
+  printf '```md-epic-order\n'
+  for n in "${numbers[@]}"; do printf 'number: %s\n' "$n"; done
+  printf '```\n'
+} > "$bodyfile"
+`````
+
+`````powershell
+# PowerShell 7+. Same assembly; single-quoted strings keep every backtick literal.
+# $intro is the manifest's Parent intro: line; $numbers is the array gathered in step 2, in
+# build order.
+$bodyLines = @($intro, '')
+$bodyLines += '```md-epic-order'
+foreach ($n in $numbers) { $bodyLines += "number: $n" }
+$bodyLines += '```'
+$bodyFile = New-TemporaryFile
+Set-Content -LiteralPath $bodyFile -Value $bodyLines -Encoding utf8NoBOM
+`````
+
+**4. Resolve the parent (create-or-adopt), then create it or REPLACE-PATCH it.** Resolve in this order:
+
+| Resolution | Action |
+|---|---|
+| **(a) The manifest already carries `Parent issue (GitHub): #<n>`** | Adopt `<n>` directly, no further lookup. |
+| **(b) Absent, an OPEN issue carrying the `md-epic` label has the exact title of the manifest's `Parent title:`** (mirrors pass c's adopt-by-title de-dup, below) | Adopt that issue's number. This safety net keeps the parent from ever duplicating even when a prior run created it but failed to write the receipt (step 5's write is itself best-effort, the identical risk pass b's receipt write carries). |
+| **(c) No match** | Create it: `gh issue create --title "<parent-title>" --body-file "<body-file-path>" --label "md-epic"`. No `--milestone` flag, no other label. Capture the returned number. |
+
+```bash
+# bash. The (b) adopt-by-title search, quote-safe via env.t (mirrors pass b's title search).
+t="<parent-title>" gh issue list --label "md-epic" --state open --json number,title \
+  --jq '.[] | select(.title==env.t) | .number'
+```
+
+```powershell
+# PowerShell 7+. Same adopt-by-title search.
+$env:t = "<parent-title>"
+gh issue list --label "md-epic" --state open --json number,title --jq '.[] | select(.title==env.t) | .number'
+```
+
+**On adopt ((a) or (b)), the re-run rewrite (mirrors pass d's REPLACE-form PATCH, below):** the body from step 3 was already recomputed fresh from the current manifest and the current milestone numbers on this same run, so REPLACE the whole body:
+
+```bash
+gh issue edit "$n" --body-file "$bodyfile"
+```
+
+```powershell
+gh issue edit $n --body-file $bodyFile
+```
+
+This is a full-body replace, never an append, so a re-run never leaves a second `md-epic-order` block. On create ((c) above), the body is already the freshly rendered one from step 3; no separate edit call is needed.
+
+**5. Write the manifest receipt.** `Parent issue (GitHub): #<n>` as a sibling header line on the roadmap manifest, using the same idempotent read-modify-write mechanic pass b already implements (below), extended with a two-tier anchor:
+
+- **Present** → rewrite the number in place (exactly one line, never a duplicate).
+- **Absent, `Parent intro:` present** → insert immediately after it.
+- **Absent, `Parent intro:` also absent, `Build order:` present** → insert immediately after `Build order:` (a hand-edited or pre-#244 manifest missing `Parent intro:`).
+- **Absent, neither anchor present** → degrade visibly: append at EOF (the present branch finds it on the next run).
+
+```bash
+# bash. Rewrite the receipt in place if present, else insert after Parent intro:, else after
+# Build order:, else append at EOF. n is the resolved parent number; manifest is the roadmap
+# manifest path Step 1R resolved. On any write error, emit the notice and continue (don't block).
+manifest=".milestone-feeder/roadmap-<slug>.md"
+n="<resolved-parent-issue-number>"
+notice="create: deployed the md-epic parent #$n but could not write the receipt to $manifest; re-run to record it"
+tmp="$(mktemp)" || { echo "$notice"; }
+if [ -n "$tmp" ]; then
+  if grep -q '^Parent issue (GitHub):' "$manifest"; then
+    awk -v n="$n" '!done && /^Parent issue \(GitHub\):/ { print "Parent issue (GitHub): #" n; done=1; next } { print }' "$manifest" > "$tmp" \
+      && mv "$tmp" "$manifest" || echo "$notice"
+  elif grep -q '^Parent intro:' "$manifest"; then
+    awk -v n="$n" '{ print } !done && /^Parent intro:/ { print "Parent issue (GitHub): #" n; done=1 }' "$manifest" > "$tmp" \
+      && mv "$tmp" "$manifest" || echo "$notice"
+  elif grep -q '^Build order:' "$manifest"; then
+    awk -v n="$n" '{ print } !done && /^Build order:/ { print "Parent issue (GitHub): #" n; done=1 }' "$manifest" > "$tmp" \
+      && mv "$tmp" "$manifest" || echo "$notice"
+  else
+    awk -v n="$n" '{ print } END { print "Parent issue (GitHub): #" n }' "$manifest" > "$tmp" \
+      && mv "$tmp" "$manifest" || echo "$notice"
+  fi
+fi
+```
+
+```powershell
+# PowerShell 7+. Same idempotent rewrite-or-insert; write UTF-8 without a BOM.
+$manifest = ".milestone-feeder/roadmap-<slug>.md"
+$n        = "<resolved-parent-issue-number>"
+$notice   = "create: deployed the md-epic parent #$n but could not write the receipt to $manifest; re-run to record it"
+try {
+  $lines = Get-Content -LiteralPath $manifest
+  if ($lines -match '^Parent issue \(GitHub\):') {
+    $out = $lines -replace '^Parent issue \(GitHub\):.*', "Parent issue (GitHub): #$n"
+  } elseif ($lines -match '^Parent intro:') {
+    $out = $lines | ForEach-Object { $_; if ($_ -match '^Parent intro:') { "Parent issue (GitHub): #$n" } }
+  } elseif ($lines -match '^Build order:') {
+    $out = $lines | ForEach-Object { $_; if ($_ -match '^Build order:') { "Parent issue (GitHub): #$n" } }
+  } else {
+    $out = @($lines) + "Parent issue (GitHub): #$n"
+  }
+  Set-Content -LiteralPath $manifest -Value $out -Encoding utf8NoBOM -ErrorAction Stop
+} catch {
+  Write-Output $notice
+}
+```
+
+**Failure semantics.** The label ensure, the parent resolve-or-create, and the body PATCH are load-bearing writes, not best-effort: a `gh` error in any of them STOPS this pass immediately. Report which step failed and what already succeeded (the label may already be ensured; the parent may already exist under a captured number), then stop; nothing is deleted. A re-run resumes safely: the label upsert is a no-op if it already ran, parent resolution retries receipt-then-title-match before ever creating a second issue, and the body PATCH is REPLACE-form, safe to reapply. Only the closing manifest-receipt write (step 5) is report-don't-block, mirroring pass b: by the time it runs, the parent issue itself already exists with its correct body, so a receipt-write failure is reported as a notice and the run continues; the next `create` re-derives the same number from the title-match fallback (step 4(b)) and rewrites the receipt.
 
 ### Step 3 — deploy write-sequence (passes a-d)
 

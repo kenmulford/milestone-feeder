@@ -44,7 +44,11 @@ When the gate above fires, emit the notice **exactly as recorded** in `docs/one-
 
 Check for a **roadmap manifest** at `.milestone-feeder/roadmap-<slug>.md` (slug derived as in Step 1). **Absent → single-plan path, UNCHANGED:** fall through to Step 1 and run Steps 1 → 4 once (the **N=1** case). **Found → roadmap deploy:** read the manifest (**never** regenerate it) and loop the per-plan deploy (Step 2 → Step 3 passes a–e) over its milestones in build order, resolving each by its recorded `Plan file:` path and recording its `build order: milestone X of N` line **inside** pass (d)'s description PATCH (idempotent). A mid-loop failure stops, deletes nothing, and re-runs resume.
 
+**Once the loop has deployed all N milestones, `create` runs one more pass, exactly once:** it ensures the `md-epic` label, creates or adopts the roadmap's single parent issue, renders and PATCHes its `md-epic-order` body block, and writes the manifest's `Parent issue (GitHub): #<n>` receipt, before continuing to Step 4. This produces the driver's cross-milestone parent issue (`docs/specs/v0.11.0-md-epic-parent-issue.md`). A roadmap manifest existing at all already means N is at least 2 (`docs/roadmap-manifest-format.md`: the `Parent title:`/`Parent intro:` fields are written only for a confirmed multi-milestone split), so the single-plan path above never reaches this pass and an N=1 deploy stays byte-unchanged.
+
 Full mechanics — the resolution table, the outer-loop per-milestone steps, and the build-order-line assembly twins — live in **`docs/create-deploy-sequence.md` → "Step 1R — Resolve the deploy target"**.
+
+Mechanics for the new md-epic parent-issue pass live in that same reference, immediately after the build-order-line assembly twins.
 
 ### Step 1 — Resolve the plan file for the brief
 
