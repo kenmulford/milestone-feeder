@@ -1,20 +1,23 @@
 # Plan Step 0 — one-time notices
 
 `plan` Step 0 prints up to five one-time notices the first time it runs in a
-clone. Each one either announces a self-heal `plan` just performed, flags a
-repo-state problem for you to fix by hand, or points you at a new or optional
-capability you can opt into. Every notice shows at most once per clone: the
-block drops a small marker file under `.milestone-config/.runtime/` the first
-time it fires, then stays silent on every later run. The self-heal in the first
-section is the one exception — it is gated on file-absence, not a marker, so it
-re-checks every run and acts only when the file it writes is missing.
+clone; a sixth notice (below) fires instead from `create`'s and `update`'s
+Step 0. Each one either announces a self-heal `plan` just performed, flags a
+repo-state problem for you to fix by hand, points you at a new or optional
+capability you can opt into, or announces a behavior change. Every notice
+shows at most once per clone: the block drops a small marker file under
+`.milestone-config/.runtime/` the first time it fires, then stays silent on
+every later run. The self-heal in the first section is the one exception: it
+is gated on file-absence, not a marker, so it re-checks every run and acts
+only when the file it writes is missing.
 
-This file is the canonical source for those five notices. Each section records,
+This file is the canonical source for those six notices. Each section records,
 for one notice: when it fires, the per-clone marker that silences it, and what
-it writes — then the notice text together with both emitter twins (a bash form
+it writes, then the notice text together with both emitter twins (a bash form
 and a PowerShell 7+ form), byte-for-byte. The blocks are reference content;
-nothing in this file runs on its own. The live emitter is
-`skills/plan/SKILL.md` Step 0.
+nothing in this file runs on its own. The live emitter for notices 1-5 is
+`skills/plan/SKILL.md` Step 0; the live emitter for notice 6 is
+`skills/create/SKILL.md` Step 0 and `skills/update/SKILL.md` Step 0.
 
 **Contents**
 
@@ -23,6 +26,7 @@ nothing in this file runs on its own. The live emitter is
 3. [Bootstrap-nudge notice](#bootstrap-nudge-notice)
 4. [Roadmap-routing notice](#roadmap-routing-notice)
 5. [Implied-surfaces notice](#implied-surfaces-notice)
+6. [md-epic parent notice](#md-epic-parent-notice)
 
 ## Self-heal the nested .milestone-config/.gitignore
 
@@ -402,6 +406,70 @@ try {
       '|      | capability per ## heading with its implied surfaces beneath — the'
       '|      | same shape as the bundled reference. Leave it out and the bundled'
       '|      | reference is used as-is; an absent overlay is never an error.'
+      '| Note | This notice shows at most once per clone.'
+    ) -join "`n")
+    New-Item -ItemType Directory -Force -Path (Join-Path '.milestone-config' '.runtime') | Out-Null
+    New-Item -ItemType File -Force -Path $marker | Out-Null
+  }
+} catch {}
+```
+
+## md-epic parent notice
+
+- **Gate:** the per-clone marker is absent. Otherwise unconditional: there is no repo-state condition, because the notice announces a behavior change.
+- **Per-clone marker:** `.milestone-config/.runtime/md-epic-parent-notice`, shared between `create`'s and `update`'s Step-0 twins, so it shows at most once per clone across both verbs (the same cross-verb sharing the Implied-surfaces notice already uses between `plan` and `update`).
+- **Writes:** the `.runtime/` directory and the marker. `create` Step 0 and `update` Step 0 only, no `plan` twin.
+- **Safety:** best-effort; a failed notice or marker write never aborts the run.
+
+```text
+🟡 New: a roadmap deploy now also creates a driver parent issue
+
+| What | When your roadmap deploys more than one milestone, create (and
+|      | update, on a re-plan) now also creates one md-epic-labeled parent
+|      | issue whose body lists the milestones in build order. The driver
+|      | reads this parent to drive the milestones in sequence for you.
+| When | Only when the roadmap deploys N>1 milestones. A single-milestone
+|      | plan/create is unchanged. No parent issue, nothing new to look at.
+| Note | This notice shows at most once per clone.
+```
+
+```bash
+# bash: one-time md-epic-parent discovery notice; read-only; marker-gated; never aborts create/update.
+# printf '%s\n' (NOT a heredoc): the same indent-safe construct the sibling Step-0 notices use,
+# so all sites emit one consistent form. The notice text is the quoted args, so it prints flush-left.
+marker=".milestone-config/.runtime/md-epic-parent-notice"
+if [ ! -f "$marker" ]; then
+  printf '%s\n' \
+    '🟡 New: a roadmap deploy now also creates a driver parent issue' \
+    '' \
+    '| What | When your roadmap deploys more than one milestone, create (and' \
+    '|      | update, on a re-plan) now also creates one md-epic-labeled parent' \
+    '|      | issue whose body lists the milestones in build order. The driver' \
+    '|      | reads this parent to drive the milestones in sequence for you.' \
+    '| When | Only when the roadmap deploys N>1 milestones. A single-milestone' \
+    '|      | plan/create is unchanged. No parent issue, nothing new to look at.' \
+    '| Note | This notice shows at most once per clone.'
+  mkdir -p .milestone-config/.runtime 2>/dev/null && : > "$marker" 2>/dev/null || true
+fi
+```
+
+```powershell
+# PowerShell 7+: same one-time md-epic-parent discovery notice; read-only; marker-gated; never aborts create/update.
+try {
+  $marker = Join-Path '.milestone-config' (Join-Path '.runtime' 'md-epic-parent-notice')
+  if (-not (Test-Path $marker)) {
+    # Indent-safe array-join (the #120/#121 self-heal construct), NOT a here-string: an
+    # @'...'@ closing terminator must sit at column 0, which breaks when nested under indented
+    # markdown. The text below is byte-identical to the bash printf args.
+    Write-Host (@(
+      '🟡 New: a roadmap deploy now also creates a driver parent issue'
+      ''
+      '| What | When your roadmap deploys more than one milestone, create (and'
+      '|      | update, on a re-plan) now also creates one md-epic-labeled parent'
+      '|      | issue whose body lists the milestones in build order. The driver'
+      '|      | reads this parent to drive the milestones in sequence for you.'
+      '| When | Only when the roadmap deploys N>1 milestones. A single-milestone'
+      '|      | plan/create is unchanged. No parent issue, nothing new to look at.'
       '| Note | This notice shows at most once per clone.'
     ) -join "`n")
     New-Item -ItemType Directory -Force -Path (Join-Path '.milestone-config' '.runtime') | Out-Null
