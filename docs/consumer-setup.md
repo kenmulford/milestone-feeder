@@ -143,6 +143,7 @@ that happens:
 | Confirm it (your call) | You **confirm** it, **merge** two milestones, **split** one, **reorder** them, or **reject** the split — one decision, up front, before anything is planned or written. Reject, and `plan` falls back to planning your brief as a single milestone. |
 | Plan them all | Once you confirm, `plan` plans **every** milestone in the roadmap (in parallel), each to its own plan file, in build order. |
 | Deploy in order | `create` deploys the milestones **in build order**, recording each one's position (`milestone X of N`) so the driver builds them in sequence. |
+| Tie them together | This same deploy also opens one parent issue that ties the milestones together, in build order, so `milestone-driver` builds them in sequence on its own. This is default behavior on the roadmap path: there is no new setting to turn it on. |
 | Check coverage | As its last step, `create` reads the deployed milestones and issues back from GitHub and checks they cover **everything your original brief asked for** — surfacing a short punch-list of anything missed, covered twice, or drifted. It never edits your issues; the punch-list is yours to act on. |
 
 **A normal, single-release brief is unchanged.** The roadmap only kicks in when your
