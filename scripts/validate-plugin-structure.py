@@ -232,13 +232,16 @@ if commands_dir.is_dir():
 # set is the one the live gate executes, so it is the safety-relevant one to
 # cover). The comment set is also coverage-checked as belt-and-suspenders.
 #
-# The coverage check is intentionally ONE-DIRECTIONAL: it asserts every agent
-# name in agents/*.md appears in each hook's set. It does NOT flag a stale extra
-# name that is in a hook set but no longer in agents/*.md — that direction is
-# fail-CLOSED (a non-existent agent name can never match a real actor, so at worst
-# it is dead weight). The comment-vs-runtime check, by contrast, IS strict set
-# equality, because a disagreement there is exactly the false-PASS this guard
-# exists to catch. All parsing is stdlib `re` only — NO shell/pwsh execution.
+# The coverage check is BIDIRECTIONAL: it asserts every agent name in
+# agents/*.md appears in each hook's set (forward — a missing name would let the
+# gate mis-classify a real feeder subagent as an outside actor), AND that every
+# name in each hook's set has a matching agents/*.md file (reverse — a name with
+# no matching agent is dead weight left behind by a deletion/rename, e.g. a
+# deleted agent never trimmed from the allowlist). Neither direction is
+# exempted: a missing name and an orphaned name both fail CI. The comment-vs-
+# runtime check, separately, IS strict set equality, because a disagreement
+# there is exactly the false-PASS this guard exists to catch. All parsing is
+# stdlib `re` only — NO shell/pwsh execution.
 
 FEEDER_AGENT_SET_RE = re.compile(r"^#\s*FEEDER_OWN_AGENTS:\s*(.+?)\s*$", re.MULTILINE)
 
@@ -308,6 +311,10 @@ hook_scripts = {
     "sh": REPO_ROOT / "hooks" / "no-source-edit.sh",
     "ps1": REPO_ROOT / "hooks" / "no-source-edit.ps1",
 }
+# Set form of agent_names for O(1) `in` checks in the reverse-coverage loops
+# below (agent_names itself stays a list — order doesn't matter for membership,
+# but no need to change its existing type/uses elsewhere in this script).
+agent_names_set = set(agent_names)
 for _label, hook_path in hook_scripts.items():
     checked += 1
     comment_set = parse_hook_agent_set(hook_path)
@@ -336,6 +343,23 @@ for _label, hook_path in hook_scripts.items():
                            f"'{agent_name}' (declared in agents/*.md) — the "
                            f"actor-gate drift-guard comment has drifted from the "
                            f"real agent set; add it to keep the safety gate correct")
+    # Reverse coverage: every name the hook actually carries must map to a real
+    # agents/*.md file. This is the NEW direction — an orphaned name (e.g. a
+    # deleted agent left behind in the hook's allowlist) is dead weight that
+    # silently masks drift forever without this check. No escape hatch: any
+    # orphaned name fails CI, full stop.
+    for name in runtime_set:
+        if name not in agent_names_set:
+            err(hook_path, f"runtime FEEDER_OWN_AGENTS set contains '{name}', "
+                           f"which has no matching agents/*.md — this is a stale "
+                           f"orphaned name (e.g. from a deleted agent); remove it "
+                           f"from the hook's allowlist")
+    for name in comment_set:
+        if name not in agent_names_set:
+            err(hook_path, f"FEEDER_OWN_AGENTS comment literal contains '{name}', "
+                           f"which has no matching agents/*.md — this is a stale "
+                           f"orphaned name (e.g. from a deleted agent); remove it "
+                           f"from the hook's comment literal")
 
 # --- 5: cross-file SKILL.md line-citation guard -----------------------------
 #
