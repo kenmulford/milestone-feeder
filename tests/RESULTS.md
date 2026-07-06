@@ -1,10 +1,10 @@
-# RESULTS — milestone-feeder credibility harness
+# RESULTS — milestone-feeder scenario fixture catalog
 
-**What this is.** A dogfooding scorecard: the feeder run against its own `tests/scenarios/` fixtures (each = `brief.md` + a `project/` fixture + `feeder-env.md` + a blind `expected.md` grader contract). It records what the feeder actually produced versus what each scenario asserts.
+**What this is.** `tests/scenarios/` holds executable fixtures (each = `brief.md` + a `project/` fixture + `feeder-env.md` + a blind `expected.md` grader contract) that specify what the feeder is supposed to do when run. This file catalogs those fixtures and what each asserts. It is deliberately **not** framed as an automated scorecard: `.github/workflows/ci.yml` runs exactly two static gates (vocabulary-purge, plugin-structure) and neither dispatches an agent runner or grader, so repeatable, machine-verified re-execution of this suite is not something CI can do — any confidence this file records comes from whichever manual run is named below, never from an automated re-run.
 
-**Status for v0.9.0.** The detailed scorecard below is the **v0.3.0 preview run (2026-06-19)** — the last full credibility execution. Its per-scenario `run-log.md` / `run-output.md` transcripts have been **removed**: they narrated the pre-v0.9.0 `plan` pipeline (including the in-feeder self-check gate), and a fresh run against the **installed** plugin is the pending follow-up. The suite table just below reflects the **current v0.9.0** fixtures; the historical scorecard is kept as a record and clearly marked.
+**Status for v0.9.0 (as of 2026-07-06).** No scenario has been executed against the **installed** plugin. The only run on record is the **v0.3.0 preview run (2026-06-19)**, kept below as a historical record — and it backs **none** of the current claims: it exercised the pre-v0.9.0 `plan` pipeline (the in-feeder self-check gate, removed in v0.9.0 — see the historical section) through **proxied** `general-purpose` subagents carrying the `agents/*.md` contracts, not the plugin dispatched for real (the Fidelity caveat below documents this gap, still open). Its per-scenario `run-log.md` / `run-output.md` transcripts have been **removed**. A fresh run against the installed plugin — turning the fixtures below from "asserted" to "demonstrated" — remains a pending follow-up, not something this file claims has happened.
 
-> **v0.9.0 removed the model this scorecard was written around.** Through v0.8.0 the feeder ran the driver's `triage-reviewer` + `design-reviewer` itself as an in-`plan` **self-check gate** — the "keystone" the historical section below celebrates. v0.9.0 **removes that gate**: the feeder now **drafts** well-formed issues that **target** the driver's triage bar, and the driver's own triage is the single automated entry gate (you still review the plan before `create`). Every "self-check gate" / "real-reviewer gate PASS" note below is therefore **historical** — it describes the v0.3.0 pipeline, not the shipped v0.9.0 one. Product-gap parking (park a no-conventional-default decision; invent nothing) is unchanged.
+> **v0.9.0 removed the model this catalog's historical run was written around.** Through v0.8.0 the feeder ran the driver's `triage-reviewer` + `design-reviewer` itself as an in-`plan` **self-check gate** — the "keystone" the historical section below celebrates. v0.9.0 **removes that gate**: the feeder now **drafts** well-formed issues that **target** the driver's triage bar, and the driver's own triage is the single automated entry gate (you still review the plan before `create`). Every "self-check gate" / "real-reviewer gate PASS" note below is therefore **historical** — it describes the v0.3.0 pipeline, not the shipped v0.9.0 one. Product-gap parking (park a no-conventional-default decision; invent nothing) is unchanged.
 
 ## Current scenario suite (v0.9.0)
 
@@ -31,7 +31,7 @@ The feeder's own agents (`milestone-feeder:architect`, `:issue-author`) are not 
 
 ---
 
-## Historical scorecard — v0.3.0 preview run (2026-06-19) · superseded
+## Historical run record — v0.3.0 preview run (2026-06-19) · superseded, does not back current claims
 
 > Kept as a record of the last full execution. Mode: preview-only, prose-direct. The self-check-gate framing here describes the **pre-v0.9.0** pipeline (the gate was removed in v0.9.0, above). Run-now that day: 01, 02, 03, 06.
 
@@ -49,4 +49,4 @@ Findings from that run that still stand:
 
 ## Bottom line (v0.9.0)
 
-The `tests/scenarios/` suite above is the current dogfooding contract, expanded for v0.9.0 (13 layer-aware breakdown, 14 config pointers; 05 removed with the retired gate). The last full execution recorded here is the v0.3.0 preview run; its transcripts have been removed pending a fresh run against the installed plugin. **The v0.9.0 pipeline is gate-free** — the feeder drafts issues that target the driver's triage bar rather than running that gate itself; the driver's triage is where the bar is enforced.
+The `tests/scenarios/` suite above is the current dogfooding contract, expanded for v0.9.0 (13 layer-aware breakdown, 14 config pointers; 05 removed with the retired gate). This file is a **fixture catalog, not a scorecard**: no scenario has been run against the installed plugin, so nothing above is claimed as demonstrated for the current pipeline — the v0.3.0 preview run recorded above is the only execution on file, and it predates and does not exercise v0.9.0's shipped pipeline. **The v0.9.0 pipeline is gate-free** — the feeder drafts issues that target the driver's triage bar rather than running that gate itself; the driver's triage is where the bar is enforced.
