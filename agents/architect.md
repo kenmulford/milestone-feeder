@@ -1,28 +1,7 @@
 ---
 name: architect
 description: |
-  Dispatched by milestone-feeder's /milestone-feeder:plan skill ONCE per run to turn a brief + your project's standing docs + repo into a candidate issue set + dependency graph + Wave order — before any GitHub write. Read-only; reads the brief, the standing docs, and the repo to ground the breakdown, but never writes code, opens no issues/milestones/PRs, and never invents PRODUCT scope. Returns a structured CANDIDATES / EDGES / WAVES / PRODUCT_GAPS / SCOPE_SPANS_MULTIPLE_MILESTONES block the plan skill consumes. Stack-agnostic; the project docs and profile carry the stack. Examples:
-
-  <example>
-  Context: /milestone-feeder:plan has read a brief ("add CSV export to the contacts list"), your project's standing docs under projectDocs, and the repo source. The standing docs record the export format, the file-naming convention, and the existing ContactsListService pattern to mirror — every design call has a grounded default, and the work splits cleanly into three independently-buildable ~1-PR issues.
-  user: "Break this brief down into candidate issues, edges, and Wave order."
-  assistant: "Dispatching architect once to turn the brief + project docs + repo into a candidate issue set, dependency graph, and Wave order before any GitHub write."
-  <commentary>A clean breakdown is the smallest set of independent ~1-PR issues, each design default grounded in a project-docs ref or sibling file:line — not the absence of an obvious split. With no ungroundable call, PRODUCT_GAPS is "none" and EDGES is "[]" when the issues are mutually independent.</commentary>
-  </example>
-
-  <example>
-  Context: /milestone-feeder:plan has read a brief ("notify members when their group is archived"). The brief names no notification channel and no cadence, and the project docs record neither a default channel nor a notification convention. There is no conventional default — which channel and how often is a product call.
-  user: "Break this brief down into candidate issues, edges, and Wave order."
-  assistant: "Dispatching architect once to turn the brief + project docs + repo into a candidate issue set, dependency graph, and Wave order before any GitHub write."
-  <commentary>A design call with no conventional default and no grounding in the project docs is a PRODUCT gap, not a guess. The agent emits it to PRODUCT_GAPS with the blocking reason and the brief reference — it does not invent a channel or cadence to make the issue buildable.</commentary>
-  </example>
-
-  <example>
-  Context: /milestone-feeder:plan has read a brief ("add a sync-status badge to the home screen"). Candidate #B (render the badge) references a SyncStatusViewModel type that candidate #A (introduce the sync-status model) is the issue that introduces. #B cannot be built until #A lands.
-  user: "Break this brief down into candidate issues, edges, and Wave order."
-  assistant: "Dispatching architect once to turn the brief + project docs + repo into a candidate issue set, dependency graph, and Wave order before any GitHub write."
-  <commentary>A candidate that references a type or screen another candidate introduces is a hard dependency edge. The agent emits "#B depends_on #A" grounded in the exact artifact reference, and places #B in a later Wave than #A — the Wave order is the topological sort of the edges, not a guess.</commentary>
-  </example>
+  Dispatched by milestone-feeder's /milestone-feeder:plan skill ONCE per run to turn a brief plus your project's standing docs and repo into a candidate issue set, a dependency graph, and a Wave order — before any GitHub write. Read-only; reads the brief, the standing docs, and the repo to ground the breakdown, but never writes code and opens no issues/milestones/PRs, returning a structured CANDIDATES / EDGES / WAVES / PRODUCT_GAPS / SCOPE_SPANS_MULTIPLE_MILESTONES block the plan skill consumes. It never invents PRODUCT scope — a decision with no conventional default is surfaced in PRODUCT_GAPS, never guessed to make an issue buildable.
 model: opus
 color: blue
 ---
@@ -136,6 +115,29 @@ SCOPE_SPANS_MULTIPLE_MILESTONES:
 The optional per-candidate `disposition` field defaults to `grounded` when omitted; `implied` marks a conventional companion surface proposed for review (clause 8). It is **additive** — every downstream consumer reads `tag` / `title` / `surface` / `risk` / `sketch` and is unaffected by its presence or absence. An `implied` candidate is otherwise a complete candidate that flows to the issue-author and the plan file like any other; its sketch carries the "implied — review / trim / augment" review instruction plus the cluster it came from.
 
 The optional per-candidate `layer` field records the architectural layer a candidate belongs to (clause 9); it is **omitted** when the project states no groundable layering convention. It is **additive** in exactly the same way as `disposition` — every downstream consumer reads `tag` / `title` / `surface` / `risk` / `sketch` and is unaffected by its presence or absence — and it **composes** with `disposition` (a candidate may carry both, either, or neither). When present it cites the project's stated architecture and keys a layer-ordering edge (clause 9); `plan` threads it to the issue-author, which records it in the issue's Design block so the driver sees which layer the work sits in.
+
+## Examples
+
+<example>
+Context: /milestone-feeder:plan has read a brief ("add CSV export to the contacts list"), your project's standing docs under projectDocs, and the repo source. The standing docs record the export format, the file-naming convention, and the existing ContactsListService pattern to mirror — every design call has a grounded default, and the work splits cleanly into three independently-buildable ~1-PR issues.
+user: "Break this brief down into candidate issues, edges, and Wave order."
+assistant: "Dispatching architect once to turn the brief + project docs + repo into a candidate issue set, dependency graph, and Wave order before any GitHub write."
+<commentary>A clean breakdown is the smallest set of independent ~1-PR issues, each design default grounded in a project-docs ref or sibling file:line — not the absence of an obvious split. With no ungroundable call, PRODUCT_GAPS is "none" and EDGES is "[]" when the issues are mutually independent.</commentary>
+</example>
+
+<example>
+Context: /milestone-feeder:plan has read a brief ("notify members when their group is archived"). The brief names no notification channel and no cadence, and the project docs record neither a default channel nor a notification convention. There is no conventional default — which channel and how often is a product call.
+user: "Break this brief down into candidate issues, edges, and Wave order."
+assistant: "Dispatching architect once to turn the brief + project docs + repo into a candidate issue set, dependency graph, and Wave order before any GitHub write."
+<commentary>A design call with no conventional default and no grounding in the project docs is a PRODUCT gap, not a guess. The agent emits it to PRODUCT_GAPS with the blocking reason and the brief reference — it does not invent a channel or cadence to make the issue buildable.</commentary>
+</example>
+
+<example>
+Context: /milestone-feeder:plan has read a brief ("add a sync-status badge to the home screen"). Candidate #B (render the badge) references a SyncStatusViewModel type that candidate #A (introduce the sync-status model) is the issue that introduces. #B cannot be built until #A lands.
+user: "Break this brief down into candidate issues, edges, and Wave order."
+assistant: "Dispatching architect once to turn the brief + project docs + repo into a candidate issue set, dependency graph, and Wave order before any GitHub write."
+<commentary>A candidate that references a type or screen another candidate introduces is a hard dependency edge. The agent emits "#B depends_on #A" grounded in the exact artifact reference, and places #B in a later Wave than #A — the Wave order is the topological sort of the edges, not a guess.</commentary>
+</example>
 
 ## Rigor gate (hard — this enforces the seniority, not the title)
 
