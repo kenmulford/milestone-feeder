@@ -3,6 +3,19 @@
 Release notes for milestone-feeder. Each tagged release is also published on the
 [GitHub Releases page](https://github.com/kenmulford/milestone-feeder/releases).
 
+## v0.11.1: audit remediation — re-trims, honest harness, size budgets
+
+Patch release — the audit-remediation milestone (10 issues, all merged CI-green).
+
+- `plan/SKILL.md` re-trim: 3.7 fan-out phases → `docs/roadmap-fan-out.md`, Step 5.1 version ladder → `docs/version-ladder.md` (12,183 → 9,729 words) (#262)
+- Agent frontmatter descriptions trimmed to role+trigger (~320 words combined); worked examples relocated verbatim to body `## Examples` sections (#263)
+- All six one-time Step-0 units consolidated behind `docs/one-time-notices.md` with Skills scoping; KEEP-IN-SYNC comments retired (#266)
+- Dead `brief-coverage-verifier` hook-allowlist entry removed + reverse drift-guard (#264); README stops hardcoding the version (#265)
+- `create` persists a roadmap deploy checkpoint for resumability (#267); build-roadmap correction loop bounded (#268)
+- Per-dispatch verify + one bounded retry on both plan fan-outs, value-level checks (#269)
+- Size budgets in the structure validator: per-file ratcheted SKILL.md word ceilings + 150w agent-description ceiling, fail-loud on missing governed files (#270)
+- `tests/RESULTS.md` truth-up: fixture catalog, not a scorecard — no run claimed that never happened (#271)
+
 ## v0.11.0: md-epic parent issue
 
 **Theme:** The suite's two halves gain a shared handoff object. When a roadmap deploy produces more than one milestone, `create` now also opens one parent issue, labeled `md-epic`, whose body lists the milestones in build order. `milestone-driver` (already shipped on v1.15.0) reads that parent and drives the milestones in sequence on its own, instead of relying on the free-text `milestone X of N` line a human had to read. A single-milestone plan or create stays byte-unchanged: no parent issue, no label, nothing new to configure.
