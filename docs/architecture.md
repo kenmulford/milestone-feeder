@@ -292,7 +292,9 @@ position the driver reads to build the roadmap in sequence), ridden inside pass 
 REPLACE-form PATCH so it stays idempotent — the count never grows. The single-plan
 path is the **N=1** case, byte-for-byte unchanged; a mid-loop failure stops and
 reports, deletes nothing, and a re-run resumes (already-deployed milestones adopted
-by exact title, the rest deployed).
+by exact title, the rest deployed) — now short-circuited for already-fully-deployed
+milestones by a per-run deploy checkpoint (`docs/create-deploy-sequence.md` → "The
+deploy checkpoint (resume short-circuit, roadmap-only)").
 
 After the write sequence (a–e), `create` runs a
 top-level **Step 4 — the driver handoff**. It is **not** a GitHub write and is **not** part of the pass-(d)

@@ -24,10 +24,187 @@ Before resolving a plan file, check whether `plan`'s roadmap flow left a **roadm
 
 | Per-milestone step | What runs |
 |---|---|
-| **i. Resolve this milestone's plan file** | **Read the recorded `Plan file:` path from this manifest entry** — the exact `.milestone-feeder/plan-<assignedSlug>.md` the planning fan-out populated (`skills/build-roadmap/SKILL.md` "Manifest format"; `skills/plan/SKILL.md` Step 3.7.g). **Do NOT re-derive a slug from the milestone name** — the plan-file slug is goal-derived with an `-m<index>` collision tiebreaker the manifest name does not encode (`skills/plan/SKILL.md` Step 3.7.d), so a name-derived path would miss. Read that plan file and treat it as Step 1's **Found** row, then deploy it. If the entry's `Plan file:` is **pending/empty**, or the file at that path is **absent** (this milestone never finished planning), STOP the loop and report it as a mid-loop failure (🔴, Partial-failure path below) — do **NOT** re-plan from `create`. |
+| **0. Consult the deploy checkpoint** | As its OWN first action (before anything else in this row), resolve `$planfile` — this milestone's `Plan file:` path at `position` `$X` — directly from the roadmap manifest; row i then reuses this SAME value (it is read only once, never re-read). Then read this milestone's checkpoint entry (keyed by `$X`) from `.milestone-feeder/deploy-state-<slug>.json`, when present and `jq`-readable. An entry reporting `pass == "d"` and `status == "complete"` earns ONE cheap existence check (a single `gh api .../milestones/<n>` GET, compared against the plan file's exact title and `state == "open"`); on a match, **skip only Step 3 passes (a)-(d)** (row iii's `gh`-heavy re-derivation, and row iv) for this milestone — **row ii (Step 2) and pass (e), the needs-input report routing, ALWAYS still run**, regardless of the checkpoint's verdict, before continuing the outer loop at position `X+1`. On a `gh` error, a title/state mismatch, or the file/entry/`jq` absent or unreadable, the checkpoint entry is untrustworthy — discard it and fall through to the existing, unchanged full per-milestone deploy (rows i-iv in full) for **this milestone only**. See "The deploy checkpoint" below. |
+| **i. Resolve this milestone's plan file** | **Reuse the `$planfile` Row 0 already resolved** (it read the recorded `Plan file:` path from this manifest entry as its own first action, above — this row does not re-read it) — the exact `.milestone-feeder/plan-<assignedSlug>.md` the planning fan-out populated (`skills/build-roadmap/SKILL.md` "Manifest format"; `skills/plan/SKILL.md` Step 3.7.g). **Do NOT re-derive a slug from the milestone name** — the plan-file slug is goal-derived with an `-m<index>` collision tiebreaker the manifest name does not encode (`skills/plan/SKILL.md` Step 3.7.d), so a name-derived path would miss. Read that plan file and treat it as Step 1's **Found** row, then deploy it. If the entry's `Plan file:` is **pending/empty**, or the file at that path is **absent** (this milestone never finished planning), STOP the loop and report it as a mid-loop failure (🔴, Partial-failure path below) — do **NOT** re-plan from `create`. |
 | **ii. Read its plan-file contract** | **Step 2**, unchanged. |
 | **iii. Deploy it** | **Step 3 passes a–e**, entirely unchanged — ensure labels (a) / create-or-adopt the milestone by exact title (b) / create-or-reuse each surviving issue by exact title (c) / slug→`#n` rewrite + Wave-description PATCH (d) / route the needs-input report (e). Per-milestone idempotency is the existing **create-or-adopt**, inherited per iteration: never delete a milestone or issue, never duplicate a same-title open issue. |
 | **iv. Record the build-order line** | When pass (d) PATCHes this milestone's description, include the canonical `build order: milestone X of N` line in the PATCHed description, alongside the `## Waves` block (see "The build-order line" below). |
+
+**The deploy checkpoint (resume short-circuit, roadmap-only).** Step 3 passes (a)-(d) below stay entirely unchanged and are reused, verbatim, for every milestone this checkpoint does not confirm; pass (e) (the needs-input report routing) always runs regardless of the checkpoint's verdict (see "On a match" below). This subsection adds only row **0** above, plus the read/write mechanics behind it — it does not alter what passes (a)-(e) do, or how the single-plan (N=1, no manifest) path behaves (that path never reaches Step 1R's outer loop, so it never reads or writes this file).
+
+**Purpose — what it short-circuits.** Absent this checkpoint, resuming an N-milestone roadmap re-runs pass (b)'s **create-or-adopt-by-EXACT-title** lookup (below, "Create-or-adopt the milestone (by EXACT title)") — an exact-title `gh api` search against ALL existing milestones — for EVERY milestone, on EVERY run, whether or not that milestone already fully deployed. Pass (b) never reads back its own `Milestone number (GitHub):` receipt to shortcut this: that receipt is "the create-SIDE back-write only … not part of `create`" (below, pass (b)'s receipt-write section). So today, a resumed deploy pays pass (b)'s title lookup, plus passes (a)/(c)/(d)'s own `gh` calls, again for every already-fully-deployed milestone — correct, but pure API overhead on a large roadmap. This checkpoint lets a milestone it confirms is already fully deployed skip straight past Step 3 passes (a)-(d) with one cheap existence check instead; pass (e) — a cheap, local, non-`gh`-heavy step — ALWAYS still runs for every milestone regardless of the checkpoint's verdict, so its own retry-on-resume guarantee is never silently lost.
+
+**File + identity.** `.milestone-feeder/deploy-state-<slug>.json` — `<slug>` derived by the identical rule the plan file and the roadmap manifest use (`skills/plan/SKILL.md` Step 7). Local, per-run scratch, covered by `.milestone-feeder/.gitignore`'s `*` (ensured by `plan`'s roadmap flow before this checkpoint is ever written; this checkpoint never creates that `.gitignore` itself).
+
+**Schema.** One JSON object per file, keyed by `position` (the manifest's `Build-order position`, `$X` below):
+
+```json
+{
+  "slug": "<slug>",
+  "milestones": [
+    {
+      "position": 1,
+      "planFile": ".milestone-feeder/plan-<assignedSlug>.md",
+      "milestoneNumber": 42,
+      "pass": "d",
+      "status": "complete"
+    }
+  ]
+}
+```
+
+`pass` is one of `"a"|"b"|"c"|"d"` — deliberately excludes `"e"`: pass (e), the needs-input report, is best-effort and conditional (it routes only when the plan file's `## Needs human input` pointer is not "none"), so it carries no deploy-completeness signal of its own — `pass == "d"` / `status == "complete"` IS the fully-deployed signal this checkpoint tracks (matches the happy-path acceptance criterion verbatim). `milestoneNumber` is `null` until pass (b) resolves it — before that, there is no number to record.
+
+**Write timing (Correction 2 — choice (a) picked).** The checkpoint entry is upserted TWICE per pass, for each of passes a-d, inside the SAME per-milestone iteration those passes already run: once at pass-START (`status: "in-progress"`, before that pass's own work begins) and once at pass-END (`status: "complete"`, once that pass's own work succeeds). Chosen over dropping `"in-progress"` from the schema (the alternative, simpler option) because it costs one extra call to the SAME upsert helper per pass — not a second code path — and it gives real crash-diagnosis value: a checkpoint left at, say, `pass: "c", status: "in-progress"` after a crash names exactly where the run died. The read-side check (below) is unchanged either way — it only ever looks for `pass == "d" && status == "complete"`.
+
+**Upsert-by-position helper (never grows a duplicate entry) — bash + PowerShell 7+ twins.** Mirrors this file's own idempotent-write idioms: the plan-file receipt's read-modify-write (below, "Write the deploy receipt") and the manifest's per-entry field overwrite keyed by a stable position (`skills/plan/SKILL.md` line ~266). Call this at each pass-start/pass-end site above, with `$pass`/`$status` set to that site's values. `$X` is this milestone's `Build-order position`; `$planfile` is its `Plan file:` path — Row 0 resolves it first (below) and every later row reuses that same value, never re-reading it; `$number` is this milestone's resolved GitHub milestone number — the same VALUE the outer loop's later passes track under their own local name `n` (above, "Gather every deployed milestone's number"; this new mechanism uses its own name, `number`, in its own scope, not a shared variable) — empty until pass (b) resolves it:
+
+```bash
+# bash — upsert this milestone's checkpoint entry by position; fail-open (no jq, or any
+# write error, emits a notice and returns WITHOUT aborting the deploy in progress). A
+# 0-byte/absent state file is (re)seeded fresh (`-s`, not `-f` — treats empty the same as
+# absent, so a corrupted-to-empty file is never silently accepted as valid content); a
+# post-filter `-s "$tmp"` check guards against ever overwriting the real file with an
+# unexpectedly empty filter result (jq exits 0 on empty input with zero output records).
+state=".milestone-feeder/deploy-state-<slug>.json"
+if command -v jq >/dev/null 2>&1; then
+  [ -s "$state" ] || printf '{"slug": "<slug>", "milestones": []}' > "$state" 2>/dev/null
+  n_json="${number:-null}"
+  tmp="$(mktemp 2>/dev/null)"
+  if [ -n "$tmp" ] && jq --argjson x "$X" --arg pf "$planfile" --argjson n "$n_json" --arg p "$pass" --arg st "$status" \
+       '.milestones = ((.milestones // []) | map(select(.position != $x))) + [{position: $x, planFile: $pf, milestoneNumber: $n, pass: $p, status: $st}]' \
+       "$state" > "$tmp" 2>/dev/null && [ -s "$tmp" ]; then
+    mv "$tmp" "$state" 2>/dev/null || echo "create: could not persist the deploy checkpoint for milestone $X (pass $pass, $status) — continuing without it"
+  else
+    rm -f "$tmp" 2>/dev/null
+    echo "create: could not persist the deploy checkpoint for milestone $X (pass $pass, $status) — continuing without it"
+  fi
+fi
+```
+
+```powershell
+# PowerShell 7+ — same upsert-by-position; native ConvertFrom-Json/ConvertTo-Json, no jq
+# dependency (mirrors hooks/no-source-edit.ps1's convention vs the bash twin). Fail-open:
+# any error emits a notice and returns WITHOUT aborting the deploy in progress. $number is
+# $null until pass (b) resolves it. A 0-byte/absent state file is (re)seeded fresh (mirrors
+# the bash twin's `-s`, not `-f`, guard). position/milestoneNumber are cast to [int]
+# explicitly so ConvertTo-Json always emits a JSON number, never a string a regex capture
+# upstream could have left un-typed — a string-typed position would never match the bash
+# reader's `--argjson x` numeric comparison, permanently defeating the short-circuit.
+$state = ".milestone-feeder/deploy-state-<slug>.json"
+try {
+  $stateHasContent = (Test-Path $state) -and ((Get-Item $state).Length -gt 0)
+  $checkpoint = if ($stateHasContent) { Get-Content -LiteralPath $state -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop } else { [pscustomobject]@{ slug = "<slug>"; milestones = @() } }
+  $rest = @($checkpoint.milestones | Where-Object { $_.position -ne [int]$X })
+  $numberJson = if ($number) { [int]$number } else { $null }
+  $rest += [pscustomobject]@{
+    position        = [int]$X
+    planFile        = $planfile
+    milestoneNumber = $numberJson
+    pass            = $pass
+    status          = $status
+  }
+  $checkpoint.milestones = $rest
+  $checkpoint | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $state -Encoding utf8NoBOM -ErrorAction Stop
+} catch {
+  Write-Output "create: could not persist the deploy checkpoint for milestone $X (pass $pass, $status) — continuing without it"
+}
+```
+
+**Row 0 — the read + short-circuit check (Correction 3's exact shape) — bash + PowerShell 7+ twins.** Runs BEFORE row i, for each milestone in build order, and resolves `$planfile` itself as its very first action, by reading this milestone's `Plan file:` line at `position` `$X` straight from the roadmap manifest (row i, row ii, and pass (e) then all reuse this SAME already-resolved value — it is read only once per milestone, never re-read). Once `$planfile` is in hand, read this milestone's checkpoint entry by `position` (`$X`); when it reports `pass == "d" && status == "complete"`, run ONE `gh api` GET against the live milestone and compare it to (a) the plan file's `Milestone title (exact):` line (exact string equality) and (b) `.state == "open"` — a 404/`gh` error, a title mismatch, or `state != "open"` are ALL "does not match" and fall through, consistent with pass (b)'s own title-compare precedent (below). The `gh` call captures **stdout only** — it never merges stderr into the stream being parsed as JSON, so an incidental stderr line on an otherwise-successful call can never masquerade as unparsable JSON and force a false negative. The checkpoint-recorded values read back for the trust test are named `cp_pass`/`cp_status`/`cp_number` (bash) / `$cpPass`/`$cpStatus`/`$cpNumber` (pwsh) — deliberately NOT `pass`/`status`/`number`, so they never collide with the upsert helper's caller-supplied parameters of those same names:
+
+```bash
+# bash — row 0: resolve $planfile, consult the checkpoint, then the one cheap existence
+# check (Correction 3). cp_pass/cp_status/cp_number are the CHECKPOINT-RECORDED values
+# (never the upsert helper's own pass/status/number parameter names — no collision).
+short_circuit=0
+manifest=".milestone-feeder/roadmap-<slug>.md"
+state=".milestone-feeder/deploy-state-<slug>.json"
+planfile="$(awk -v x="$X" '
+  $0 ~ ("^### " x "\\. ") { infile=1; next }
+  /^### / { infile=0 }
+  infile && /^- Plan file:/ { sub(/^- Plan file: */, ""); print; exit }
+' "$manifest")"
+if command -v jq >/dev/null 2>&1 && [ -s "$state" ]; then
+  entry="$(jq -c --argjson x "$X" '(.milestones // [])[] | select(.position == $x)' "$state" 2>/dev/null)"
+  if [ -n "$entry" ]; then
+    cp_pass="$(printf '%s' "$entry" | jq -r '.pass // empty' 2>/dev/null)"
+    cp_status="$(printf '%s' "$entry" | jq -r '.status // empty' 2>/dev/null)"
+    cp_number="$(printf '%s' "$entry" | jq -r '.milestoneNumber // empty' 2>/dev/null)"
+    if [ "$cp_pass" = "d" ] && [ "$cp_status" = "complete" ] && [ -n "$cp_number" ]; then
+      title="$(grep -m1 '^Milestone title (exact):' "$planfile" | sed -E 's/^Milestone title \(exact\): *//')"
+      # stdout only (2>/dev/null) — never merge gh's stderr into the JSON we parse below.
+      if live="$(gh api "repos/{owner}/{repo}/milestones/$cp_number" --jq '{title, state}' 2>/dev/null)"; then
+        live_title="$(printf '%s' "$live" | jq -r '.title' 2>/dev/null)"
+        live_state="$(printf '%s' "$live" | jq -r '.state' 2>/dev/null)"
+        if [ "$live_title" = "$title" ] && [ "$live_state" = "open" ]; then
+          short_circuit=1
+          number="$cp_number"
+        fi
+      fi
+    fi
+  fi
+fi
+```
+
+```powershell
+# PowerShell 7+ — same resolve-then-check; native JSON, no jq dependency. $cpPass/$cpStatus/
+# $cpNumber are the CHECKPOINT-RECORDED values (never the upsert helper's own $pass/$status/
+# $number parameter names — no collision).
+$shortCircuit = $false
+$manifest = ".milestone-feeder/roadmap-<slug>.md"
+$state = ".milestone-feeder/deploy-state-<slug>.json"
+$planfile = $null
+$inBlock = $false
+foreach ($line in (Get-Content -LiteralPath $manifest)) {
+  if ($line -match "^### $X\. ") { $inBlock = $true; continue }
+  if ($line -match '^### ') { $inBlock = $false }
+  if ($inBlock -and $line -match '^- Plan file: *(.+)') { $planfile = $Matches[1]; break }
+}
+$stateHasContent = (Test-Path $state) -and ((Get-Item $state).Length -gt 0)
+if ($stateHasContent) {
+  try {
+    $checkpoint = Get-Content -LiteralPath $state -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop
+    $entry = $checkpoint.milestones | Where-Object { $_.position -eq [int]$X } | Select-Object -First 1
+    if ($entry) {
+      $cpPass = $entry.pass
+      $cpStatus = $entry.status
+      $cpNumber = $entry.milestoneNumber
+      if ($cpPass -eq 'd' -and $cpStatus -eq 'complete' -and $cpNumber) {
+        $titleLine = Get-Content -LiteralPath $planfile | Where-Object { $_ -match '^Milestone title \(exact\): *(.+)' } | Select-Object -First 1
+        $null = $titleLine -match '^Milestone title \(exact\): *(.+)'
+        $title = $Matches[1]
+        # stdout only (2>$null) — never merge gh's stderr into the JSON we parse below.
+        $live = gh api "repos/{owner}/{repo}/milestones/$cpNumber" --jq '{title, state}' 2>$null
+        if ($LASTEXITCODE -eq 0) {
+          $liveObj = $live | ConvertFrom-Json
+          if ($liveObj.title -eq $title -and $liveObj.state -eq 'open') {
+            $shortCircuit = $true
+            $number = $cpNumber
+          }
+        }
+      }
+    }
+  } catch { }
+}
+```
+
+**On a match:** this milestone is confirmed fully deployed for Step 3 passes (a)-(d) — skip those four passes (and row iv, the build-order line pass (d) produces) for this milestone, print a one-line notice (`create: milestone <X> — checkpoint confirms #<number> already deployed; skipping passes a-d`), then STILL run row ii (Step 2 — read the plan-file contract) and pass (e) (the needs-input report routing) exactly as a full deploy would, before continuing the outer loop at position `X+1`. Row ii and pass (e) are cheap and local (no `gh`-heavy re-derivation), so running them for every milestone — checkpoint-confirmed or not — does not reintroduce the O(N) cost this checkpoint eliminates; it only preserves pass (e)'s own retry-on-resume guarantee, which a permanent skip would otherwise silently lose. **On no match** (any of: file/entry/`jq` absent or unreadable, `pass`/`status` not `"d"`/`"complete"`, the `gh` GET erroring, a title mismatch, or `state != "open"`): the checkpoint's claim for THIS milestone only is untrustworthy — discard it and fall through to the existing, unchanged full per-milestone deploy (rows i-iv in full) for this milestone. No other milestone's entry is touched or affected by one milestone's stale/absent entry.
+
+**How each acceptance criterion is met.**
+
+| Criterion | Where it is satisfied |
+|---|---|
+| Happy path (confirm 1..k with one cheap check — Step 3 passes a-d skipped, row ii + pass e still run for every milestone; full passes a-e only for k+1..N) | Row 0's match branch (above) plus the unchanged rows i-iv for every milestone the check doesn't confirm. |
+| Empty/absent state (no `jq`, or file absent/empty → unchanged resume for every milestone) | Row 0's outer `command -v jq` / `[ -s "$state" ]` (bash) and `$stateHasContent` (pwsh) guards: when either is false, no read is attempted at all and every milestone falls straight through to the existing full per-milestone deploy, exactly as today. |
+| Error/failure path (a stale-but-present entry never blocks or skips any OTHER milestone) | Row 0's per-milestone scoping: the checkpoint is read and checked once per milestone, inside that milestone's own per-milestone loop iteration; a mismatch discards only that milestone's own `entry`/`short_circuit` (bash) / `$entry`/`$shortCircuit` (pwsh) state — no state carries across milestones. |
+| Disabled/edge state (a write failure is a notice, never an abort; N=1 path unaffected) | The upsert helper's fail-open `command -v jq` / try-catch guards (above) — a write error is reported and the deploy continues. The single-plan path (Step 1R's Absent row) never reaches the outer loop at all, so it never reads or writes this file. |
+
+**Accepted trade-off (Correction 4).** The cheap existence check verifies only the milestone RECORD (its title and open/closed state) — it does not re-verify the milestone's issues. A milestone whose issue was manually deleted or renamed on GitHub between runs is NOT caught by this checkpoint path, unlike today's full pass (c), which re-lists and re-derives every issue's state on every run it actually executes. This is an accepted, deliberate trade-off: the whole point of this checkpoint is O(remaining) instead of O(N), and adding a full issue-level re-check to the checkpoint path would defeat that (it would just be pass (c) again, on every run). A milestone that drifts this way is only caught the next time its own checkpoint entry goes stale (e.g. because the milestone itself was closed or renamed) or on a full non-resumed deploy.
+
+**Two more accepted trade-offs, same O(remaining) trade as Correction 4.** A confirmed milestone also loses two more of passes (b)/(d)'s self-healing retries — both accepted for the same reason: restoring either would mean re-running pass (b) or (d) in full, defeating the point.
+- **The build-order-line / Waves self-heal is lost.** Pass (d)'s idempotent REPLACE-form PATCH is what repairs the milestone description (the `build order: milestone X of N` line, the `## Waves` block) on every unconfirmed re-run today. A confirmed milestone skips pass (d) entirely, so if a human or a bug corrupts or reverts that milestone's description on GitHub between runs, it is NOT restored as long as the checkpoint keeps matching (title + open state can both still be correct even with a mangled description) — only a full non-resumed deploy, or a fallback triggered by a stale checkpoint entry, re-PATCHes and repairs it.
+- **The plan-file receipt's self-healing retry is lost.** Pass (b)'s `Milestone number (GitHub): <n>` receipt write is best-effort/report-don't-block (below, "Write the deploy receipt"). Today, if it fails once, the very next resume re-runs pass (b) in full and its idempotent write retries and usually succeeds. A confirmed milestone never reaches pass (b) again, so a receipt that failed to write on the completing run stays permanently missing — impacting a later `update`'s ability to resolve this milestone after a title change (the receipt's documented purpose, `docs/specs/v0.3.1-driver-handoff.md` §4).
 
 After the loop deploys all N, run **the md-epic parent-issue pass** below exactly once: it ensures the `md-epic` label, creates or adopts the roadmap's single parent issue, renders and PATCHes its `md-epic-order` body block, and writes the manifest's `Parent issue (GitHub): #<n>` receipt. Then report each milestone's deploy receipt (`#`), the recorded build order, and the parent issue's own `#`, and continue to **Step 4** (its multi-milestone note).
 

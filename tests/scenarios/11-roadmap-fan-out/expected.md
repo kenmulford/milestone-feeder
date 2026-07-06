@@ -128,7 +128,10 @@ GitHub writes, excluded from the preview run per `tests/README.md` lines 33–35
 - **Idempotent / non-destructive:** create-or-adopt per milestone — never deletes,
   never duplicates a same-title open issue; a mid-loop failure **stops and reports**
   which milestones deployed, which failed and at which pass, which remain — and a
-  re-run **resumes** (already-deployed milestones adopted by exact title).
+  re-run **resumes** (already-deployed milestones adopted by exact title) — now
+  short-circuited for already-fully-deployed milestones by a per-run deploy
+  checkpoint (`docs/create-deploy-sequence.md` → "The deploy checkpoint (resume
+  short-circuit, roadmap-only)").
 - **Parked issues are never created**; they route to the needs-input report.
 
 ## Disabled / edge — bash/pwsh parity
