@@ -1,23 +1,56 @@
-# Plan Step 0 — one-time notices
+# One-time notices — shared reference
 
-`plan` Step 0 prints up to five one-time notices the first time it runs in a
-clone; a sixth notice (below) fires instead from `create`'s and `update`'s
-Step 0. Each one either announces a self-heal `plan` just performed, flags a
+This file is the single source of truth for six one-time Step-0 units — a
+self-heal and five printed notices — shared across `plan`, `create`, and
+`update`. Each one either announces a self-heal `plan` just performed, flags a
 repo-state problem for you to fix by hand, points you at a new or optional
-capability you can opt into, or announces a behavior change. Every notice
-shows at most once per clone: the block drops a small marker file under
+capability you can opt into, or announces a behavior change. Every printed
+notice shows at most once per clone: the block drops a small marker file under
 `.milestone-config/.runtime/` the first time it fires, then stays silent on
 every later run. The self-heal in the first section is the one exception: it
 is gated on file-absence, not a marker, so it re-checks every run and acts
 only when the file it writes is missing.
 
-This file is the canonical source for those six notices. Each section records,
-for one notice: when it fires, the per-clone marker that silences it, and what
-it writes, then the notice text together with both emitter twins (a bash form
-and a PowerShell 7+ form), byte-for-byte. The blocks are reference content;
-nothing in this file runs on its own. The live emitter for notices 1-5 is
-`skills/plan/SKILL.md` Step 0; the live emitter for notice 6 is
-`skills/create/SKILL.md` Step 0 and `skills/update/SKILL.md` Step 0.
+Both the notice text and its emitter twins exist in exactly this one file —
+`plan`, `create`, and `update` each iterate this file (see "How each skill
+runs this file" below) rather than restating any notice's text or gating
+logic inline.
+
+## Section fields
+
+Each `##` section below is one notice:
+
+- **Marker** — the per-clone marker file under `.milestone-config/.runtime/`
+  that makes the notice fire at most once per clone, or `none` for the
+  file-absence-gated self-heal.
+- **Skills** — which skill(s) evaluate this section: `plan`, `create`,
+  `update`, or a combination. A skill evaluates a section only when the
+  section's `Skills` field includes that skill's own name.
+- **Trigger** — the exact condition that must hold for the notice to fire.
+- **Legacy-fallback** — a stale pre-`.milestone-config/.runtime/` marker
+  checked alongside the current marker, or `none` when the notice was born
+  entirely on the current path (`none` for all six sections below).
+- **Writes** — what the unit writes when it fires.
+- **Safety** — its failure/abort behavior.
+- **Text** and both **emitter twins** (a `bash` form and a PowerShell 7+
+  form), fenced below the bullets, byte-for-byte.
+
+## How each skill runs this file
+
+Immediately after its own Step-0 config read, each of `plan`, `create`, and
+`update` iterates the sections below **in file order** and, for each section
+whose `Skills` field includes its own name, runs that section's recorded
+**deterministic emitter twin** (the `bash` form or the PowerShell 7+ form)
+**verbatim**: that emitter's `printf` / `Write-Host` args **are** the
+canonical notice text, so the emitted text is **byte-identical by
+construction** — never re-type a notice as free-form agent text. The emitter
+performs the trigger check, the text print (when triggered), and the marker
+write, all in one step. A section whose `Skills` field does **not** include
+the running skill is **never evaluated** by that skill. A malformed or
+unusable section is **skipped for that entry only** — never a crash, never a
+partial print, never an aborted run. Every unit is **best-effort**, and
+read-only except for the `.runtime/` dir + marker (and the self-heal, which
+writes the nested `.gitignore`).
 
 **Contents**
 
@@ -30,10 +63,13 @@ nothing in this file runs on its own. The live emitter for notices 1-5 is
 
 ## Self-heal the nested .milestone-config/.gitignore
 
-- **Gate:** file-absence only (`[ ! -f ]` / `-not (Test-Path ...)`) — create-only, NOT marker-gated.
-- **Per-clone marker:** none.
+- **Marker:** none — gated on file-absence, not a marker.
+- **Skills:** plan
+- **Trigger:** file-absence only (`[ ! -f ]` / `-not (Test-Path ...)`) — create-only, NOT marker-gated.
+- **Legacy-fallback:** none.
 - **Writes:** the nested `.milestone-config/.gitignore`.
 - **Safety:** best-effort; never clobbers a user-edited file; a failed self-heal never aborts the run.
+- **Sync:** keep this block byte-exact with this repo's own committed `.milestone-config/.gitignore`, feeder `setup`'s self-heal twin (`skills/setup/SKILL.md` Phase 3), and the driver's `tests-green` twin (`milestone-driver/hooks/tests-green.sh` / `tests-green.ps1`).
 
 ```gitignore
 # milestone-driver / milestone-feeder per-clone scratch — git-invisible by default.
@@ -84,8 +120,10 @@ try {
 
 ## Legacy-blanket root .gitignore notice
 
-- **Gate:** a root `.gitignore` blanket for `.milestone-config` is detected AND the per-clone marker is absent.
-- **Per-clone marker:** `.milestone-config/.runtime/legacy-blanket-notice`.
+- **Marker:** `.milestone-config/.runtime/legacy-blanket-notice`.
+- **Skills:** plan
+- **Trigger:** a root `.gitignore` blanket for `.milestone-config` is detected AND the per-clone marker is absent.
+- **Legacy-fallback:** none.
 - **Writes:** the `.runtime/` directory and the marker. Read-only on the root `.gitignore` — it never auto-edits it.
 - **Safety:** best-effort; a failed detect or marker write never aborts the run.
 
@@ -168,8 +206,10 @@ try {
 
 ## Bootstrap-nudge notice
 
-- **Gate:** the repo is un-bootstrapped (the resolved `projectDocs` path is absent or has no readable files, OR `.milestone-config/driver.json` is missing) AND the per-clone marker is absent.
-- **Per-clone marker:** `.milestone-config/.runtime/bootstrap-nudge-notice`.
+- **Marker:** `.milestone-config/.runtime/bootstrap-nudge-notice`.
+- **Skills:** plan
+- **Trigger:** the repo is un-bootstrapped (the resolved `projectDocs` path is absent or has no readable files, OR `.milestone-config/driver.json` is missing) AND the per-clone marker is absent.
+- **Legacy-fallback:** none.
 - **Writes:** the `.runtime/` directory and the marker. Read-only — it never runs the bootstrapper and never writes `projectDocs` / `.project/` or `driver.json`.
 - **Safety:** best-effort; a failed resolve, detect, or marker write never aborts the run.
 
@@ -260,8 +300,10 @@ try {
 
 ## Roadmap-routing notice
 
-- **Gate:** the per-clone marker is absent. Otherwise unconditional — there is no repo-state condition, because the notice announces a behavior change.
-- **Per-clone marker:** `.milestone-config/.runtime/roadmap-routing-notice`.
+- **Marker:** `.milestone-config/.runtime/roadmap-routing-notice`.
+- **Skills:** plan
+- **Trigger:** the per-clone marker is absent. Otherwise unconditional — there is no repo-state condition, because the notice announces a behavior change.
+- **Legacy-fallback:** none.
 - **Writes:** the `.runtime/` directory and the marker. `plan` Step 0 only — there is no `setup` twin.
 - **Safety:** best-effort; a failed notice or marker write never aborts the run.
 
@@ -329,10 +371,13 @@ try {
 
 ## Implied-surfaces notice
 
-- **Gate:** the overlay `.milestone-config/implied-surfaces.md` is absent AND the per-clone marker is absent.
-- **Per-clone marker:** `.milestone-config/.runtime/implied-surfaces-notice` — shared verbatim text and shared marker with the `update` Step-0 twin, so the notice shows at most once per clone across both verbs.
+- **Marker:** `.milestone-config/.runtime/implied-surfaces-notice` — shared verbatim text and shared marker across both skills below, so the notice shows at most once per clone across both.
+- **Skills:** plan, update
+- **Trigger:** the overlay `.milestone-config/implied-surfaces.md` is absent AND the per-clone marker is absent.
+- **Legacy-fallback:** none.
 - **Writes:** the `.runtime/` directory and the marker. Read-only — it never writes the overlay.
 - **Safety:** best-effort; a failed detect, notice, or marker write never aborts the run.
+- **Note:** the recorded emitter twins' lead comments read `never aborts plan` — a naming leftover from before this notice was shared with `update`. It's harmless: the printed **Text** and the best-effort never-abort guarantee below apply identically when `update` runs this section; the comment wording is the only per-skill difference and is not part of the printed notice.
 
 ```text
 🟡 Optional: add project-specific implied surfaces
@@ -416,8 +461,10 @@ try {
 
 ## md-epic parent notice
 
-- **Gate:** the per-clone marker is absent. Otherwise unconditional: there is no repo-state condition, because the notice announces a behavior change.
-- **Per-clone marker:** `.milestone-config/.runtime/md-epic-parent-notice`, shared between `create`'s and `update`'s Step-0 twins, so it shows at most once per clone across both verbs (the same cross-verb sharing the Implied-surfaces notice already uses between `plan` and `update`).
+- **Marker:** `.milestone-config/.runtime/md-epic-parent-notice`, shared between both skills below, so it shows at most once per clone across both (the same cross-verb sharing the Implied-surfaces notice already uses between `plan` and `update`).
+- **Skills:** create, update
+- **Trigger:** the per-clone marker is absent. Otherwise unconditional: there is no repo-state condition, because the notice announces a behavior change.
+- **Legacy-fallback:** none.
 - **Writes:** the `.runtime/` directory and the marker. `create` Step 0 and `update` Step 0 only, no `plan` twin.
 - **Safety:** best-effort; a failed notice or marker write never aborts the run.
 
