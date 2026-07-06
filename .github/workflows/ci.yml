@@ -8,7 +8,9 @@ name: CI
 #   1. vocabulary-purge gate   — fails if the retired v0.3.0 words reappear on
 #                                the live plugin surface (spec §11).
 #   2. plugin-structure check  — fails if a manifest or a skill/agent/command
-#                                frontmatter block is malformed.
+#                                frontmatter block is malformed, or a governed
+#                                skills/**/SKILL.md or agents/**/*.md exceeds
+#                                its size-budget ceiling (issue #270).
 #
 # The two job names below ("vocabulary-purge gate" and "plugin-structure check")
 # are the required-status-check contexts to wire in branch protection.
