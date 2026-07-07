@@ -11,9 +11,27 @@ description beats a confident, unproven one.
 
 ## The one rule that makes the metric honest
 
-The scenario **runner never sees `expected.md`.** It runs the brief blind — given only the
-plan procedure and the scenario's inputs. A separate **grader** compares observed
-output against `expected.md`. No teaching to the test.
+The scenario **runner never sees `expected.grader.md`** — it is **not part of the runner
+input set**. The runner input set is exactly `{ brief.md, project/, feeder-env.md }`; the
+runner runs the brief blind on those inputs and the plan procedure alone. A separate
+**grader** compares observed output against `expected.grader.md`. No teaching to the test.
+
+## Runner brief (neutral template)
+
+A runner is dispatched with this brief — reusable across scenarios, and deliberately
+neutral so the inputs never bias the architect:
+
+> You are the `plan` runner for one scenario. Your **only** inputs are the scenario's
+> runner input set: `{ brief.md, project/, feeder-env.md }`. Follow `skills/plan/SKILL.md`
+> on those inputs and the plan procedure alone.
+>
+> **Never open `expected.grader.md`** — not this scenario's, and not any
+> `expected.grader.md` under `tests/scenarios/`. It is the grader's answer key, it sits
+> outside your input set, and reading it invalidates the run.
+>
+> Judge candidate gaps on their own merits. Where the brief leaves a decision
+> underspecified, weigh it neutrally against the project's stated conventions — do not
+> assume a verdict, and treat no example as a cue for how to decide.
 
 ## Execution model (preview-only, prose-direct)
 
@@ -26,7 +44,7 @@ is executed by **following the prose directly**:
    `agents/architect.md` and `agents/issue-author.md` (their contracts).
 3. **PREVIEW only** — zero GitHub writes. The run emits the plan file (and a
    needs-product-input report when applicable) as text artifacts under the scenario folder.
-4. A **grader** subagent scores observed-vs-`expected.md` → ✅ pass / ⚠️ partial / ❌ fail,
+4. A **grader** subagent scores observed-vs-`expected.grader.md` → ✅ pass / ⚠️ partial / ❌ fail,
    with the observed behavior recorded.
 
 `create` and `update` make real GitHub writes, so their scenarios (07–09, and the
@@ -39,17 +57,19 @@ throwaway sandbox repo — labeled, not silently skipped.
 tests/
   README.md                      # this file (design + how to run + how to read RESULTS)
   scenarios/
-    01-clean-happy-path/          { brief.md, project/, feeder-env.md, expected.md }
+    # runner input set = { brief.md, project/, feeder-env.md };
+    # expected.grader.md is grader-only — it exists in each dir but is outside the input set.
+    01-clean-happy-path/          { brief.md, project/, feeder-env.md }  + expected.grader.md
     02-product-gap-parks/         { ... }
     03-design-resolvable-no-park/ { ... }
     04-no-code-refusal/           { ... }
     06-cross-cutting-consistency/ { ... }
-    10-nested-layout/             { brief.md, project/, feeder-env.md, expected.md }
-    11-roadmap-fan-out/           { brief.md, project/, feeder-env.md, expected.md }
-    12-implied-surfaces/          { brief.md, project/, feeder-env.md, expected.md }
-    12b-implied-surfaces-control/ { brief.md, project/, feeder-env.md, expected.md }
-    13-layer-aware-breakdown/     { brief.md, project/, feeder-env.md, expected.md }
-    14-config-pointers/           { brief.md, project/, feeder-env.md, expected.md }
+    10-nested-layout/             { brief.md, project/, feeder-env.md }  + expected.grader.md
+    11-roadmap-fan-out/           { brief.md, project/, feeder-env.md }  + expected.grader.md
+    12-implied-surfaces/          { brief.md, project/, feeder-env.md }  + expected.grader.md
+    12b-implied-surfaces-control/ { brief.md, project/, feeder-env.md }  + expected.grader.md
+    13-layer-aware-breakdown/     { brief.md, project/, feeder-env.md }  + expected.grader.md
+    14-config-pointers/           { brief.md, project/, feeder-env.md }  + expected.grader.md
   RESULTS.md                      # scorecard + claim→evidence map (the metric)
 ```
 
@@ -58,7 +78,8 @@ Per scenario:
 - `project/` — the `.project/`-style project docs the run grounds on (optional per scenario).
 - `feeder-env.md` — the test config the run assumes: the `feeder.json` keys and the driver
   shared keys (`sourceGlobs`, `uiSurfaceGlobs`, `integrationBranch`) the run reads.
-- `expected.md` — the behavioral contract (grader-only; the runner never sees it).
+- `expected.grader.md` — the behavioral contract (grader-only, outside the runner input
+  set; the runner never sees it).
 
 `tests/` is outside `sourceGlobs` and the `skills/` load path — no hook friction, never
 loaded as plugin skills.

@@ -1,6 +1,6 @@
 # Expected contract: 12b implied-surfaces-control  (GRADER ONLY)
 
-This is the CONTROL sibling scenario 12's own `expected.md` calls for but cannot
+This is the CONTROL sibling scenario 12's own `expected.grader.md` calls for but cannot
 demonstrate from inside scenario 12's brief: scenario 12's brief always names the
 email capability, so "no anti-fixation prompt" can never be observed there (see
 the gap recorded on #285). `12b`'s brief is capability-free and entity-free, a
@@ -69,7 +69,7 @@ scenario 12's own execution model.
 - Like scenario 12, this scenario is **plan-side, preview-only** and
   **prose-direct**: no scenario-specific scripted (bash/pwsh) twin exists to hold
   parity with, so parity is **N/A**.
-- `expected.md` is **grader-only** (the runner never sees it). This fixture is a
+- `expected.grader.md` is **grader-only** (the runner never sees it). This fixture is a
   **sibling** to `12-implied-surfaces`, not a renumbering of the on-disk sequence,
   per the human decision recorded on #285: the control lives in its own
   directory, `12b-implied-surfaces-control/`, because the anti-fixation prompt is

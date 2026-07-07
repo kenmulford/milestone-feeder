@@ -116,6 +116,6 @@ plan-side portion of scenario 11.
   consult / fan-out / anti-fixation flow is prose the runner follows; it touches no
   scenario-specific scripted (bash/pwsh) twin. **Cross-platform parity is recorded
   N/A** for this scenario (mirroring scenario 11's plan-side preview portion).
-- `expected.md` is **grader-only** (the runner never sees it). Appended at **NN=12**
+- `expected.grader.md` is **grader-only** (the runner never sees it). Appended at **NN=12**
   (on-disk 01–06, 10, 11; 07–09 reserved for the sandbox `create` / `update`
   scenarios).

@@ -1,6 +1,6 @@
 # RESULTS — milestone-feeder scenario fixture catalog
 
-**What this is.** `tests/scenarios/` holds executable fixtures (each = `brief.md` + a `project/` fixture + `feeder-env.md` + a blind `expected.md` grader contract) that specify what the feeder is supposed to do when run. This file catalogs those fixtures and what each asserts. It is deliberately **not** framed as an automated scorecard: `.github/workflows/ci.yml` runs exactly two static gates (vocabulary-purge, plugin-structure) and neither dispatches an agent runner or grader, so repeatable, machine-verified re-execution of this suite is not something CI can do — any confidence this file records comes from whichever manual run is named below, never from an automated re-run.
+**What this is.** `tests/scenarios/` holds executable fixtures (each = `brief.md` + a `project/` fixture + `feeder-env.md` + a blind `expected.grader.md` grader contract) that specify what the feeder is supposed to do when run. This file catalogs those fixtures and what each asserts. It is deliberately **not** framed as an automated scorecard: `.github/workflows/ci.yml` runs exactly two static gates (vocabulary-purge, plugin-structure) and neither dispatches an agent runner or grader, so repeatable, machine-verified re-execution of this suite is not something CI can do — any confidence this file records comes from whichever manual run is named below, never from an automated re-run.
 
 **Status (as of 2026-07-06).** Four scenarios have now been executed against the **installed** plugin with the real `milestone-feeder:architect` and `milestone-feeder:issue-author` agents dispatched (not proxied): **02, 03, 06 PASS; 12 PARTIAL** (see the dated run record below). This is the first execution of the current post-v0.9.0, gate-free pipeline, and it closes the old from-repo fidelity gap for those four fixtures. The other six (01, 04, 10, 11, 13, 14) remain **unexecuted**, plus the `create`/`update` sandbox scenarios. The **v0.3.0 preview run (2026-06-19)**, kept in the historical section, still backs **none** of the current claims: it exercised the removed pre-v0.9.0 pipeline through proxied `general-purpose` subagents, and its per-scenario transcripts were removed.
 
@@ -8,7 +8,7 @@
 
 ## Current scenario suite (v0.9.0)
 
-What each fixture asserts — the `expected.md` contract, not a fresh execution verdict:
+What each fixture asserts — the `expected.grader.md` contract, not a fresh execution verdict:
 
 | # | Scenario | What it asserts |
 |---|----------|-----------------|
@@ -27,7 +27,7 @@ What each fixture asserts — the `expected.md` contract, not a fresh execution 
 
 ## Run record: 2026-07-06 (installed plugin, real agents)
 
-First real execution of the current pipeline. Each runner followed `skills/plan/SKILL.md` **blind to `expected.md`** and dispatched the real `milestone-feeder:architect` (once) and `milestone-feeder:issue-author` (once per surviving candidate) agents; an independent grader then scored the observed plan against `expected.md`. PREVIEW-only (zero GitHub writes). Version-ladder rungs 3-4 could not resolve offline (no live repo) and were recorded as preview-limitations, not fabricated.
+First real execution of the current pipeline. Each runner followed `skills/plan/SKILL.md` **blind to `expected.grader.md`** and dispatched the real `milestone-feeder:architect` (once) and `milestone-feeder:issue-author` (once per surviving candidate) agents; an independent grader then scored the observed plan against `expected.grader.md`. PREVIEW-only (zero GitHub writes). Version-ladder rungs 3-4 could not resolve offline (no live repo) and were recorded as preview-limitations, not fabricated.
 
 | # | Scenario | Verdict | Observed |
 |---|----------|---------|----------|
@@ -40,7 +40,7 @@ Observed artifacts live beside each fixture as `observed-2026-07-06.md`. The two
 
 ## Fidelity caveat (applies to any from-repo run)
 
-The feeder's own agents (`milestone-feeder:architect`, `:issue-author`) are not always registered as dispatchable subagents when running from-repo (when the plugin isn't installed in the harness session), in which case their *contracts* are executed via `general-purpose` subagents carrying the verbatim `agents/*.md` files, contract-faithful but proxied. **Update (2026-07-06):** in the run recorded above the plugin WAS installed and the real agents dispatched, so 02/03/06/12 close this gap; the remaining six fixtures have not yet had a real-agent run. Each runner was **blind** to its `expected.md`; an independent grader scored each run.
+The feeder's own agents (`milestone-feeder:architect`, `:issue-author`) are not always registered as dispatchable subagents when running from-repo (when the plugin isn't installed in the harness session), in which case their *contracts* are executed via `general-purpose` subagents carrying the verbatim `agents/*.md` files, contract-faithful but proxied. **Update (2026-07-06):** in the run recorded above the plugin WAS installed and the real agents dispatched, so 02/03/06/12 close this gap; the remaining six fixtures have not yet had a real-agent run. Each runner was **blind** to its `expected.grader.md`; an independent grader scored each run.
 
 ---
 

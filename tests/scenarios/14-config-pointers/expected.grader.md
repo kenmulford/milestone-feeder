@@ -109,5 +109,5 @@ named BY PATH, not that its values are copied in.
   authoring / anti-inline / degrade flow is prose the runner follows; it touches no
   scenario-specific scripted (bash/pwsh) twin. **Cross-platform parity is recorded N/A**
   for this scenario (mirroring scenarios 11, 12, and 13's plan-side preview portion).
-- `expected.md` is **grader-only** (the runner never sees it). Appended at **NN=14**
+- `expected.grader.md` is **grader-only** (the runner never sees it). Appended at **NN=14**
   (on-disk 01–06, 10–13; 07–09 reserved for the sandbox `create` / `update` scenarios).
