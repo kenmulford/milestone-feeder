@@ -137,6 +137,6 @@ The expected candidate set (local tags; exact titles may vary):
   assignment / ordering / threading flow is prose the runner follows; it touches no
   scenario-specific scripted (bash/pwsh) twin. **Cross-platform parity is recorded
   N/A** for this scenario (mirroring scenarios 11 and 12's plan-side preview portion).
-- `expected.md` is **grader-only** (the runner never sees it). Appended at **NN=13**
+- `expected.grader.md` is **grader-only** (the runner never sees it). Appended at **NN=13**
   (on-disk 01–06, 10, 11, 12; 07–09 reserved for the sandbox `create` / `update`
   scenarios).

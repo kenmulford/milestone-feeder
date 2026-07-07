@@ -14,25 +14,36 @@ It checks:
   3. Every skills/**/SKILL.md and agents/**/*.md  — opens with a `---`-fenced
      frontmatter block carrying non-empty `name` and `description`. Every
      commands/**/*.md needs `description` (a command's name comes from its
-     filename, so `name` is not required there).
+     filename, so `name` is not required there). Governed frontmatter
+     (skills/**/SKILL.md, agents/**/*.md, commands/**/*.md) is additionally
+     strict-scalar checked: no unquoted plain scalar may carry a colon+space that
+     Claude Desktop's strict YAML loader would reject (issue #292; see the
+     strict-scalar note below).
   4. Size budgets (issue #270) — every governed skills/**/SKILL.md stays at or
      under its own per-file word-count ceiling, and every agents/**/*.md
      frontmatter `description` stays at or under a flat 150-word ceiling. A
      written size standard with no gate is exactly what let these regrow past
      their targets before (see "--- 6: size budgets ---" below).
 
-Why a lenient line parser (NOT strict YAML — read before "upgrading" this):
-  Claude Code's frontmatter reader is tolerant: it takes everything after the
-  first colon on a `key:` line as that key's value. This repo's real, working
-  skills rely on that — e.g. skills/plan/SKILL.md has
-  `description: ... Read-only on GitHub: writes a single ...`, whose embedded
-  ": " a STRICT YAML parser (PyYAML safe_load) rejects with "mapping values are
-  not allowed here". Validating with strict YAML therefore FALSE-FAILS files
-  that load fine in Claude Code — the worst thing a gate can do. So this parser
-  deliberately mirrors the loader: split each top-level `key:` on its first
-  colon, keep the rest as the value. It does not try to be a full YAML engine.
-  Files are read as utf-8-sig so a leading BOM (e.g. from a Windows editor) is
-  stripped rather than wrongly failing the line-1 fence check.
+Two readers, two rules (read before "upgrading" this):
+  Claude Code's frontmatter reader is tolerant — it takes everything after the
+  first colon on a `key:` line as that key's value — so the parser below
+  deliberately mirrors it for key extraction: split each top-level `key:` on its
+  first colon, keep the rest as the value. It does not try to be a full YAML
+  engine. Files are read as utf-8-sig so a leading BOM (e.g. from a Windows
+  editor) is stripped rather than wrongly failing the line-1 fence check.
+
+  Claude Desktop's loader, by contrast, is STRICT (js-yaml): an unquoted plain
+  scalar whose value contains a colon+space (": ") is read as a nested mapping,
+  so the skill silently fails to register (issue #292). That strict loader is
+  ground truth for whether a skill loads in Desktop — so the strict-scalar check
+  below FAILS any governed frontmatter (skills/**/SKILL.md, agents/**/*.md,
+  commands/**/*.md) carrying that exact construct. This is not a false-fail risk: the governed
+  files' long descriptions are folded block scalars (`description: >-`), which
+  the strict loader accepts, and block-scalar or quoted values are exempt by
+  construction. The check stays stdlib-only by design — it detects the one
+  rejected construct without parsing YAML, so CI needs no PyYAML and no
+  dependency-install step.
 
 Dependencies: Python standard library only.
 
@@ -78,6 +89,14 @@ def load_json(path: Path) -> dict | None:
     return data
 
 
+# Block-scalar indicators a top-level value may legitimately be (no inline value
+# follows on the header line; the real value is on the indented lines below).
+# Defined once here and consumed by BOTH walkers — parse_frontmatter (key
+# extraction) and check_strict_scalars (strict-loader gate) — so the set can
+# never drift between them.
+_BLOCK_SCALAR_INDICATORS = ("|", ">", "|-", ">-", "|+", ">+")
+
+
 def parse_frontmatter(path: Path) -> dict | None:
     """Extract the leading `---` frontmatter block as a key->value dict.
 
@@ -119,7 +138,7 @@ def parse_frontmatter(path: Path) -> dict | None:
             key, _, value = raw.partition(":")
             key = key.strip()
             value = value.strip()
-            if value in ("|", ">", "|-", ">-", "|+", ">+"):
+            if value in _BLOCK_SCALAR_INDICATORS:
                 # Block scalar — value continues on indented lines below.
                 current_key = key
                 data[key] = ""
@@ -158,6 +177,90 @@ def require_keys(path: Path, data: dict, keys: list[str]) -> None:
             err(path, f"frontmatter key '{key}' is empty")
 
 
+def check_strict_scalars(path: Path) -> None:
+    """Fail any governed-frontmatter plain scalar a STRICT YAML loader rejects.
+
+    Claude Desktop's frontmatter loader is strict (js-yaml): an unquoted plain
+    scalar whose value contains a colon+space (": ") is parsed as a nested
+    mapping and the skill silently fails to register (issue #292). This check
+    catches exactly that defect class — stdlib-only, no YAML parse — across the
+    governed frontmatter (skills/**/SKILL.md, agents/**/*.md, commands/**/*.md).
+    It walks the top-level `key: value` lines of the frontmatter block and flags
+    any whose value is an unquoted plain scalar (does not start with |, >, ', or
+    ") containing ": ". Block-scalar header lines (`key: >-`) carry no inline
+    value and their indented continuation lines belong to the block, so both are
+    exempt; a quoted value escapes the colon and is exempt too.
+
+    The `collecting_block` state is load-bearing, not decorative: an indented line
+    is exempt ONLY while inside a block scalar (its body). An indented line while
+    NOT collecting a block is a plain-scalar CONTINUATION line — a multi-line
+    plain value folded onto the next line — which js-yaml folds and rejects a
+    ": " on exactly as it would on the header line (the #292 defect class,
+    line-wrapped). So such a continuation line is flagged too, citing its own
+    line number. The ": " test runs against the value with its TRAILING
+    whitespace intact (only leading whitespace after the key's colon is stripped),
+    so a value ending in a colon+space (e.g. `key: …drift: `) is not masked.
+
+    Errors are recorded via err(); nothing is returned. Fence problems are not
+    re-reported here (parse_frontmatter/require_keys already flag them).
+    """
+    lines = path.read_text(encoding="utf-8-sig").splitlines()
+    if not lines or lines[0].strip() != "---":
+        return
+    close_idx = None
+    for i in range(1, len(lines)):
+        if lines[i].strip() == "---":
+            close_idx = i
+            break
+    if close_idx is None:
+        return
+
+    _MSG = (
+        "Claude Desktop's strict YAML loader (js-yaml) parses this as a nested "
+        "mapping and the skill silently fails to register (issue #292); make the "
+        "value a folded block scalar ('key: >-' with the text indented below) or "
+        "quote it"
+    )
+
+    collecting_block = False  # inside a `key: >-`-style block scalar
+    for i in range(1, close_idx):
+        raw = lines[i]
+        is_indented = raw[:1] in (" ", "\t")
+        if collecting_block:
+            if is_indented or raw.strip() == "":
+                continue  # continuation of a block scalar — exempt.
+            collecting_block = False  # unindented line ends the block; process it.
+        if is_indented:
+            # Not a block-scalar body (handled above) → a plain-scalar
+            # continuation line. js-yaml folds it and rejects a ": " here just
+            # as on the header line, so flag it (issue #292, line-wrapped).
+            if ": " in raw:
+                err(
+                    path,
+                    f"frontmatter line {i + 1} plain-scalar continuation "
+                    f"'{raw.strip()}' contains a colon+space (': ') — {_MSG}",
+                )
+            continue
+        if ":" not in raw:
+            continue
+        # lstrip only: drop the leading space after the key's own colon so
+        # `key: foo` never false-positives on its separator, but keep any TRAILING
+        # whitespace so a value ending in ": " is still caught (fix: strip() here
+        # masked a trailing colon+space).
+        value = raw.partition(":")[2].lstrip()
+        if value.strip() in _BLOCK_SCALAR_INDICATORS:
+            collecting_block = True
+            continue
+        if not value.strip() or value[0] in ("|", ">", "'", '"'):
+            continue  # block scalar / quoted value — exempt by construction.
+        if ": " in value:
+            err(
+                path,
+                f"frontmatter line {i + 1} value '{value.strip()}' is an "
+                f"unquoted plain scalar containing a colon+space (': ') — {_MSG}",
+            )
+
+
 # --- 1 & 2: manifests -------------------------------------------------------
 
 plugin_json = REPO_ROOT / ".claude-plugin" / "plugin.json"
@@ -189,6 +292,7 @@ for skill_md in sorted((REPO_ROOT / "skills").rglob("SKILL.md")):
     fm = parse_frontmatter(skill_md)
     if fm is not None:
         require_keys(skill_md, fm, ["name", "description"])
+        check_strict_scalars(skill_md)
 
 # Agents: every agents/**/*.md (recursive) — require name + description.
 # Also collect each agent's `name` for the no-source-edit drift-guard below.
@@ -200,6 +304,7 @@ if agents_dir.is_dir():
         fm = parse_frontmatter(agent_md)
         if fm is not None:
             require_keys(agent_md, fm, ["name", "description"])
+            check_strict_scalars(agent_md)
             name = str(fm.get("name", "")).strip()
             if name:
                 agent_names.append(name)
@@ -213,6 +318,9 @@ if commands_dir.is_dir():
         fm = parse_frontmatter(cmd_md)
         if fm is not None:
             require_keys(cmd_md, fm, ["description"])
+            # Desktop's strict loader reads command frontmatter identically to
+            # skills'/agents', so the #292 strict-scalar rule governs it too.
+            check_strict_scalars(cmd_md)
 
 # --- 4: no-source-edit actor-gate drift-guard -------------------------------
 #
@@ -276,8 +384,11 @@ def parse_hook_agent_set(path: Path) -> set[str] | None:
     text = path.read_text(encoding="utf-8-sig")
     m = FEEDER_AGENT_SET_RE.search(text)
     if m is None:
-        err(path, "missing the '# FEEDER_OWN_AGENTS: ...' set literal "
-                  "(required for the actor-gate drift-guard)")
+        err(
+            path,
+            "missing the '# FEEDER_OWN_AGENTS: ...' set literal "
+            "(required for the actor-gate drift-guard)",
+        )
         return None
     names = {n for n in m.group(1).split() if n}
     if not names:
@@ -305,9 +416,12 @@ def parse_hook_runtime_set(path: Path, label: str) -> set[str] | None:
     else:  # pragma: no cover — guard against an unknown script type.
         names = None
     if not names:
-        err(path, "missing or empty RUNTIME FEEDER_OWN_AGENTS literal "
-                  "(the set the hook actually executes) — required for the "
-                  "actor-gate drift-guard")
+        err(
+            path,
+            "missing or empty RUNTIME FEEDER_OWN_AGENTS literal "
+            "(the set the hook actually executes) — required for the "
+            "actor-gate drift-guard",
+        )
         return None
     return names
 
@@ -323,31 +437,42 @@ agent_names_set = set(agent_names)
 for _label, hook_path in hook_scripts.items():
     checked += 1
     comment_set = parse_hook_agent_set(hook_path)
-    runtime_set = parse_hook_runtime_set(hook_path, _label) if hook_path.is_file() else None
+    runtime_set = (
+        parse_hook_runtime_set(hook_path, _label) if hook_path.is_file() else None
+    )
     if comment_set is None or runtime_set is None:
         continue
     # Comment-vs-runtime: strict equality. A disagreement is the false-PASS this
     # guard exists to catch (e.g. comment updated but runtime line left stale).
     if comment_set != runtime_set:
-        err(hook_path, f"FEEDER_OWN_AGENTS comment literal "
-                       f"{sorted(comment_set)} disagrees with the runtime literal "
-                       f"{sorted(runtime_set)} the hook executes — update both so "
-                       f"the live actor gate matches its documented set")
+        err(
+            hook_path,
+            f"FEEDER_OWN_AGENTS comment literal "
+            f"{sorted(comment_set)} disagrees with the runtime literal "
+            f"{sorted(runtime_set)} the hook executes — update both so "
+            f"the live actor gate matches its documented set",
+        )
     # Coverage: every declared agent must appear in BOTH sets. The runtime set is
     # the safety-relevant one (it is what the live gate executes); the comment set
     # is checked too as belt-and-suspenders.
     for agent_name in agent_names:
         if agent_name not in runtime_set:
-            err(hook_path, f"runtime FEEDER_OWN_AGENTS set is missing agent "
-                           f"'{agent_name}' (declared in agents/*.md) — the "
-                           f"no-source-edit actor gate the hook executes has "
-                           f"drifted from the real agent set; add it to keep the "
-                           f"safety gate correct")
+            err(
+                hook_path,
+                f"runtime FEEDER_OWN_AGENTS set is missing agent "
+                f"'{agent_name}' (declared in agents/*.md) — the "
+                f"no-source-edit actor gate the hook executes has "
+                f"drifted from the real agent set; add it to keep the "
+                f"safety gate correct",
+            )
         if agent_name not in comment_set:
-            err(hook_path, f"FEEDER_OWN_AGENTS comment literal is missing agent "
-                           f"'{agent_name}' (declared in agents/*.md) — the "
-                           f"actor-gate drift-guard comment has drifted from the "
-                           f"real agent set; add it to keep the safety gate correct")
+            err(
+                hook_path,
+                f"FEEDER_OWN_AGENTS comment literal is missing agent "
+                f"'{agent_name}' (declared in agents/*.md) — the "
+                f"actor-gate drift-guard comment has drifted from the "
+                f"real agent set; add it to keep the safety gate correct",
+            )
     # Reverse coverage: every name the hook actually carries must map to a real
     # agents/*.md file. This is the NEW direction — an orphaned name (e.g. a
     # deleted agent left behind in the hook's allowlist) is dead weight that
@@ -355,16 +480,22 @@ for _label, hook_path in hook_scripts.items():
     # orphaned name fails CI, full stop.
     for name in runtime_set:
         if name not in agent_names_set:
-            err(hook_path, f"runtime FEEDER_OWN_AGENTS set contains '{name}', "
-                           f"which has no matching agents/*.md — this is a stale "
-                           f"orphaned name (e.g. from a deleted agent); remove it "
-                           f"from the hook's allowlist")
+            err(
+                hook_path,
+                f"runtime FEEDER_OWN_AGENTS set contains '{name}', "
+                f"which has no matching agents/*.md — this is a stale "
+                f"orphaned name (e.g. from a deleted agent); remove it "
+                f"from the hook's allowlist",
+            )
     for name in comment_set:
         if name not in agent_names_set:
-            err(hook_path, f"FEEDER_OWN_AGENTS comment literal contains '{name}', "
-                           f"which has no matching agents/*.md — this is a stale "
-                           f"orphaned name (e.g. from a deleted agent); remove it "
-                           f"from the hook's comment literal")
+            err(
+                hook_path,
+                f"FEEDER_OWN_AGENTS comment literal contains '{name}', "
+                f"which has no matching agents/*.md — this is a stale "
+                f"orphaned name (e.g. from a deleted agent); remove it "
+                f"from the hook's comment literal",
+            )
 
 # --- 5: cross-file SKILL.md line-citation guard -----------------------------
 #
@@ -395,10 +526,13 @@ for skill_md in sorted((REPO_ROOT / "skills").rglob("SKILL.md")):
     for m in CROSS_FILE_LINE_CITATION_RE.finditer(text):
         cited_path = (REPO_ROOT / m.group(1)).resolve()
         if cited_path != skill_md.resolve():
-            err(skill_md, f"cross-file line citation '{m.group(0)}' — line numbers "
-                          f"drift when the cited file changes, silently invalidating "
-                          f"the reference; cite the target by its stable heading "
-                          f"(its Step / section / § name) instead of a line number")
+            err(
+                skill_md,
+                f"cross-file line citation '{m.group(0)}' — line numbers "
+                f"drift when the cited file changes, silently invalidating "
+                f"the reference; cite the target by its stable heading "
+                f"(its Step / section / § name) instead of a line number",
+            )
 
 # --- 6: size budgets ---------------------------------------------------------
 #
@@ -450,18 +584,24 @@ for rel_path, ceiling in sorted(SKILL_WORD_CEILINGS.items()):
     skill_md = REPO_ROOT / rel_path
     checked += 1
     if not skill_md.is_file():
-        err(skill_md, f"is listed in SKILL_WORD_CEILINGS ({ceiling}-word ceiling) "
-                      f"but is missing from disk — a renamed or deleted governed "
-                      f"file must update this table in the same change, not "
-                      f"silently drop out of the size-budget gate")
+        err(
+            skill_md,
+            f"is listed in SKILL_WORD_CEILINGS ({ceiling}-word ceiling) "
+            f"but is missing from disk — a renamed or deleted governed "
+            f"file must update this table in the same change, not "
+            f"silently drop out of the size-budget gate",
+        )
         continue
     word_count = len(skill_md.read_text(encoding="utf-8-sig").split())
     if word_count > ceiling:
-        err(skill_md, f"is {word_count} words, over its {ceiling}-word "
-                      f"size-budget ceiling (SKILL_WORD_CEILINGS in this script) "
-                      f"— trim it, or if the growth is deliberate, record a "
-                      f"decision on the issue that grows it and raise the "
-                      f"ceiling in the same change")
+        err(
+            skill_md,
+            f"is {word_count} words, over its {ceiling}-word "
+            f"size-budget ceiling (SKILL_WORD_CEILINGS in this script) "
+            f"— trim it, or if the growth is deliberate, record a "
+            f"decision on the issue that grows it and raise the "
+            f"ceiling in the same change",
+        )
 
 if agents_dir.is_dir():
     for agent_md in sorted(agents_dir.rglob("*.md")):
@@ -474,9 +614,12 @@ if agents_dir.is_dir():
         checked += 1
         word_count = len(description.split())
         if word_count > AGENT_DESCRIPTION_WORD_CEILING:
-            err(agent_md, f"frontmatter 'description' is {word_count} words, "
-                          f"over the flat {AGENT_DESCRIPTION_WORD_CEILING}-word "
-                          f"ceiling every agent description is held to — trim it")
+            err(
+                agent_md,
+                f"frontmatter 'description' is {word_count} words, "
+                f"over the flat {AGENT_DESCRIPTION_WORD_CEILING}-word "
+                f"ceiling every agent description is held to — trim it",
+            )
 
 # --- report -----------------------------------------------------------------
 
@@ -484,11 +627,15 @@ for w in warnings:
     print(f"WARN: {w}", file=sys.stderr)
 
 if errors:
-    print(f"FAIL: plugin structure invalid ({len(errors)} problem(s)):", file=sys.stderr)
+    print(
+        f"FAIL: plugin structure invalid ({len(errors)} problem(s)):", file=sys.stderr
+    )
     for e in errors:
         print(f"  - {e}", file=sys.stderr)
     sys.exit(1)
 
-print(f"PASS: plugin structure valid ({checked} file(s) checked, "
-      f"{len(warnings)} warning(s)).")
+print(
+    f"PASS: plugin structure valid ({checked} file(s) checked, "
+    f"{len(warnings)} warning(s))."
+)
 sys.exit(0)

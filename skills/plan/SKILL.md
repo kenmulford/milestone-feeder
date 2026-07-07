@@ -1,6 +1,7 @@
 ---
 name: plan
-description: This skill should be used when the user invokes "/milestone-feeder:plan <brief>", or asks to "plan a milestone from a brief" or "turn an idea into a reviewable plan". Turns a feature brief into a reviewable plan file — small, well-formed candidate issues drafted to pass the driver's triage clean, landing in a plan you review before `create`. Read-only on GitHub: writes a single reviewable plan file (plus a needs-input report when something is parked) and creates nothing on GitHub. No flags. Authors no code; opens no PRs.
+description: >-
+  This skill should be used when the user invokes "/milestone-feeder:plan <brief>", or asks to "plan a milestone from a brief" or "turn an idea into a reviewable plan". Turns a feature brief into a reviewable plan file — small, well-formed candidate issues drafted to pass the driver's triage clean, landing in a plan you review before `create`. Read-only on GitHub: writes a single reviewable plan file (plus a needs-input report when something is parked) and creates nothing on GitHub. No flags. Authors no code; opens no PRs.
 ---
 
 # plan — brief → reviewable plan file
@@ -97,7 +98,7 @@ The brief arrives in one of three forms. **Detect** which:
 
 Record `epicIssueNumber` when the brief was an epic issue. `plan` posts **nothing** to the epic — the number is recorded in the plan file's source-brief reference so the downstream `create` / `update` can route their needs-input report to the epic comment. `plan` itself writes no GitHub state.
 
-**Capture the explicit milestone identity (`milestoneLine`) when the user states it up front** (`docs/specs/v0.3.1-driver-handoff.md` §3 — milestone identity is a user-owned field). The user may name the milestone — with its version — either as a labelled `Milestone: <name> vX.Y.Z` line **in the brief doc** or as an inline statement alongside the brief. When present, capture that verbatim `<name> vX.Y.Z` string as `milestoneLine` — it is carried **verbatim** into the version-resolution step (Step 5's ladder, rung 1; `docs/specs/v0.3.1-driver-handoff.md` §2). This field is **optional and additive**: a brief with no `Milestone:` line and no inline statement omits it and normalizes exactly as before (`skills/plan/SKILL.md:46` ingest, `:56` normalize) — the missing field degrades gracefully to the rest of the ladder.
+**Capture the explicit milestone identity (`milestoneLine`) when the user states it up front** (`docs/specs/v0.3.1-driver-handoff.md` §3 — milestone identity is a user-owned field). The user may name the milestone — with its version — either as a labelled `Milestone: <name> vX.Y.Z` line **in the brief doc** or as an inline statement alongside the brief. When present, capture that verbatim `<name> vX.Y.Z` string as `milestoneLine` — it is carried **verbatim** into the version-resolution step (Step 5's ladder, rung 1; `docs/specs/v0.3.1-driver-handoff.md` §2). This field is **optional and additive**: a brief with no `Milestone:` line and no inline statement omits it and normalizes exactly as before (`skills/plan/SKILL.md:47` ingest, `:57` normalize) — the missing field degrades gracefully to the rest of the ladder.
 
 ### Step 2 — Product-gap check (the park boundary)
 
@@ -157,7 +158,7 @@ This is the **front-door** size/scope check. It runs after the architect's struc
 | **`none`** (single coherent release) | **Do not route.** Fall straight through to Step 4 on the whole brief — today's single-milestone pipeline, **byte-for-byte unchanged**. No `build-roadmap` invocation, no advisory change, no new prompt. |
 | **Raised** (≥2 milestones forming a strict partition of `CANDIDATES`) | **Route into `build-roadmap`** (the internal skill #152 introduced) — see below. |
 
-**The oversized route.** Invoke the `build-roadmap` skill — a Claude Code **skill invocation**, the same way `create` runs `plan` first (`skills/create/SKILL.md` Step 1 — the **Absent** row runs `plan` first); there is **no bash/pwsh form** for the invocation itself. Hand it exactly the inputs its Step 0 expects (`skills/build-roadmap/SKILL.md` Step 0 — "Receive the inputs from `plan`"), **all already in hand — re-resolve nothing** (the resolve-once boundary, `skills/plan/SKILL.md:22`):
+**The oversized route.** Invoke the `build-roadmap` skill — a Claude Code **skill invocation**, the same way `create` runs `plan` first (`skills/create/SKILL.md` Step 1 — the **Absent** row runs `plan` first); there is **no bash/pwsh form** for the invocation itself. Hand it exactly the inputs its Step 0 expects (`skills/build-roadmap/SKILL.md` Step 0 — "Receive the inputs from `plan`"), **all already in hand — re-resolve nothing** (the resolve-once boundary, `skills/plan/SKILL.md:23`):
 
 - the **oversized whole-app brief** — the Step-1 normalized brief (`{ goal, in-scope, out-of-scope, surfaces, … }`);
 - the **source-brief reference** (`inline` | `file:<path>` | `epic #<n>`) captured at Step 1;

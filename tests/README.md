@@ -11,9 +11,27 @@ description beats a confident, unproven one.
 
 ## The one rule that makes the metric honest
 
-The scenario **runner never sees `expected.md`.** It runs the brief blind — given only the
-plan procedure and the scenario's inputs. A separate **grader** compares observed
-output against `expected.md`. No teaching to the test.
+The scenario **runner never sees `expected.grader.md`** — it is **not part of the runner
+input set**. The runner input set is exactly `{ brief.md, project/, feeder-env.md }`; the
+runner runs the brief blind on those inputs and the plan procedure alone. A separate
+**grader** compares observed output against `expected.grader.md`. No teaching to the test.
+
+## Runner brief (neutral template)
+
+A runner is dispatched with this brief — reusable across scenarios, and deliberately
+neutral so the inputs never bias the architect:
+
+> You are the `plan` runner for one scenario. Your **only** inputs are the scenario's
+> runner input set: `{ brief.md, project/, feeder-env.md }`. Follow `skills/plan/SKILL.md`
+> on those inputs and the plan procedure alone.
+>
+> **Never open `expected.grader.md`** — not this scenario's, and not any
+> `expected.grader.md` under `tests/scenarios/`. It is the grader's answer key, it sits
+> outside your input set, and reading it invalidates the run.
+>
+> Judge candidate gaps on their own merits. Where the brief leaves a decision
+> underspecified, weigh it neutrally against the project's stated conventions — do not
+> assume a verdict, and treat no example as a cue for how to decide.
 
 ## Execution model (preview-only, prose-direct)
 
@@ -26,7 +44,7 @@ is executed by **following the prose directly**:
    `agents/architect.md` and `agents/issue-author.md` (their contracts).
 3. **PREVIEW only** — zero GitHub writes. The run emits the plan file (and a
    needs-product-input report when applicable) as text artifacts under the scenario folder.
-4. A **grader** subagent scores observed-vs-`expected.md` → ✅ pass / ⚠️ partial / ❌ fail,
+4. A **grader** subagent scores observed-vs-`expected.grader.md` → ✅ pass / ⚠️ partial / ❌ fail,
    with the observed behavior recorded.
 
 `create` and `update` make real GitHub writes, so their scenarios (07–09, and the
@@ -39,16 +57,19 @@ throwaway sandbox repo — labeled, not silently skipped.
 tests/
   README.md                      # this file (design + how to run + how to read RESULTS)
   scenarios/
-    01-clean-happy-path/          { brief.md, project/, feeder-env.md, expected.md }
+    # runner input set = { brief.md, project/, feeder-env.md };
+    # expected.grader.md is grader-only — it exists in each dir but is outside the input set.
+    01-clean-happy-path/          { brief.md, project/, feeder-env.md }  + expected.grader.md
     02-product-gap-parks/         { ... }
     03-design-resolvable-no-park/ { ... }
     04-no-code-refusal/           { ... }
     06-cross-cutting-consistency/ { ... }
-    10-nested-layout/             { brief.md, project/, feeder-env.md, expected.md }
-    11-roadmap-fan-out/           { brief.md, project/, feeder-env.md, expected.md }
-    12-implied-surfaces/          { brief.md, project/, feeder-env.md, expected.md }
-    13-layer-aware-breakdown/     { brief.md, project/, feeder-env.md, expected.md }
-    14-config-pointers/           { brief.md, project/, feeder-env.md, expected.md }
+    10-nested-layout/             { brief.md, project/, feeder-env.md }  + expected.grader.md
+    11-roadmap-fan-out/           { brief.md, project/, feeder-env.md }  + expected.grader.md
+    12-implied-surfaces/          { brief.md, project/, feeder-env.md }  + expected.grader.md
+    12b-implied-surfaces-control/ { brief.md, project/, feeder-env.md }  + expected.grader.md
+    13-layer-aware-breakdown/     { brief.md, project/, feeder-env.md }  + expected.grader.md
+    14-config-pointers/           { brief.md, project/, feeder-env.md }  + expected.grader.md
   RESULTS.md                      # scorecard + claim→evidence map (the metric)
 ```
 
@@ -57,7 +78,8 @@ Per scenario:
 - `project/` — the `.project/`-style project docs the run grounds on (optional per scenario).
 - `feeder-env.md` — the test config the run assumes: the `feeder.json` keys and the driver
   shared keys (`sourceGlobs`, `uiSurfaceGlobs`, `integrationBranch`) the run reads.
-- `expected.md` — the behavioral contract (grader-only; the runner never sees it).
+- `expected.grader.md` — the behavioral contract (grader-only, outside the runner input
+  set; the runner never sees it).
 
 `tests/` is outside `sourceGlobs` and the `skills/` load path — no hook friction, never
 loaded as plugin skills.
@@ -77,6 +99,7 @@ loaded as plugin skills.
 | 10 | nested layout | a nested monorepo (`siteroot/{web,api}`) where source lives only under app roots, never the repo root | bootstrapper-v0.2.0-baked nested `sourceGlobs` route issue file scope into the nested app roots, never the repo root | ✅ |
 | 11 | roadmap fan-out | an oversized whole-app brief (auth, data model, invoicing, billing, screens) that spans several milestones, seeded from its own author sections | a whole-app brief routes into `build-roadmap`: **split → confirm → parallel-plan** emits the roadmap manifest + N per-milestone plan files; the **create deploy-loop** deploys them; single-milestone collapse falls back cleanly; an undecided product call parks one issue and siblings continue | plan-side ✅ now / create-loop sandbox follow-up |
 | 12 | implied surfaces | a terse brief names a capability (admins emailing members) but never spells out its companion surfaces; one companion (suppression/unsubscribe) is a genuine product-call with no conventional default | the architect consults the implied-surfaces reference, fans the conventional companions (delivery-failure log + retry + audit) out as **`implied`-labeled review candidates**, **parks** the genuine product-call to needs-product-input instead of inventing it, and `plan` surfaces the implied set with the verbatim anti-fixation prompt — no auto-dump, no invented scope; a control slice with no capability/entity triggers neither | ✅ |
+| 12b | implied surfaces control | a brief that names **no capability and introduces no new entity** (a plain reword of existing copy, no email/user-management/sync, etc.) | the control sibling to 12, demonstrated by its own run: the architect's clause-8 consult is a genuine no-op, zero `implied`-disposition candidates, no `[implied — review / trim / augment]` marker, no anti-fixation prompt; breakdown proceeds grounded and dependency-only, byte-for-byte as today | ✅ |
 | 13 | layer-aware breakdown | a small backend brief (list + create notes + a slug helper) against a project stating a strict layering convention (`util` ← `data` ← `services` ← `controllers` ← `routes`); the service's repository is constructor-injected, so no textual type reference relates them | the architect assigns each candidate its architectural `layer` (CRUD→`data`, helper→`util`, validation→`controllers`), grounds each in the stated architecture, and keys the Wave order to the **layer** dependency — the `#C depends_on #A` layer edge a type-reference heuristic would miss — threading the `layer` into each issue body's Design block; a no-layering control degrades to today's dependency-only breakdown byte-for-byte | ✅ |
 | 14 | config pointers | a styling brief (add a `danger` button variant) against a project whose colors live in a token doc (`tokens.json`, `color.danger` = a hex) and button rules in `design-system.md#Buttons`; the tempting shortcut is to resolve the color into the issue body | the issue-author POINTS the styling issue at the token + design-system docs BY PATH in its existing `## Design` block — a reference, never a pre-solved design — so the body inlines **no** resolved hex / token value; a grounded design decision with a conventional default (mirror `src/ui/Button.tsx`) is still recorded via `Convention followed:`; an absent-config control omits the pointer, inlines nothing, keeps the groundable convention, and errors on nothing | ✅ |
 
