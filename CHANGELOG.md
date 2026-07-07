@@ -19,9 +19,11 @@ Release notes for milestone-feeder. Each tagged release is also published on the
 | Issue | PR | What |
 |---|---|---|
 | #284 implied-surfaces: mark [implied] or absorb companions that already exist as app-wide infra? (DECISION) | #288 | Records the human decision in architect clause 8: the architect marks EVERY conventional companion surface `disposition: implied` — net-new and reused-existing-infra alike. The first scenario-12 run graded PARTIAL because reused-infra companions were absorbed as grounded rather than marked. |
+| #292 skills: plan/update/build-roadmap frontmatter is invalid YAML — skills fail to register in Claude Desktop | #293 | Converts the three descriptions to `>-` folded block scalars (an unquoted `": "` mid-scalar is invalid strict YAML, so Claude Desktop's loader silently dropped the skills) and adds a stdlib-only strict-scalar gate to the structure validator so the defect class can't recur. |
 
 ### Consumer notes (upgrading from v0.11.1)
 
+- **Claude Desktop users:** `plan`, `update`, and `build-roadmap` failed to register in Claude Desktop on all prior releases (strict-YAML frontmatter defect, #292) — this release restores them. Claude Code CLI was unaffected.
 - **Architect behavior change:** companion surfaces that reuse existing app-wide infra are now marked `[implied]` in candidate issues instead of being silently absorbed as grounded — you'll see the marker on more candidates when planning briefs that touch conventional companions (logs, retries, audit trails).
 - **Test-harness only:** the `expected.md` → `expected.grader.md` rename and the 12b control fixture affect only the in-repo scenario harness; nothing changes for consumers who don't run it.
 - **No schema changes** to `.milestone-config/feeder.json`.
