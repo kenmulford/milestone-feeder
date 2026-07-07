@@ -10,7 +10,7 @@ never names the concrete repository type — the **layer** dependency, not a tex
 type reference, is what orders a service after its repository.
 
 The run must assign each candidate its architectural layer and key the Wave order to
-the layer dependency. The CONTROL alternate (see `expected.md`) runs the same brief
+the layer dependency. The CONTROL alternate (see `expected.grader.md`) runs the same brief
 against a project stating **no** layering convention and must degrade to today's
 dependency-only breakdown.
 
