@@ -1,6 +1,7 @@
 ---
 name: build-roadmap
-description: This skill is INTERNAL — it is invoked by the `plan` skill when it detects an oversized whole-app brief that spans several releases, never by a user command. It turns that oversized brief into a confirmed, sequenced roadmap of milestones: it dispatches the `milestone-feeder:roadmap-splitter` agent once to propose a strict, build-ordered partition, surfaces the proposed split for the user to confirm / merge / split / reorder / reject, and on confirmation writes a roadmap manifest to `.milestone-feeder/roadmap-<slug>.md`, then returns control plus the manifest path to `plan`. Read-only on GitHub: writes a single local scratch manifest and creates nothing on GitHub. Authors no code; opens no PRs.
+description: >-
+  This skill is INTERNAL — it is invoked by the `plan` skill when it detects an oversized whole-app brief that spans several releases, never by a user command. It turns that oversized brief into a confirmed, sequenced roadmap of milestones: it dispatches the `milestone-feeder:roadmap-splitter` agent once to propose a strict, build-ordered partition, surfaces the proposed split for the user to confirm / merge / split / reorder / reject, and on confirmation writes a roadmap manifest to `.milestone-feeder/roadmap-<slug>.md`, then returns control plus the manifest path to `plan`. Read-only on GitHub: writes a single local scratch manifest and creates nothing on GitHub. Authors no code; opens no PRs.
 ---
 
 # build-roadmap — oversized brief → confirmed milestone roadmap
