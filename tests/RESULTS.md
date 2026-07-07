@@ -25,7 +25,7 @@ What each fixture asserts — the `expected.md` contract, not a fresh execution 
 
 `05-reviewer-backends` was **removed in v0.9.0** — its subject (the retired `reviewer` config key + reviewer backends) no longer exists.
 
-## Run record — 2026-07-06 (installed plugin, real agents)
+## Run record: 2026-07-06 (installed plugin, real agents)
 
 First real execution of the current pipeline. Each runner followed `skills/plan/SKILL.md` **blind to `expected.md`** and dispatched the real `milestone-feeder:architect` (once) and `milestone-feeder:issue-author` (once per surviving candidate) agents; an independent grader then scored the observed plan against `expected.md`. PREVIEW-only (zero GitHub writes). Version-ladder rungs 3-4 could not resolve offline (no live repo) and were recorded as preview-limitations, not fabricated.
 
@@ -36,7 +36,7 @@ First real execution of the current pipeline. Each runner followed `skills/plan/
 | 06 | cross-cutting-consistency (flagship) | ✅ PASS | 9/9 authored page-issues carry the table directive complete and unweakened (literal "30" intact, each cited); the 10th parked on a genuine product gap, not fabricated |
 | 12 | implied-surfaces | ⚠️ PARTIAL | product-call parked + verbatim anti-fixation prompt both correct; **but** companions that already exist as app-wide infra were absorbed as grounded rather than marked `implied`, and the control case (no-capability slice) was never exercised |
 
-Observed artifacts live beside each fixture as `observed-2026-07-06.md`. The two `12` gaps plus two harness-integrity gaps found mid-run (a blind-run violation and a brief-contamination, both caught and re-run clean) are filed under milestone **v0.11.2** — #284 (implied-marking design call), #285 (control-case coverage), #286 (blind-runner isolation).
+Observed artifacts live beside each fixture as `observed-2026-07-06.md`. The two `12` gaps plus two harness-integrity gaps found mid-run (a blind-run violation and a brief-contamination, both caught and re-run clean) are filed under milestone **v0.11.2**: #284 (implied-marking design call), #285 (control-case coverage), #286 (blind-runner isolation).
 
 ## Fidelity caveat (applies to any from-repo run)
 
@@ -62,6 +62,6 @@ Findings from that run that still stand:
 
 ## Bottom line (v0.9.0)
 
-The `tests/scenarios/` suite above is the current dogfooding contract, expanded for v0.9.0 (13 layer-aware breakdown, 14 config pointers; 05 removed with the retired gate). This file is a **fixture catalog with a partial scorecard**: as of 2026-07-06, four scenarios (02, 03, 06 PASS; 12 PARTIAL) have run against the installed plugin (the run record above); the other six remain asserted-not-demonstrated. **The current pipeline is gate-free** — the feeder drafts issues that target the driver's triage bar rather than running that gate itself; the driver's triage is where the bar is enforced.
+The `tests/scenarios/` suite above is the current dogfooding contract, expanded for v0.9.0 (13 layer-aware breakdown, 14 config pointers; 05 removed with the retired gate). This file is a **fixture catalog with a partial scorecard**: as of 2026-07-06, four scenarios (02, 03, 06 PASS; 12 PARTIAL) have run against the installed plugin (the run record above); the other six remain asserted-not-demonstrated. **The current pipeline is gate-free**: the feeder drafts issues that target the driver's triage bar rather than running that gate itself; the driver's triage is where the bar is enforced.
 
-**The skills' "never" claims are classified in `docs/never-claims-audit.md`.** That audit maps each of the ~191 `never`/`always` occurrences in `skills/` to what backs it (write-path code fact, hook, structural invariant, error-philosophy branch, or scenario fixture). The one backing that is behavioral rather than deterministic is the scenario-asserted class — and the 2026-07-06 run **demonstrated** three of its load-bearing claims (never-invents-scope via 02, resolve-and-cite-not-over-park via 03, directive-consistency via 06); the implied-surfaces claim graded **PARTIAL** (12), tracked as #284.
+**The skills' "never" claims are classified in `docs/never-claims-audit.md`.** That audit maps each of the ~191 `never`/`always` occurrences in `skills/` to what backs it (write-path code fact, hook, structural invariant, error-philosophy branch, or scenario fixture). The one backing that is behavioral rather than deterministic is the scenario-asserted class, and the 2026-07-06 run **demonstrated** three of its load-bearing claims (never-invents-scope via 02, resolve-and-cite-not-over-park via 03, directive-consistency via 06); the implied-surfaces claim graded **PARTIAL** (12), tracked as #284.
