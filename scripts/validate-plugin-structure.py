@@ -576,7 +576,7 @@ SKILL_WORD_CEILINGS: dict[str, int] = {
     "skills/update/SKILL.md": 7200,
     "skills/build-roadmap/SKILL.md": 2750,
     "skills/setup/SKILL.md": 2550,
-    "skills/plan/SKILL.md": 10250,
+    "skills/plan/SKILL.md": 9900,
 }
 AGENT_DESCRIPTION_WORD_CEILING = 150
 
