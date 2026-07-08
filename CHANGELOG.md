@@ -3,6 +3,27 @@
 Release notes for milestone-feeder. Each tagged release is also published on the
 [GitHub Releases page](https://github.com/kenmulford/milestone-feeder/releases).
 
+## v0.12.0 — plan-stage grounding file-map
+
+**Theme:** The plan stage resolves a compact, candidate-scoped file-map once at Step-0 grounding-digest assembly and injects it into the issue-author brief, so the author stops re-grepping the live repo just to discover where cited code lives.
+
+### ✨ Plan-stage grounding
+
+| Issue | PR | What |
+|---|---|---|
+| #300 Resolve a candidate-scoped file-map once at Step 0 and inject it into the issue-author brief | #302 | Step-0 digest assembly now also resolves an ordered, `sourceGlobs`-bounded `{ path, anchors }` file-map, carried once in the `resolved` bundle and handed to every issue-author brief beside the prose digest — a discovery pointer, not an allowlist; the author still greps to verify each citation. Mechanics live in the new `docs/file-map.md`; `skills/plan/SKILL.md` keeps a lean imperative stub. |
+| #299 Bump plugin version to v0.12.0 and sync version-bearing references | #301 | Release-sync opening the milestone: `.claude-plugin/plugin.json` → `0.12.0` and the `.project/library-manifest.md` version stamp re-synced. |
+
+### Consumer notes (upgrading from v0.11.2)
+
+- **Planning grounding:** when you run `plan`, the issue-author now receives a candidate-scoped file-map (an ordered `{ path, anchors }` index over your `sourceGlobs`) alongside the project-docs digest, so it spends less effort rediscovering where cited code lives. It is a supplement/pointer — the author still greps to verify every citation, and the file-map is never persisted (it lives only in the in-run `resolved` bundle). Nothing you configure changes.
+- **Cross-repo parity (maintainer action):** the file-map shape (`{ path, anchors: [] }`, ordered, `sourceGlobs`-bounded) is intended to match milestone-driver's sibling change to its own grounding digest. Confirm the two shapes agree before shipping the driver side — this is a human release gate (#300 AC5), not an automated check.
+- **No schema changes** to `.milestone-config/feeder.json`.
+
+### ⚖️ Post-run audit trail
+
+Judgment-call PRs for this release: #302
+
 ## v0.11.2 — implied-surfaces and scenario-harness fixes
 
 **Theme:** Gaps surfaced by the first real installed-plugin run of the scenario harness (item 4a, 2026-07-06): one implied-surfaces design call plus two test-harness fixes.
