@@ -11,7 +11,8 @@ Release notes for milestone-feeder. Each tagged release is also published on the
 
 | Issue | PR | What |
 |---|---|---|
-| #300 Resolve a candidate-scoped file-map once at Step 0 and inject it into the issue-author brief | #302 | Step-0 digest assembly now also resolves an ordered, `sourceGlobs`-bounded `{ path, anchors }` file-map, carried once in the `resolved` bundle and handed to every issue-author brief beside the prose digest — a discovery pointer, not an allowlist; the author still greps to verify each citation. Mechanics live in the new `docs/file-map.md`; `skills/plan/SKILL.md` keeps a lean imperative stub. |
+| #300 Resolve a candidate-scoped file-map once at Step 0 and inject it into the issue-author brief | #302 | Step-0 digest assembly now also resolves an ordered, `sourceGlobs`-bounded `{ path, anchors }` file-map, carried once in the `resolved` bundle and handed to every issue-author brief beside the prose digest — a discovery pointer, not an allowlist; the author still greps to verify each citation. `skills/plan/SKILL.md` keeps a lean imperative stub; the mechanics live in a `docs/` reference (`docs/step-0-grounding.md` — see the #304 consolidation below). |
+| — DRY the four Step-0 grounding inputs into one reference | #304 | Consolidates the four Step-0 grounding inputs (grounding digest, file-map, global implied-surfaces reference, project-local overlay) — whose `skills/plan/SKILL.md` paragraphs each restated the same resolve-once / hand-in / degrade-like-the-digest / supplement-not-allowlist contract — into a single `docs/step-0-grounding.md` that states the shared contract once and records each input's specifics (the file-map's own `docs/file-map.md`, added in #302, is folded in here). Keeps `skills/plan/SKILL.md` one level deep from its references per Anthropic progressive-disclosure guidance (10119 → 9416 words) and ratchets the plan SKILL word-budget ceiling 10250 → 9900. No behavior change — mechanics moved verbatim. |
 | #299 Bump plugin version to v0.12.0 and sync version-bearing references | #301 | Release-sync opening the milestone: `.claude-plugin/plugin.json` → `0.12.0` and the `.project/library-manifest.md` version stamp re-synced. |
 
 ### Consumer notes (upgrading from v0.11.2)
@@ -23,6 +24,8 @@ Release notes for milestone-feeder. Each tagged release is also published on the
 ### ⚖️ Post-run audit trail
 
 Judgment-call PRs for this release: #302
+
+Post-release doc consistency: this entry was amended after tagging to fold in the #304 consolidation and drop a stale `docs/file-map.md` reference (the file was consolidated into `docs/step-0-grounding.md`). The `v0.12.0` tag itself is unchanged.
 
 ## v0.11.2 — implied-surfaces and scenario-harness fixes
 
