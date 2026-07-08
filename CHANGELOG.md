@@ -3,6 +3,10 @@
 Release notes for milestone-feeder. Each tagged release is also published on the
 [GitHub Releases page](https://github.com/kenmulford/milestone-feeder/releases).
 
+## v0.12.0 — plan-stage grounding file-map
+
+**Theme:** completed by #300 when the plan-stage grounding file-map feature lands.
+
 ## v0.11.2 — implied-surfaces and scenario-harness fixes
 
 **Theme:** Gaps surfaced by the first real installed-plugin run of the scenario harness (item 4a, 2026-07-06): one implied-surfaces design call plus two test-harness fixes.
