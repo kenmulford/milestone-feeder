@@ -3,6 +3,26 @@
 Release notes for milestone-feeder. Each tagged release is also published on the
 [GitHub Releases page](https://github.com/kenmulford/milestone-feeder/releases).
 
+## v0.12.1 — candidate-scoped file-map
+
+**Theme:** The plan-stage file-map now scopes to each candidate's own neighborhood — resolved per candidate at the Step-4 dispatch as whole-folder units (with a soft 20-folder cap on the keyword-fallback path) — instead of one `sourceGlobs`-wide Step-0 map shared across every issue-author. Planning grounding now hands each issue-author only its candidate's relevant folders, not the whole source listing.
+
+### ✨ Candidate-scoped file-map
+
+| Issue | PR | What |
+|---|---|---|
+| #312 Resolve the plan-stage file-map per candidate at the Step-4 dispatch, scoped to the candidate's own neighborhood | #314 | The Step-0, `sourceGlobs`-wide file-map is replaced by a per-candidate resolution at the Step-4 dispatch: each candidate gets a file-map scoped to its own neighborhood — whole-folder units, with a soft 20-folder cap on the keyword-fallback path — so an issue-author is handed only the folders relevant to its candidate rather than the whole source listing. Still a discovery pointer, not an allowlist; the author greps to verify each citation, and the file-map is never persisted. |
+| #313 Re-sync the hand-maintained version-bearing reference to v0.12.1 and add the v0.12.1 CHANGELOG entry | (this PR) | Release-sync closing the milestone: the `.project/library-manifest.md` version stamp re-synced to `0.12.1` and this changelog entry authored. `.claude-plugin/plugin.json` was already bumped to `0.12.1` on #312's merged PR (#314), per milestone-driver's `solve-issue` version-bump step, so this issue re-syncs only the other hand-maintained in-doc reference. |
+
+### Consumer notes (upgrading from v0.12.0)
+
+- **Planning grounding is now candidate-scoped.** When you run `plan`, each issue-author is handed a file-map scoped to *its own candidate's* neighborhood — the relevant folders as whole-folder units, with a soft 20-folder cap on the keyword-fallback path — instead of one `sourceGlobs`-wide map shared across every issue-author. The author still greps to verify every citation; the file-map remains a supplement/pointer, never an allowlist, and is never persisted (it lives only in the in-run bundle).
+- **No schema changes** to `.milestone-config/feeder.json`. Nothing you configure changes.
+
+### ⚖️ Post-run audit trail
+
+Judgment-call PRs for this release: none
+
 ## v0.12.0 — plan-stage grounding file-map
 
 **Theme:** The plan stage resolves a compact, candidate-scoped file-map once at Step-0 grounding-digest assembly and injects it into the issue-author brief, so the author stops re-grepping the live repo just to discover where cited code lives.
