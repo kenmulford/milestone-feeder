@@ -3,6 +3,27 @@
 Release notes for milestone-feeder. Each tagged release is also published on the
 [GitHub Releases page](https://github.com/kenmulford/milestone-feeder/releases).
 
+## v0.12.2 — issue prose style
+
+**Theme:** Issues authored by the plan pipeline now read concise, direct, and human-readable — a hard prose-style ruleset anchors confidence to the grounding citation instead of padded word count.
+
+### ✨ Issue prose style
+
+| Issue | PR | What |
+|---|---|---|
+| #320 Add a hard prose-style ruleset to issue-author governing every ISSUE_BODY line | #324 | A new `## Prose style (hard)` section in `agents/issue-author.md` binds every ISSUE_BODY line: confidence lives in the citation not the word count; Summary is 2–3 plain sentences; one decision per line; banned filler vocabulary and hedges; never narrate the template; a mandatory cut pass before returning. A content-preservation guardrail keeps every state, edge, citation, and literal directive — concision cuts prose, never content. |
+| #321 Tighten the §4 Summary placeholder to "2-3 plain sentences" | #325 | The §4 issue-body Summary placeholder changes from `<one paragraph>` to `<2-3 plain sentences>` in both must-not-drift copies (`agents/issue-author.md` and `SPEC.md`), reconciled with the new rule 2. |
+| #322 Add prose-style regression assertions to a scenario grader | #326 | Appends `tests/scenarios/15-prose-style/` — a compliant body passes the prose rules, a padded rewrite fails, and the guardrail keeps every state, the literal "30 rows per page" directive, and the grounding citation verbatim. |
+
+### Consumer notes (upgrading from v0.12.1)
+
+- **Issues now read concise and direct.** When you run `plan`, each authored issue follows a hard prose-style ruleset — a 2–3-sentence Summary, one decision per line grounded by a citation, and no filler padding. The five triage criteria are untouched: every state (happy/empty/error/disabled), dependency edge, grounded decision, and literal directive still lands, verbatim where required. Fewer words, same completeness.
+- **No schema changes** to `.milestone-config/feeder.json`. Nothing you configure changes.
+
+### ⚖️ Post-run audit trail
+
+Judgment-call PRs for this release: none
+
 ## v0.12.1 — candidate-scoped file-map
 
 **Theme:** The plan-stage file-map now scopes to each candidate's own neighborhood — resolved per candidate at the Step-4 dispatch as whole-folder units (with a soft 20-folder cap on the keyword-fallback path) — instead of one `sourceGlobs`-wide Step-0 map shared across every issue-author. Planning grounding now hands each issue-author only its candidate's relevant folders, not the whole source listing.
