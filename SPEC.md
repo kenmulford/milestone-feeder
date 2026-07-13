@@ -175,7 +175,7 @@ Maps 1:1 to the five criteria the driver's triage checks. The issue-author guara
 
 ```markdown
 ## Summary
-<one paragraph: what changes and why, in product terms>
+<2-3 plain sentences: what changes and why, in product terms>
 
 ## Acceptance criteria
 - [ ] <happy path, observable>
