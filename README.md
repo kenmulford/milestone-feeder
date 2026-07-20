@@ -8,7 +8,7 @@ milestone-feeder is a Claude Code plugin. You hand it a brief — a file, a few 
 
 **Before you install, add `superpowers` first.** milestone-feeder needs the `superpowers` plugin to plan — it is a required prerequisite you now install yourself (it is no longer pulled in automatically). Add the `claude-plugins-official` marketplace and install `superpowers` from it, then install milestone-feeder from one of the marketplaces below, then restart Claude Code so the plugin's hook loads. Skip `superpowers` and the planning commands won't work.
 
-**Recommended — the milestone-suite marketplace.** One marketplace carries all four milestone plugins (`milestone-bootstrapper`, `milestone-feeder`, `milestone-driver`, `milestone-coherence-reviewer`), so you add it once and install whichever you want:
+**Recommended — the milestone-suite marketplace.** One marketplace carries all five milestone plugins (`milestone-bootstrapper`, `milestone-designer`, `milestone-feeder`, `milestone-driver`, `milestone-coherence-reviewer`), so you add it once and install whichever you want:
 
 ```
 /plugin marketplace add kenmulford/milestone-suite
