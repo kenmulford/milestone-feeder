@@ -28,6 +28,7 @@ The plan file is the **build artifact** (see [The plan file as build artifact](#
 | Implied-surfaces reference | `docs/implied-surfaces.md` | The stack-agnostic implied-surfaces **reasoning reference** the architect consults during breakdown — the standard companion surfaces a capability or a new entity implies, framed as a reviewable floor (a robust start, never a scope-emitting catalog). Also **defines** the project-local overlay shape (`.milestone-config/implied-surfaces.md`, additive-merge: add / extend, never delete a global surface). PR-able; shipped so the capability set grows by community PR. |
 | One-time-notices reference | `docs/one-time-notices.md` | The canonical source for seven one-time Step-0 units (a self-heal + six notices) shared across `plan`, `create`, and `update` — each announces a self-heal one of them performed, flags a repo-state problem to fix by hand, points at a new/optional capability, or announces a behavior change — shown at most once per clone via a per-clone marker. Reference content only; the live emitters are `skills/plan/SKILL.md`, `skills/create/SKILL.md`, and `skills/update/SKILL.md` Step 0, each iterating the sections whose `Skills` field names it. |
 | Plan-file-contract reference | `docs/plan-file-contract.md` | The shared definition of the plan file's fields and output templates — the field table, the plan-file output template, and the needs-product-input report template that `create` and `update` parse. Copied verbatim from `skills/plan/SKILL.md` Step 7 so downstream skills cite one contract, not each their own. |
+| Style-contracts reference | `docs/style-contracts.md` | The canonical source for the three style contracts — `## Output style` (what a skill prints to the terminal), `## Communication style` (the wrapper an agent returns to its caller), and `## GitHub prose style` (an index pointing at `agents/issue-author.md` `## Prose style`, the single definition of the rules binding agent-authored GitHub text). Carries the surface-boundary table stating which surface each contract governs. Reference content only; the five governed skills and the three agents each cite a section by `file:section` rather than restating it. |
 | Roadmap-manifest reference | `docs/roadmap-manifest-format.md` | The exact shape of the roadmap manifest `build-roadmap` writes to `.milestone-feeder/roadmap-<slug>.md` — the cross-milestone build artifact recording which milestones to plan, in what order, plus the full original brief. Read on demand by `build-roadmap` (Step 4) and its downstream `plan` / `create` consumers. |
 | Create-deploy-sequence reference | `docs/create-deploy-sequence.md` | The full mechanics of `create`'s heavy deploy steps (Step 1R, the Step 3 write-sequence passes a–d, Step 4), relocated byte-for-byte from `skills/create/SKILL.md` so the skill keeps a lean orchestration skeleton. `create` reads it on demand; behavior-neutral. |
 | `create` GitHub write path | (in `create`, §7-apply deploy sequence) | Ensures the labels idempotently, creates-or-adopts the milestone by title, opens each surviving issue, rewrites slug→`#n` references, PATCHes the Wave-encoded milestone description, and files the needs-product-input report (epic comment for a GitHub-epic brief / local file otherwise). Idempotent re-run via adopt + match-by-title. |
@@ -365,9 +366,9 @@ input" report. It authors no code, opens no PRs, and never touches branches
 
 ## Output style
 
-The skills and agents follow a concise, tabular output norm: status and outcomes
-are stated flatly, steps / gates / lists / options are presented as tables rather
-than inline prose, and any item that needs a human is marked with 🔴.
+Defined once at [`style-contracts.md#output-style`](style-contracts.md#output-style),
+alongside the sibling `## Communication style` and `## GitHub prose style`
+contracts and the surface-boundary table stating which surface each governs.
 
 ---
 

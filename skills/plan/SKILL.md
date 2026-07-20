@@ -240,7 +240,7 @@ Build the **dependency graph** over the surviving set from the architect's `EDGE
 Render the **milestone description** to the `SPEC.md` §4 Wave template, substituting the local slugs/tags for the `#<n>` placeholders:
 
 ```markdown
-<one-paragraph milestone goal>
+<what this milestone delivers, and its scope boundary — both facts, at whatever length states them>
 
 ## Waves
 - Wave 1 (parallel): #A, #B, #C
@@ -311,7 +311,7 @@ The plan file and the report are local scratch. **Nothing is posted to GitHub** 
 
 ## Output style
 
-Be concise — report status and outcomes flatly, no wall-of-text. Present steps, gates, lists, and options as **tables**, not inline prose. Mark anything that needs a human with 🔴. (Mirrors the agents' communication-style contract.)
+Defined once at `docs/style-contracts.md#output-style` — read it there; it is not restated here.
 
 ## Non-negotiables
 

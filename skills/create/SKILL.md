@@ -145,7 +145,7 @@ In all cases the failure path is **defined, not silent**, and re-running `create
 
 ## Output style
 
-Be concise — report status and outcomes flatly, no wall-of-text. Present steps, gates, lists, and options as **tables**, not inline prose. Mark anything that needs a human with 🔴. (Mirrors the agents' communication-style contract and `plan`'s output style.)
+Defined once at `docs/style-contracts.md#output-style` — read it there; it is not restated here.
 
 ## Non-negotiables
 
