@@ -138,7 +138,7 @@ Return control to the caller (`plan`) immediately. Do **not** ask the user to re
 
 ## Output style
 
-Be concise — report status and outcomes flatly, no wall-of-text. Present steps, gates, lists, and options as **tables**, not inline prose. Mark anything that needs a human with 🔴. (Mirrors the agents' communication-style contract.)
+Defined once at `docs/style-contracts.md#output-style` — read it there; it is not restated here.
 
 ## Non-negotiables
 

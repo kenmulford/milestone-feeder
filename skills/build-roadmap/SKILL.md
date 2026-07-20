@@ -54,11 +54,11 @@ ROADMAP:
   - …                       # one entry per proposed milestone, IN BUILD ORDER
 parent_title: <the roadmap's one-line goal, reused from the whole-app brief's
               own one-line goal>   # top-level field, alongside ROADMAP
-parent_intro: <a short intro paragraph for the future md-epic parent issue's
+parent_intro: <the intro for the future md-epic parent issue's
               body: what the roadmap covers and the build order it spans>
 ```
 
-`parent_title` and `parent_intro` are whole-roadmap fields, not per-milestone entries: the roadmap's one-line goal (the future `md-epic` parent issue's title) and a short intro paragraph for that issue's body (`agents/roadmap-splitter.md` clause 7). Both ride alongside the `ROADMAP` list only when the split is multi-milestone (two or more entries); the single-milestone return (Step 2's single-milestone row) omits them entirely, not blank.
+`parent_title` and `parent_intro` are whole-roadmap fields, not per-milestone entries: the roadmap's one-line goal (the future `md-epic` parent issue's title) and the intro for that issue's body (`agents/roadmap-splitter.md` clause 7). Both ride alongside the `ROADMAP` list only when the split is multi-milestone (two or more entries); the single-milestone return (Step 2's single-milestone row) omits them entirely, not blank.
 
 ### Step 2 — Validate the returned ROADMAP (partition / single-milestone / error)
 
@@ -129,7 +129,7 @@ The roadmap manifest is the **authoritative cross-milestone build artifact** —
 
 ## Output style
 
-Be concise — report status and outcomes flatly, no wall-of-text. Present steps, gates, lists, and options as **tables**, not inline prose. Mark anything that needs a human with 🔴. (Mirrors the agents' communication-style contract.)
+Defined once at `docs/style-contracts.md#output-style` — read it there; it is not restated here.
 
 ## Non-negotiables
 

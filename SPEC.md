@@ -213,7 +213,7 @@ Labels applied by **`create`**: a UI/logic label, and `risk:light` / `risk:heavy
 ### Milestone description template (encodes the Wave order)
 
 ```markdown
-<one-paragraph milestone goal>
+<what this milestone delivers, and its scope boundary — both facts, at whatever length states them>
 
 ## Waves
 - Wave 1 (parallel): #A, #B, #C
