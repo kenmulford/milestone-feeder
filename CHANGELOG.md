@@ -3,6 +3,39 @@
 Release notes for milestone-feeder. Each tagged release is also published on the
 [GitHub Releases page](https://github.com/kenmulford/milestone-feeder/releases).
 
+## v0.12.3 — consumer issue templates & prose-style reach
+
+**Theme:** The feeder writes issues into other people's repos, so it now authors to *their* `.github/ISSUE_TEMPLATE/` convention instead of imposing its own structure. Alongside it, v0.12.2's prose ruleset grows past the one agent and one field it originally bound.
+
+### ✨ Consumer issue templates
+
+| Issue | PR | What |
+|---|---|---|
+| #331 Resolve the consumer repo's issue template when authoring, instead of imposing this plugin's structure | #335 | `plan` Step 0 resolves the consumer's issue template once, repo-wide, and hands it into the issue-author brief (`docs/step-0-grounding.md` §5, under that file's existing resolve-once / hand-in / degrade / supplement contract). Selection is deterministic and classification-free across four rungs: an explicit `agentIssueTemplate` wins; otherwise exactly one template wins (today's rule, unchanged, with `config.yml` excluded from the count); otherwise the built-in default; and absence never blocks. A `.yml` form translates per all five Issue Forms field types, a `.md` template is used as the body skeleton directly, and the built-in default gains `## Impact` and `## Non-goals`. Multi-template smart classification stays an explicit non-goal. |
+
+### ✨ Prose-style reach
+
+| Issue | PR | What |
+|---|---|---|
+| #330 Extend v0.12.2 prose style beyond issue-author: milestone description, parent_intro, Design block, and the 5x duplicated Output style block | #339 | New `docs/style-contracts.md` is the single source for `## Output style` and `## Communication style`, plus an index for the GitHub prose contract whose definition stays at `agents/issue-author.md` `## Prose style`. It carries a surface-boundary table stating which surface each contract governs, which is why two of them can mandate opposite things and both be right. The five duplicated `## Output style` copies and the `docs/architecture.md` paraphrase reduce to pointers; both drifted parentheticals and the dangling "(Mirrors the agents' communication-style contract.)" reference resolve. `architect` (`sketch`, EDGES `<reason>`) and `roadmap-splitter` (`parent_title`, `parent_intro`, `rationale`) are bound to the prose contract by reference, each with an explicit scope split against its own `## Communication style`. `parent_intro` and the milestone description get fact-checklist form obligations rather than length caps. Two prose rules are added: recorded design decisions are structured by default, keyed to content rather than a heading string so a renamed consumer section cannot silently unbind them; and prose stays the correct form where content carries dependent clauses, scoped so it does not reopen rule 3. |
+
+### 🧹 Housekeeping
+
+| Issue | PR | What |
+|---|---|---|
+| #323 README says the suite carries "all four" plugins — it now carries five | #334 | `README.md:11` advertised the milestone-suite marketplace as carrying "all four" plugins. `milestone-designer` shipped as the pre-plan design phase, making both the count and the roster stale. The count and the list update in pipeline order (bootstrapper → designer → feeder → driver → coherence-reviewer). Also bumps `.claude-plugin/plugin.json` to `0.12.3`. |
+| Release-sync closing the milestone | (this PR) | The `.project/library-manifest.md` version stamp re-synced to `0.12.3` and this changelog entry authored. `.claude-plugin/plugin.json` was already bumped on #323's merged PR (#334), per milestone-driver's `solve-issue` version-bump step, so this re-syncs only the other hand-maintained in-doc reference. |
+
+### Consumer notes (upgrading from v0.12.2)
+
+- **Issues now follow your repo's issue template.** If `.github/ISSUE_TEMPLATE/` holds exactly one template (ignoring `config.yml`), `plan` authors to it. Set `agentIssueTemplate` in your driver config to name one explicitly, which you need when the directory holds two or more. Zero templates, or two-plus with no key set, falls back to the built-in default. An absent, unreadable, or unparseable template degrades to that default rather than erroring or parking, so it never blocks issue creation. A one-time discovery notice announces this on your first run.
+- **Authored text reads tighter in more places.** The prose contract now also governs the milestone description, the `md-epic` parent issue's intro, the architect's design sketches, and the roadmap change-rationale. The content-preservation guardrail is unchanged and now applies wherever the rules were newly extended: every state, dependency edge, grounded decision, and literal directive still lands, verbatim where required.
+- **No schema changes** to `.milestone-config/feeder.json`. `agentIssueTemplate` is read down the existing driver-config chain and is optional; leaving it unset is byte-for-byte the previous behavior.
+
+### ⚖️ Post-run audit trail
+
+Judgment-call PRs for this release: none
+
 ## v0.12.2 — issue prose style
 
 **Theme:** Issues authored by the plan pipeline now read concise, direct, and human-readable — a hard prose-style ruleset anchors confidence to the grounding citation instead of padded word count.
