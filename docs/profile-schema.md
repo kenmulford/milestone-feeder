@@ -132,8 +132,9 @@ the dogfood consumer — the feeder protecting its own source — under the
 ## Shared keys (resolved from the driver profile)
 
 Two distinct resolution chains apply, and neither duplicates the driver's keys
-into `feeder.json`. A third read — `create`'s Trello mirror (below) — adds no new
-chain: it rides the second chain to read one more driver key.
+into `feeder.json`. Two further reads — `create`'s Trello mirror and `plan`'s
+issue-template key (both below) — add no new chain: each rides the second chain
+to read one more driver key.
 
 ### 1. The `no-source-edit` hook's `sourceGlobs` (self-protection)
 
@@ -196,6 +197,28 @@ not restate them. See milestone-driver's `skills/solve-milestone/trello-sync.md`
 [`docs/profile-schema.md`](https://github.com/kenmulford/milestone-driver/blob/main/docs/profile-schema.md)
 for the source of truth; where `create`'s pass records the seed mechanics is
 [`create-deploy-sequence.md`](create-deploy-sequence.md) → "Step 3 — pass f".
+
+### 4. `plan` reads `agentIssueTemplate` (the recorded issue template)
+
+`plan` Step 0's consumer-issue-template resolution reads one more key from the
+**driver** profile: `agentIssueTemplate` — the repo-relative path to the
+`.github/ISSUE_TEMPLATE/` template that `milestone-bootstrapper` records at
+provision time as the one agents author to
+([milestone-bootstrapper#156](https://github.com/kenmulford/milestone-bootstrapper/issues/156)).
+It resolves via the **same chain as resolution 2** —
+`.milestone-config/driver.json` (primary), root `milestone-driver.json` (legacy
+fallback), absent-means-default.
+
+Like `integrations.trello`, this is a **driver-config read the feeder consumes —
+not a `feeder.json` own-key**; there is deliberately **no row for it in the
+[Own keys](#own-keys) table**. It is also **not** a fourth consumer-facing shared
+key: the canonical set stays exactly three (§2 above, `SPEC.md` §7). It is a
+targeted read inside `plan`'s own template resolution, and nothing else consumes
+it. When the key is **absent, unreadable, or names a file that does not exist**,
+the resolution falls through to counting the directory exactly as it does today —
+a silent degrade, no error, never blocking issue creation. The selection rungs
+are recorded once and authoritatively at
+[`step-0-grounding.md` §5](step-0-grounding.md#5-the-consumer-issue-template).
 
 ### `.milestone-config/` migration note
 

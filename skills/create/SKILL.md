@@ -33,7 +33,7 @@ Read `.milestone-config/feeder.json`. **Absent → invoke `milestone-feeder:setu
 |---|---|---|
 | `autoHandoff` | `"prompt"` | After the deploy, whether `create` offers to hand the milestone to `milestone-driver` to start building (Step 4). `"prompt"` → ask (default); `"auto"` → kick off immediately, no prompt; `"off"` → never offer. An **unrecognized value** (anything that is not exactly `"prompt"`, `"auto"`, or `"off"`) is treated as the default `"prompt"` — mirrors how `versioning` treats an invalid value as absent (`docs/profile-schema.md` `versioning` per-key note); never error on the key. |
 
-**Run `create`'s one-time Step-0 notice by iterating the shared reference, not by restating its procedural prose.** `docs/one-time-notices.md` is the single canonical source for six notices/self-heals shared across `plan`, `create`, and `update` (see that file's "Section fields" and "How each skill runs this file"). Iterate its `##` sections **in file order** and, for each section whose **Skills** field includes `create`, run that section's recorded **deterministic emitter twin** (the `bash` form or the PowerShell 7+ form) **verbatim**: the emitter performs the trigger check, prints the section's **Text** when triggered, and writes the section's **Marker**, all in one step — never re-type a notice as free-form agent text. Exactly one section currently matches `create`: the **md-epic parent notice** (§6) — its Marker is **shared with `update`'s Step 0**, so the notice shows at most once per clone across both verbs. The emitter is **best-effort**: it swallows any failure (unwritable dir, permission error) and never aborts the `create` run; read-only except the `.runtime/` dir and the marker. A malformed or missing section is **skipped for that entry only**.
+**Run `create`'s one-time Step-0 notice by iterating the shared reference, not by restating its procedural prose.** `docs/one-time-notices.md` is the single canonical source for seven notices/self-heals shared across `plan`, `create`, and `update` (see that file's "Section fields" and "How each skill runs this file"). Iterate its `##` sections **in file order** and, for each section whose **Skills** field includes `create`, run that section's recorded **deterministic emitter twin** (the `bash` form or the PowerShell 7+ form) **verbatim**: the emitter performs the trigger check, prints the section's **Text** when triggered, and writes the section's **Marker**, all in one step — never re-type a notice as free-form agent text. Exactly one section currently matches `create`: the **md-epic parent notice** (§6) — its Marker is **shared with `update`'s Step 0**, so the notice shows at most once per clone across both verbs. The emitter is **best-effort**: it swallows any failure (unwritable dir, permission error) and never aborts the `create` run; read-only except the `.runtime/` dir and the marker. A malformed or missing section is **skipped for that entry only**.
 
 ### Step 1R — Resolve the deploy target: a single plan, or a roadmap of N milestones
 
@@ -145,7 +145,7 @@ In all cases the failure path is **defined, not silent**, and re-running `create
 
 ## Output style
 
-Be concise — report status and outcomes flatly, no wall-of-text. Present steps, gates, lists, and options as **tables**, not inline prose. Mark anything that needs a human with 🔴. (Mirrors the agents' communication-style contract and `plan`'s output style.)
+Defined once at `docs/style-contracts.md#output-style` — read it there; it is not restated here.
 
 ## Non-negotiables
 

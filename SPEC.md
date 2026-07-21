@@ -177,11 +177,17 @@ Maps 1:1 to the five criteria the driver's triage checks. The issue-author guara
 ## Summary
 <2-3 plain sentences: what changes and why, in product terms>
 
+## Impact
+<who is affected, and what breaks or changes for them if this is not done>
+
 ## Acceptance criteria
 - [ ] <happy path, observable>
 - [ ] <empty state>
 - [ ] <error / failure path>
 - [ ] <disabled / edge state>
+
+## Non-goals
+- <a scope boundary the criteria above deliberately do not cross — OPTIONAL section; omitted ENTIRELY when the issue records no scope boundary, never emitted empty>
 
 ## Design (recorded, consistent)
 <the decisions an implementer would otherwise have to invent — grounded in the
@@ -202,10 +208,12 @@ Labels applied by **`create`**: a UI/logic label, and `risk:light` / `risk:heavy
 
 **Config pointers (reference, never pre-solve).** With the feeder no longer reviewing (the driver's triage is the single automated entry gate, §5), its job is to make sure the driver has the right config — so the `## Design (recorded, consistent)` block also POINTS each issue at the `.project` config the driver reads at **build time**, keyed to what the issue touches — styling → `.project/tokens.json` / `.project/design-system.md#<section>`; deployment/env → `.project/environment.md` (a touched convention already rides the `Convention followed:` line). The pointer NAMES the path; it never copies or parses the values into the body — no resolved hex, no parsed token values, no pre-solved render. The render and tokens are the **driver's** to consume; the feeder only reminds the driver where they live. The line is **additive**: an issue touching none of these, or a project missing the doc, carries no pointer, byte-for-byte as today — a missing doc is no error and no fabricated reference. It reuses the existing `projectDocs` grounding — **no new config key**.
 
+**Consumer template adopted, house style as the fallback.** The template above is the **built-in default**, not the only structure. When the consumer repo keeps its own issue convention, `plan` Step 0 resolves `.github/ISSUE_TEMPLATE/` **once, repo-wide**, and hands the resolved template into every issue-author brief (`docs/step-0-grounding.md` §5), so agent-filed and human-filed issues in that repo read and triage the same way. Selection is **deterministic and classification-free**, and runs as **four rungs** — first match wins: (1) the driver config's `agentIssueTemplate`, when set and readable; (2) exactly one selectable template (the reserved `config.yml` excluded from the count, so the common `bug.yml` + `config.yml` layout counts as one); (3) zero, or two-plus with no usable key → the built-in default; (4) absence **never blocks issue creation**. The rungs are stated once and authoritatively at `docs/step-0-grounding.md` §5 — not restated here. An absent directory, an unreadable template, or unparseable YAML degrades down the rungs to the built-in default — **no error, no park**. Adopting a consumer template changes the section headers only: the five §4 criteria above still bind, including the Completeness row's discovery-path requirement. **The feeder adds no config key of its own** — rung 2 reads a path GitHub already defines, and rung 1 *reads* `agentIssueTemplate`, a key `milestone-bootstrapper` provisions ([#156](https://github.com/kenmulford/milestone-bootstrapper/issues/156)), down the existing driver-config chain. That read is **not** a fourth consumer-facing shared key: the canonical set stays exactly three (§7).
+
 ### Milestone description template (encodes the Wave order)
 
 ```markdown
-<one-paragraph milestone goal>
+<what this milestone delivers, and its scope boundary — both facts, at whatever length states them>
 
 ## Waves
 - Wave 1 (parallel): #A, #B, #C

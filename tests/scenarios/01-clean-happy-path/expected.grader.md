@@ -7,7 +7,7 @@ milestone whose issues are drafted to pass the driver's triage clean, with NO pa
 - 3 issues (3–4 acceptable if it splits sensibly): the export **endpoint**, the **Download-CSV UI action**, the **rate limit**. ~1 PR each.
 - Dependency edges: the UI action depends on the endpoint; the rate limit depends on the endpoint. Endpoint = Wave 1; the other two = Wave 2.
 - The milestone description encodes the Wave order (§4 template).
-- Each issue body has all five §4 sections. Acceptance criteria include empty/error states (per convention). The UI-action issue records the in-flight-disable + toast convention; the rate-limit issue cites the `RateLimiter` pattern (429 + `Retry-After`).
+- Each issue body has all six mandatory §4 sections (Summary, Impact, Acceptance criteria, Design (recorded, consistent), Dependencies, Classification); `Non-goals` is optional and omitted entirely when the issue records no scope boundary. Acceptance criteria include empty/error states (per convention). The UI-action issue records the in-flight-disable + toast convention; the rate-limit issue cites the `RateLimiter` pattern (429 + `Retry-After`).
 - The feeder DRAFTS every issue to pass the driver's triage clean (`GAPS: none` when the driver later triages); no in-feeder gate, no re-author loop.
 - ZERO parks; needs-product-input report absent or "none".
 - Classification: UI action = `ui`; endpoint + rate limit = `logic`. Risk reasonable.

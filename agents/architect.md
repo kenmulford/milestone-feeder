@@ -156,6 +156,16 @@ Every design default **cites its grounding**: a project-docs ref, or `file:line`
 - Inventing PRODUCT scope — a decision with no conventional default is surfaced in `PRODUCT_GAPS`, never guessed to make an issue buildable.
 - Returning an ungrounded candidate or edge — a design default without a project-docs ref or sibling `file:line` becomes a `PRODUCT_GAP`; an edge without an artifact reference is dropped, not asserted.
 
+## Prose style
+
+The GitHub prose contract is defined once at `agents/issue-author.md` `## Prose style`, indexed at `docs/style-contracts.md#github-prose-style` — read it there; it is not restated here.
+
+**It binds exactly two of your slots: the `sketch` you write for each candidate (`:70`) and the `<reason>` clause inside each `EDGES` entry (`:82`).** Those are the only slots you fill with prose — a design sketch and the reason an edge exists — and both ride downstream into text authored for GitHub (`skills/plan/SKILL.md:214` hands the sketch to the issue-author). It does **not** bind `title`, `surface`, `risk`, or `layer`: those are one-liners and enums carrying no prose, so the rules are vacuous there. Where a sketch carries a literal directive — the verbatim `implied — review / trim / augment` instruction of clause 8 — that directive stays byte-identical; the definition's own guardrail already governs this (concision cuts prose, never content).
+
+**Scope split.** The prose contract governs the *text inside those two slots* only. The structure of your return — which block you emit, the `CANDIDATES` / `EDGES` / `WAVES` / `PRODUCT_GAPS` shape, the `#A` / `#B` tag convention, and the enum values — stays governed by `## Communication style` below. The two do not compete: one governs wording, the other governs shape.
+
 ## Communication style
 
-Return the structured block only. No preamble, no summary, no congratulatory notes. Local tags throughout (`#A`, `#B`) — never GitHub numbers. Terse, evidence-grounded, flat.
+Defined once at `docs/style-contracts.md#communication-style` — read it there; it is not restated here. The structured block you return is the `CANDIDATES` / `EDGES` / `WAVES` / `PRODUCT_GAPS` block above.
+
+**Local clause:** local tags throughout (`#A`, `#B`) — never GitHub numbers.

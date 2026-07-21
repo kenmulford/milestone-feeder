@@ -38,8 +38,10 @@ isolates: a glob-ignoring feeder FAILS here; it cannot pass by prose-transcripti
   surface matches `uiSurfaceGlobs`** under `siteroot/web` (not because of the API-client path,
   which is under `siteroot/web/src/api/` and is NOT in `uiSurfaceGlobs`); the api-endpoint issue
   classifies **`logic`**.
-- Each issue body has all five §4 sections. Acceptance criteria include empty/error states (per
-  convention). The web-banner issue records the shared API-client + `useToast()` conventions.
+- Each issue body has all six mandatory §4 sections (Summary, Impact, Acceptance criteria, Design
+  (recorded, consistent), Dependencies, Classification); `Non-goals` is optional and omitted
+  entirely when the issue records no scope boundary. Acceptance criteria include empty/error states
+  (per convention). The web-banner issue records the shared API-client + `useToast()` conventions.
 - The milestone description encodes the Wave order (§4 template).
 - Every emitted issue is drafted to pass the driver's triage clean (`GAPS: none`) — well-formed,
   ready for the driver to triage.

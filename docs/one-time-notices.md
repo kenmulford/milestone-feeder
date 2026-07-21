@@ -1,7 +1,7 @@
 # One-time notices — shared reference
 
-This file is the single source of truth for six one-time Step-0 units — a
-self-heal and five printed notices — shared across `plan`, `create`, and
+This file is the single source of truth for seven one-time Step-0 units — a
+self-heal and six printed notices — shared across `plan`, `create`, and
 `update`. Each one either announces a self-heal `plan` just performed, flags a
 repo-state problem for you to fix by hand, points you at a new or optional
 capability you can opt into, or announces a behavior change. Every printed
@@ -29,7 +29,7 @@ Each `##` section below is one notice:
 - **Trigger** — the exact condition that must hold for the notice to fire.
 - **Legacy-fallback** — a stale pre-`.milestone-config/.runtime/` marker
   checked alongside the current marker, or `none` when the notice was born
-  entirely on the current path (`none` for all six sections below).
+  entirely on the current path (`none` for all seven sections below).
 - **Writes** — what the unit writes when it fires.
 - **Safety** — its failure/abort behavior.
 - **Text** and both **emitter twins** (a `bash` form and a PowerShell 7+
@@ -60,6 +60,7 @@ writes the nested `.gitignore`).
 4. [Roadmap-routing notice](#roadmap-routing-notice)
 5. [Implied-surfaces notice](#implied-surfaces-notice)
 6. [md-epic parent notice](#md-epic-parent-notice)
+7. [Consumer issue-template notice](#consumer-issue-template-notice)
 
 ## Self-heal the nested .milestone-config/.gitignore
 
@@ -517,6 +518,80 @@ try {
       '|      | reads this parent to drive the milestones in sequence for you.'
       '| When | Only when the roadmap deploys N>1 milestones. A single-milestone'
       '|      | plan/create is unchanged. No parent issue, nothing new to look at.'
+      '| Note | This notice shows at most once per clone.'
+    ) -join "`n")
+    New-Item -ItemType Directory -Force -Path (Join-Path '.milestone-config' '.runtime') | Out-Null
+    New-Item -ItemType File -Force -Path $marker | Out-Null
+  }
+} catch {}
+```
+
+## Consumer issue-template notice
+
+- **Marker:** `.milestone-config/.runtime/issue-template-notice`.
+- **Skills:** plan
+- **Trigger:** the per-clone marker is absent. Otherwise unconditional: there is no repo-state condition, because the notice announces a behavior change.
+- **Legacy-fallback:** none.
+- **Writes:** the `.runtime/` directory and the marker. `plan` Step 0 only, no `create` / `update` twin.
+- **Safety:** best-effort; a failed notice or marker write never aborts the run.
+
+```text
+🟡 New: plan now adopts your repo's issue template
+
+| What | plan now authors each issue to your repo's own issue template
+|      | instead of its own built-in structure. It uses the template your
+|      | driver config records as agentIssueTemplate; with no such key, the
+|      | single template under .github/ISSUE_TEMPLATE/ (the reserved
+|      | config.yml is not counted, so bug.yml + config.yml counts as one).
+|      | No key and no single template keeps the built-in structure.
+| When | Every plan run. The built-in structure itself also changed: it now
+|      | carries an Impact section, and a Non-goals section when the issue
+|      | records a scope boundary.
+| Note | This notice shows at most once per clone.
+```
+
+```bash
+# bash — one-time consumer-issue-template discovery notice; read-only; marker-gated; never aborts plan.
+# printf '%s\n' (NOT a heredoc): the same indent-safe construct the sibling Step-0 notices use,
+# so all sites emit one consistent form. The notice text is the quoted args — prints flush-left.
+marker=".milestone-config/.runtime/issue-template-notice"
+if [ ! -f "$marker" ]; then
+  printf '%s\n' \
+    '🟡 New: plan now adopts your repo'"'"'s issue template' \
+    '' \
+    '| What | plan now authors each issue to your repo'"'"'s own issue template' \
+    '|      | instead of its own built-in structure. It uses the template your' \
+    '|      | driver config records as agentIssueTemplate; with no such key, the' \
+    '|      | single template under .github/ISSUE_TEMPLATE/ (the reserved' \
+    '|      | config.yml is not counted, so bug.yml + config.yml counts as one).' \
+    '|      | No key and no single template keeps the built-in structure.' \
+    '| When | Every plan run. The built-in structure itself also changed: it now' \
+    '|      | carries an Impact section, and a Non-goals section when the issue' \
+    '|      | records a scope boundary.' \
+    '| Note | This notice shows at most once per clone.'
+  mkdir -p .milestone-config/.runtime 2>/dev/null && : > "$marker" 2>/dev/null || true
+fi
+```
+
+```powershell
+# PowerShell 7+ — same one-time consumer-issue-template discovery notice; read-only; marker-gated; never aborts plan.
+try {
+  $marker = Join-Path '.milestone-config' (Join-Path '.runtime' 'issue-template-notice')
+  if (-not (Test-Path $marker)) {
+    # Indent-safe array-join (the #120/#121 self-heal construct) — NOT a here-string; byte-identical
+    # to the bash printf args and the text template above.
+    Write-Host (@(
+      '🟡 New: plan now adopts your repo''s issue template'
+      ''
+      '| What | plan now authors each issue to your repo''s own issue template'
+      '|      | instead of its own built-in structure. It uses the template your'
+      '|      | driver config records as agentIssueTemplate; with no such key, the'
+      '|      | single template under .github/ISSUE_TEMPLATE/ (the reserved'
+      '|      | config.yml is not counted, so bug.yml + config.yml counts as one).'
+      '|      | No key and no single template keeps the built-in structure.'
+      '| When | Every plan run. The built-in structure itself also changed: it now'
+      '|      | carries an Impact section, and a Non-goals section when the issue'
+      '|      | records a scope boundary.'
       '| Note | This notice shows at most once per clone.'
     ) -join "`n")
     New-Item -ItemType Directory -Force -Path (Join-Path '.milestone-config' '.runtime') | Out-Null
