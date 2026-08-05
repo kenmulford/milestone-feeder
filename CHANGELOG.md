@@ -3,6 +3,39 @@
 Release notes for milestone-feeder. Each tagged release is also published on the
 [GitHub Releases page](https://github.com/kenmulford/milestone-feeder/releases).
 
+## v0.13.0 — citation anchors
+
+**Theme:** Every citation the feeder authors was pinned to a line number, so any edit above the cited line silently invalidated it. The feeder now offers the content-anchored `path (anchor)` form at every grounding slot it writes, adopting the definition milestone-driver shipped rather than re-deriving it.
+
+### ✨ Citation anchors
+
+| Issue | PR | What |
+|---|---|---|
+| #344 Add the `path (anchor)` citation form to the §4 Design-block grounding slots | #350 | The `Convention followed:` and `Layer:` slots in `SPEC.md` and `agents/issue-author.md` gain the anchor form, as one shared clause byte-identical at all four sites |
+| #345 Offer the anchor form in the plan file's design-call grounding line | #349 | The Plan-file output template's grounding bullet gains `sibling path (anchor)`, with the preference stated in the field table above the fence so it cannot render into a generated plan file |
+| #346 Recognize `path (anchor)` citations as file-map seeds | #351 | The file-map's seed rule, fallback gate, and ordering rule recognize both forms, so an anchor-only candidate no longer falls through to a keyword scan |
+| #347 Add the `path (anchor)` form to issue-author's pattern-to-mirror slot and rigor gate | #352 | Both accept the anchor, held to the same grep-verified standard as `file:line`, and the gate now requires the whole reference to sit inside one code span |
+| #348 Offer the anchor form in the architect's sketch slot, dependency edges, and citation rigor gate | #353 | Seven grounding sites in `agents/architect.md` gain the form, with the rules stated once at the Rigor gate |
+
+### Consumer notes (upgrading from v0.12.3)
+
+- **No schema changes** to `.milestone-config/feeder.json` or `.milestone-config/driver.json`. No new config key, no changed default, and no consumer action required.
+- **Nothing already written migrates.** `path:line` and `path:start-end` remain fully valid, not a legacy tolerance, and no slot requires an anchor. A newly written line citation is correct, not a lapse.
+- Where a heading exists, a heading form (`path#Heading`, `path § Heading`) remains the form to write. The anchor form is preferred only where the cited region will outlive the line number it sits on today.
+- A citation never combines an anchor with a line number in one reference.
+- **A citation only counts inside a code span.** The span opens before the path and closes after the final `)`, and the reference must also stand in a citation position. The same words written bare read as a file name plus a parenthetical aside, resolve to nothing, and warn no one.
+- The forms are defined once, in milestone-driver's `skills/citation-format.md` (shipped v1.19.0). This repo cites that file and restates none of it.
+- The discovery path is the updated templates and agent contracts themselves: the next `plan` run surfaces the new form in the artifact you already review.
+
+### ⚖️ Post-run audit trail
+
+Judgment-call PRs for this release: none
+
+Two follow-ups recorded during the run, neither blocking:
+
+- `agents/roadmap-splitter.md` is the one authoring agent no issue in this milestone touched. Its grounding slots still name `file:line` only, and `docs/style-contracts.md:72` still pins it with bare `` `:31` `` / `` `:46` `` line references.
+- milestone-driver's `skills/citation-format.md` does not cover the **same-file** case. A `path (anchor)` citation written into the file it points at reproduces its own anchor, so it can never resolve cleanly; and when the citing line precedes its target, the citing line becomes the resolved answer. `agents/architect.md:163` keeps bare line pins for this reason.
+
 ## v0.12.3 — consumer issue templates & prose-style reach
 
 **Theme:** The feeder writes issues into other people's repos, so it now authors to *their* `.github/ISSUE_TEMPLATE/` convention instead of imposing its own structure. Alongside it, v0.12.2's prose ruleset grows past the one agent and one field it originally bound.
