@@ -16,6 +16,7 @@ Release notes for milestone-feeder. Each tagged release is also published on the
 | #346 Recognize `path (anchor)` citations as file-map seeds | #351 | The file-map's seed rule, fallback gate, and ordering rule recognize both forms, so an anchor-only candidate no longer falls through to a keyword scan |
 | #347 Add the `path (anchor)` form to issue-author's pattern-to-mirror slot and rigor gate | #352 | Both accept the anchor, held to the same grep-verified standard as `file:line`, and the gate now requires the whole reference to sit inside one code span |
 | #348 Offer the anchor form in the architect's sketch slot, dependency edges, and citation rigor gate | #353 | Seven grounding sites in `agents/architect.md` gain the form, with the rules stated once at the Rigor gate |
+| #355 Offer the anchor form in the roadmap-splitter's grounding rule | #356 | The one authoring agent the milestone had not reached; also corrects an off-by-one line pin in `docs/style-contracts.md` |
 
 ### Consumer notes (upgrading from v0.12.3)
 
@@ -33,7 +34,6 @@ Judgment-call PRs for this release: none
 
 Two follow-ups recorded during the run, neither blocking:
 
-- `agents/roadmap-splitter.md` is the one authoring agent no issue in this milestone touched. Its grounding slots still name `file:line` only, and `docs/style-contracts.md:72` still pins it with bare `` `:31` `` / `` `:46` `` line references.
 - milestone-driver's `skills/citation-format.md` does not cover the **same-file** case. A `path (anchor)` citation written into the file it points at reproduces its own anchor, so it can never resolve cleanly; and when the citing line precedes its target, the citing line becomes the resolved answer. `agents/architect.md:163` keeps bare line pins for this reason.
 
 ## v0.12.3 — consumer issue templates & prose-style reach
