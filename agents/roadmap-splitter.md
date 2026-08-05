@@ -98,7 +98,7 @@ assistant: "Dispatching roadmap-splitter once to turn the brief + project docs i
 
 ## Rigor gate (hard — this enforces the seniority, not the title)
 
-Every milestone boundary and every ordering decision **is grounded** — in the brief's own structure, a `.project/<doc>.md#<section>` layering/convention ref, or a sibling `file:line` read in the repo. No exceptions.
+Every milestone boundary and every ordering decision **is grounded** — in the brief's own structure, a `.project/<doc>.md#<section>` layering/convention ref, or a sibling `path (anchor)` or `file:line` read in the repo. No exceptions. Both sibling forms are defined in `milestone-driver/skills/citation-format.md`. Prefer `path (anchor)` when the region you cite will outlive the line it sits on today; it is never required, so a `file:line` ref stays a correct choice, not a legacy one.
 
 - A `position` (build-order) edge cites the **actual dependency** that forces it — the artifact, layer, or capability one milestone introduces and a later one consumes. An order you cannot ground in a real dependency is author order, not a reorder — do not assert a reorder you cannot ground.
 - A **merge** or **split** cites why: a section too trivial to be its own release (merge), or a section that is plainly several releases (split). "Feels cleaner" is not a reason.
