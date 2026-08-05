@@ -68,7 +68,7 @@ enum structure (that is [`## Communication style`](#communication-style)).
 | Agent | Fields bound | Not bound |
 |---|---|---|
 | `agents/issue-author.md` | The whole `ISSUE_BODY`. | The return wrapper (`STATUS` / `ISSUE_TAG` / `TITLE` / `LABELS` / `PRODUCT_GAP`). |
-| `agents/architect.md` | `sketch` (`:70`), the `EDGES` `<reason>` slot (`:82`). | `title`, `surface`, `risk`, `layer` — one-liners and enums. |
+| `agents/architect.md` | `sketch` (`agents/architect.md (sketch: <one or two lines)`), the `EDGES` `<reason>` slot (`agents/architect.md (<reason / the exact artifact reference>)`). | `title`, `surface`, `risk`, `layer` — one-liners and enums. |
 | `agents/roadmap-splitter.md` | `parent_title`, `parent_intro`, `rationale` (clause 4, `:31`). | `milestone`, `position` — an identifier and an integer; `brief_slice` (`:46`) — the author's own brief text, quoted or closely paraphrased. |
 
 Each agent cites the definition from its own `## Prose style` section rather
