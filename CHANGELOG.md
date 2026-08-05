@@ -17,6 +17,7 @@ Release notes for milestone-feeder. Each tagged release is also published on the
 | #347 Add the `path (anchor)` form to issue-author's pattern-to-mirror slot and rigor gate | #352 | Both accept the anchor, held to the same grep-verified standard as `file:line`, and the gate now requires the whole reference to sit inside one code span |
 | #348 Offer the anchor form in the architect's sketch slot, dependency edges, and citation rigor gate | #353 | Seven grounding sites in `agents/architect.md` gain the form, with the rules stated once at the Rigor gate |
 | #355 Offer the anchor form in the roadmap-splitter's grounding rule | #356 | The one authoring agent the milestone had not reached; also corrects an off-by-one line pin in `docs/style-contracts.md` |
+| #358 Correct the 13 drifted line-pinned citations found by the pre-release sweep | #359 | A sweep of all 25 line pins on the live surface found 13 wrong: 8 cross-repo pins into milestone-driver off by ~20, 2 citing a gitignored path, 3 off by one |
 
 ### Consumer notes (upgrading from v0.12.3)
 
@@ -34,6 +35,7 @@ Judgment-call PRs for this release: none
 
 Two follow-ups recorded during the run, neither blocking:
 
+- A pre-release sweep audited all 25 line-pinned citations remaining on the live surface and corrected the 13 that were wrong (#358). The 9 that resolve correctly were left as line pins; two references in the frozen `docs/specs/v0.3.0-*` spec point at since-deleted skill directories and are correct as a historical record.
 - milestone-driver's `skills/citation-format.md` does not cover the **same-file** case. A `path (anchor)` citation written into the file it points at reproduces its own anchor, so it can never resolve cleanly; and when the citing line precedes its target, the citing line becomes the resolved answer. `agents/architect.md:163` keeps bare line pins for this reason.
 
 ## v0.12.3 — consumer issue templates & prose-style reach
