@@ -25,7 +25,7 @@ The first two read as contradictory only because neither used to say which
 surface it governs. `## Output style` mandates tables because a terminal
 report is scanned; the GitHub prose contract forbids them because an issue
 body is parsed by the driver's triage and read in a browser
-(`agents/issue-author.md:49-80`). Both are right for their own surface.
+(`agents/issue-author.md (§4 issue-body template)`). Both are right for their own surface.
 
 ## Output style
 
