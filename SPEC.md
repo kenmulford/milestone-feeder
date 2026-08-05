@@ -192,8 +192,8 @@ Maps 1:1 to the five criteria the driver's triage checks. The issue-author guara
 ## Design (recorded, consistent)
 <the decisions an implementer would otherwise have to invent — grounded in the
 project docs or a cited sibling pattern. No contradictions.>
-- Convention followed: <conventions.md ref or file:line of the sibling pattern>
-- Layer: <architectural layer the architect assigned — OPTIONAL; present only when a layer was assigned; cites the stated architecture (.project/<doc>#<section> or a sibling file:line)>
+- Convention followed: <conventions.md ref, path (anchor), or file:line of the sibling pattern; the anchor form is defined in milestone-driver/skills/citation-format.md, is preferred when the cited region will outlive the line it sits on today, and is never required, so a file:line ref stays a correct choice, not a legacy one; where the cited region is a heading, the heading ref remains the form to write; any one reference carries an anchor or a line number, never both>
+- Layer: <architectural layer the architect assigned — OPTIONAL; present only when a layer was assigned; cites the stated architecture (.project/<doc>#<section>, a sibling path (anchor), or a sibling file:line); the anchor form is defined in milestone-driver/skills/citation-format.md, is preferred when the cited region will outlive the line it sits on today, and is never required, so a file:line ref stays a correct choice, not a legacy one; where the cited region is a heading, the heading ref remains the form to write; any one reference carries an anchor or a line number, never both>
 - Config pointers: <the .project config the driver reads at build time, keyed to what the issue touches — styling → .project/tokens.json + .project/design-system.md#<section>; deployment/env → .project/environment.md — OPTIONAL; a reference to the PATH only, resolved values NOT inlined (no hex, no parsed token values, no pre-solved render); omitted when the issue touches none or the doc is absent>
 
 ## Dependencies

@@ -25,7 +25,7 @@ The first two read as contradictory only because neither used to say which
 surface it governs. `## Output style` mandates tables because a terminal
 report is scanned; the GitHub prose contract forbids them because an issue
 body is parsed by the driver's triage and read in a browser
-(`agents/issue-author.md:49-80`). Both are right for their own surface.
+(`agents/issue-author.md (§4 issue-body template)`). Both are right for their own surface.
 
 ## Output style
 
@@ -68,8 +68,8 @@ enum structure (that is [`## Communication style`](#communication-style)).
 | Agent | Fields bound | Not bound |
 |---|---|---|
 | `agents/issue-author.md` | The whole `ISSUE_BODY`. | The return wrapper (`STATUS` / `ISSUE_TAG` / `TITLE` / `LABELS` / `PRODUCT_GAP`). |
-| `agents/architect.md` | `sketch` (`:70`), the `EDGES` `<reason>` slot (`:82`). | `title`, `surface`, `risk`, `layer` — one-liners and enums. |
-| `agents/roadmap-splitter.md` | `parent_title`, `parent_intro`, `rationale` (clause 4, `:31`). | `milestone`, `position` — an identifier and an integer; `brief_slice` (`:46`) — the author's own brief text, quoted or closely paraphrased. |
+| `agents/architect.md` | `sketch` (`agents/architect.md (sketch: <one or two lines)`), the `EDGES` `<reason>` slot (`agents/architect.md (<reason / the exact artifact reference>)`). | `title`, `surface`, `risk`, `layer` — one-liners and enums. |
+| `agents/roadmap-splitter.md` | `parent_title`, `parent_intro`, `rationale` (clause 4, `agents/roadmap-splitter.md (**4. Every change recorded in the rationale.**)`). | `milestone`, `position` — an identifier and an integer; `brief_slice` (`agents/roadmap-splitter.md (brief_slice: <the portion of the brief this milestone owns)`) — the author's own brief text, quoted or closely paraphrased. |
 
 Each agent cites the definition from its own `## Prose style` section rather
 than carrying a copy of the rules.
