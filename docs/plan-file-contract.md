@@ -20,6 +20,7 @@ This is the shared reference for the plan file's fields and output templates —
 | **Dropped issues** | Each dropped issue: slug, title, and the parked dependency that dropped it. Marked, never created. |
 | **Source brief reference** | `inline` \| `file:<path>` \| `epic #<n>` — drives the downstream report routing and the brief↔plan match. Record `epicIssueNumber` here when the brief was an epic. |
 | **Original brief (full text)** | The **full** brief text this plan run received — persisted verbatim and multi-line as the `## Original brief` … `## End original brief` delimited section below (a brief is multi-line, so a SECTION, not a `Label: value` header line; `Source brief reference` records only the form token; the paired end-delimiter keeps a brief that contains its own `## ` headings intact for the consumer, never truncated at its first internal heading). It is a durable record of the brief this plan was built from. Mirrors the roadmap manifest's `## Original brief`, which persists the whole-app brief for a roadmap run (`skills/build-roadmap/SKILL.md` "Manifest format"). |
+| **Project-docs grounding** | One bullet per design call carried forward, each naming what grounds it. Prefer the anchor option when the cited region will outlive the line number it sits on today. The rules governing these citation forms live in `milestone-driver/skills/citation-format.md` (the anchor form, shipped in milestone-driver v1.19.0), the sole citation authority. |
 
 ## Plan-file output template
 
@@ -68,7 +69,7 @@ Milestone number (GitHub): <n>   # OPTIONAL sibling header line — carried forw
 - <proposed milestone 2 name>: #B
 
 ## Project-docs grounding
-- <each design call carried forward> — grounded in <.project/<doc>.md#<section> | sibling file:line>
+- <each design call carried forward> — grounded in <.project/<doc>.md#<section> | sibling path (anchor) | sibling file:line>
 - Degradations: <e.g. "uiSurfaceGlobs absent → all candidates treated as logic"; "none" otherwise>
 
 ## Needs human input
