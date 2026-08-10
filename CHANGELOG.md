@@ -3,6 +3,32 @@
 Release notes for milestone-feeder. Each tagged release is also published on the
 [GitHub Releases page](https://github.com/kenmulford/milestone-feeder/releases).
 
+## v0.13.1: issue-body template trim
+
+**Theme:** The built-in §4 issue-body template mandated two sections the artifact prose contract forbids: a `## Classification` block restating the labels, and an `## Impact` section carrying the case for the issue rather than a fact a builder acts on. Both are dropped.
+
+### ✨ Issue-body template
+
+| Issue | PR | What |
+|---|---|---|
+| #361 Issue-author §4 contract mandates two sections the artifact prose contract forbids | #362 | `## Impact` and `## Classification` are removed from the built-in §4 template in both must-not-drift copies (`agents/issue-author.md` and `SPEC.md`). Surface and risk stay a contract clause 5 determination, returned in the `LABELS` field of the issue-author's return wrapper; `create` applies them as the `ui` / `logic` and `risk:*` GitHub labels, and clause 5 now sets `Risk:` only when confident of the level, deferring an unsure call to the driver's own rubric. That omission is a documented deploy path rather than a gap: `docs/create-deploy-sequence.md` defines the absent-risk branch once, and `docs/plan-file-contract.md`'s issue heading plus `skills/update/SKILL.md`'s create row cite it, so a risk-absent plan emits one `--label` instead of a dangling second one. The same diff rewrites `## Prose style`'s bound-content list, dropping the impact statement and the classification enums, and deletes its guardrail's closing sentence about the enums carrying no prose. Both dropped items are issue-body content, so the trim is issue-author-local: the architect and the roadmap-splitter cite that section rather than carrying a copy of it (`docs/style-contracts.md`), and their bound slots are unchanged (`sketch` and the `EDGES` `<reason>`; `parent_title` / `parent_intro` / `rationale`). `skills/setup/SKILL.md`'s Design note grounds its `risk:*` override claim in the driver's triage skill. The consumer issue-template notice states the current mandatory section set and carries a `-v2` marker so clones that already ran `plan` see it once, and the two scenario graders asserting the mandatory section set now assert four. |
+
+### Consumer notes (upgrading from v0.13.0)
+
+- **Authored issue bodies no longer carry `## Impact` or `## Classification`.** The mandatory section set is four: `## Summary`, `## Acceptance criteria`, `## Design (recorded, consistent)`, `## Dependencies`. `## Non-goals` stays optional, omitted entirely when the issue records no scope boundary.
+- **Surface and risk reach GitHub only as labels.** `create` applies the `ui` / `logic` label and, when the feeder is confident of the risk level, `risk:light` / `risk:heavy`. The four-label taxonomy is unchanged, so the driver's triage and solve read it exactly as before.
+- **`create` leaves an existing body alone; `update` rewrites it.** An adopted title-matched issue keeps its body as-is on every `create` run (`docs/create-deploy-sequence.md` (Adopted-issue body policy)). `update` PATCHes any live body that differs from the re-authored plan body, so `plan` then `update` on an existing milestone strips `## Impact` and `## Classification` from every open issue it reconciles. It is a bulk rewrite, shown as a diff before it is applied, never silent (`skills/update/SKILL.md` Step 4, the `In BOTH, body DIFFERS` branch).
+- **A resolved consumer issue template still wins.** When `.github/ISSUE_TEMPLATE/` resolves a template, `plan` authors to its sections; this changes the built-in default only.
+- **No schema changes** to `.milestone-config/feeder.json` or `.milestone-config/driver.json`. No new config key, no changed default, and no consumer action required.
+
+### ⚖️ Post-run audit trail
+
+Judgment-call PRs for this release: #362 (three calls, recorded below).
+
+- **Contract clause 5 yields to the return-wrapper rule, not the reverse.** Clause 5's "default heavy when unsure" and the wrapper's "`LABELS` omits the `risk:*` label when you are not confident" could not both hold. A `risk:*` label is an operator override checked first that skips the driver's own rubric (`milestone-driver/skills/triage/SKILL.md` (Risk classification)), so an unsure feeder emitting `risk:heavy` suppresses a later, better-informed classifier to assert the default that rubric already reaches.
+- **`skills/setup/SKILL.md`'s risk citation retargets to the driver rather than restoring the deleted `SPEC.md` §4 line.** §4 is the issue-body template, not the driver contract, and re-adding the sentence would recreate the cross-plugin drift surface the #358 sweep cleaned. The Design note now cites `milestone-driver/skills/triage/SKILL.md` (Risk classification), the authority for a claim about driver behavior.
+- **The consumer issue-template notice marker is renamed `-v2`.** Every clone that already ran `plan` wrote `.milestone-config/.runtime/issue-template-notice`, so the corrected text would print to nobody; the marker is now `.milestone-config/.runtime/issue-template-notice-v2` and existing clones see the notice once more.
+
 ## v0.13.0 — citation anchors
 
 **Theme:** Every citation the feeder authors was pinned to a line number, so any edit above the cited line silently invalidated it. The feeder now offers the content-anchored `path (anchor)` form at every grounding slot it writes, adopting the definition milestone-driver shipped rather than re-deriving it.

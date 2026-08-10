@@ -125,7 +125,7 @@ These commands are identical on bash and PowerShell 7+. Run them as a flat list 
 
 #### Design note — `ui`/`logic` are human-facing metadata, NOT the driver's UI signal
 
-The driver derives **UI vs logic** from a **`uiSurfaceGlobs` diff-match** (it checks whether an issue's changed paths intersect the configured UI-surface globs), **not** from a literal `ui` / `logic` label. These `ui` / `logic` labels are therefore **feeder-introduced, human-facing classification metadata** — readable on the issue list, aligned with the driver's taxonomy — but they are **not** the input the driver consumes to decide whether design review applies. The `risk:light` / `risk:heavy` labels, by contrast, **do** set the driver's `risk:*` build-profile override (`SPEC.md` §4). Provisioning all four keeps the issue surface self-describing without changing how the driver makes the UI call.
+The driver derives **UI vs logic** from a **`uiSurfaceGlobs` diff-match** (it checks whether an issue's changed paths intersect the configured UI-surface globs), **not** from a literal `ui` / `logic` label. These `ui` / `logic` labels are therefore **feeder-introduced, human-facing classification metadata** — readable on the issue list, aligned with the driver's taxonomy — but they are **not** the input the driver consumes to decide whether design review applies. The `risk:light` / `risk:heavy` labels, by contrast, **do** set the driver's `risk:*` build-profile override (`milestone-driver/skills/triage/SKILL.md` (Risk classification)). Provisioning all four keeps the issue surface self-describing without changing how the driver makes the UI call.
 
 ### Phase 5 — Return control
 
