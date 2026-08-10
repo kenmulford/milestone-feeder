@@ -50,7 +50,7 @@ Milestone number (GitHub): <n>   # OPTIONAL sibling header line — carried forw
 
 ## Issues
 ### #A — <title>   [<ui|logic>, <risk:*>]
-<the full §4 ISSUE_BODY for #A>
+<the full §4 ISSUE_BODY for #A. The `<ui|logic>` tag is always rendered; the `, <risk:*>` slot is rendered ONLY when the issue carries a risk label, so an issue whose author was not confident of the level renders `[<ui|logic>]` alone (`agents/issue-author.md` The contract, clause 5) and deploys with the `ui`/`logic` label by itself (`docs/create-deploy-sequence.md` Absent-risk branch). Never an empty slot, never a placeholder value>
 
 ### #F — <title>   [<ui|logic>, <risk:*>]   [implied — review / trim / augment]
 <the full §4 ISSUE_BODY for #F — a `disposition: implied` candidate (architect clause 8) renders DISTINCTLY, carrying the `[implied — review / trim / augment]` marker (the verbatim words `implied — review / trim / augment` inside the brackets) alongside the [ui|logic, risk:*] tags; a grounded candidate (#A above) omits the marker and renders exactly as today>

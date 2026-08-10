@@ -700,9 +700,11 @@ For each surviving issue, **in Wave order** (the plan file's Wave order):
 | On adopt, title match? | Action |
 |---|---|
 | **Yes** — an open issue with the same title already exists | **Reuse** its number — do NOT create a duplicate. Map `slug → #<existing-n>`. Its body is **left as-is** (see body policy below). |
-| **No** (or this is the create path) | **Create:** `gh issue create --title "<title>" --body "<the §4 ISSUE_BODY from the plan file, verbatim>" --milestone "<milestone-title>" --label <ui\|logic> --label <risk:light\|risk:heavy>`. Capture the returned number. Map `slug → #<new-n>`. |
+| **No** (or this is the create path) | **Create:** `gh issue create --title "<title>" --body "<the §4 ISSUE_BODY from the plan file, verbatim>" --milestone "<milestone-title>" --label <ui\|logic>`, appending ` --label <risk:light\|risk:heavy>` only when the plan file records a risk label (absent-risk branch below). Capture the returned number. Map `slug → #<new-n>`. |
 
-Apply each issue's **labels exactly as recorded in the plan file** (its `ui`/`logic` label and its `risk:*` label — Step 2). Accumulate the full **slug→`#n` map** across every surviving issue (created or reused). The `--body` here still carries the **local slug** references from the plan file; they are rewritten in the second pass (d), once the full map exists.
+Apply each issue's **labels exactly as recorded in the plan file** (its `ui`/`logic` label, plus its `risk:*` label when the plan records one — Step 2). Accumulate the full **slug→`#n` map** across every surviving issue (created or reused). The `--body` here still carries the **local slug** references from the plan file; they are rewritten in the second pass (d), once the full map exists.
+
+**Absent-risk branch.** The `ui`/`logic` `--label` is always emitted. The second `--label` is emitted **only when the issue's plan-file heading carries a `risk:*` tag** (`docs/plan-file-contract.md` Plan-file output template). A heading with no risk tag deploys with the `ui`/`logic` label alone: never a `--label` with no value, and never a re-guessed `risk:heavy`. The missing tag is the issue-author's deliberate deferral to the driver's own risk rubric (`agents/issue-author.md` The contract, clause 5). Every other deploy site cites this branch rather than restating it.
 
 **Adopted-issue body policy.** Adopted (title-matched) issues are **NOT** body-rewritten — their bodies are preserved as-is. A prior `create` run already resolved their slug→`#n` references, and any manual human edits are respected. **ONLY newly-CREATED issues** receive the slug→`#n` body rewrite in pass (d). This non-clobber behavior is intentional, not a gap.
 

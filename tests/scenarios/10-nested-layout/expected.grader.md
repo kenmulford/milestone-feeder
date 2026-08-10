@@ -34,12 +34,15 @@ isolates: a glob-ignoring feeder FAILS here; it cannot pass by prose-transcripti
     no path that omits the `siteroot/web` or `siteroot/api` prefix.
 - Dependency edge: the web banner **depends on** the endpoint (the banner polls it). Endpoint =
   Wave 1; banner = Wave 2.
-- Classification: the web-banner issue classifies **`ui`** **because its primary page/component
+- Labels: the web-banner issue classifies **`ui`** **because its primary page/component
   surface matches `uiSurfaceGlobs`** under `siteroot/web` (not because of the API-client path,
   which is under `siteroot/web/src/api/` and is NOT in `uiSurfaceGlobs`); the api-endpoint issue
-  classifies **`logic`**.
-- Each issue body has all six mandatory §4 sections (Summary, Impact, Acceptance criteria, Design
-  (recorded, consistent), Dependencies, Classification); `Non-goals` is optional and omitted
+  classifies **`logic`**. Risk passes on either branch: a `risk:light` / `risk:heavy` label whose
+  level fits the issue, OR no `risk:*` label at all, which is the correct return when the author
+  was not confident of the level (`agents/issue-author.md` The contract, clause 5). Only a risk
+  label whose level contradicts the issue fails; a missing one never does.
+- Each issue body has all four mandatory §4 sections (Summary, Acceptance criteria, Design
+  (recorded, consistent), Dependencies); `Non-goals` is optional and omitted
   entirely when the issue records no scope boundary. Acceptance criteria include empty/error states
   (per convention). The web-banner issue records the shared API-client + `useToast()` conventions.
 - The milestone description encodes the Wave order (§4 template).

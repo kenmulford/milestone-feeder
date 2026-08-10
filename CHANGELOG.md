@@ -3,6 +3,32 @@
 Release notes for milestone-feeder. Each tagged release is also published on the
 [GitHub Releases page](https://github.com/kenmulford/milestone-feeder/releases).
 
+## v0.13.1: issue-body template trim
+
+**Theme:** The built-in §4 issue-body template mandated two sections the artifact prose contract forbids: `## Classification`, restating the labels, and `## Impact`, the case for the issue. Both are dropped.
+
+### ✨ Issue-body template
+
+| Issue | PR | What |
+|---|---|---|
+| #361 Drop `## Impact` and `## Classification` from the §4 template | #362 | Both sections leave `agents/issue-author.md` and `SPEC.md`; clause 5 sets `Risk:` only when confident, and the deploy chain gains the absent-risk branch it never had |
+
+### Consumer notes (upgrading from v0.13.0)
+
+- **No schema changes** to `.milestone-config/feeder.json` or `.milestone-config/driver.json`. No new config key, no changed default, and no consumer action required.
+- Authored bodies carry four mandatory sections: `## Summary`, `## Acceptance criteria`, `## Design (recorded, consistent)`, `## Dependencies`. `## Non-goals` stays optional.
+- Surface and risk reach GitHub only as the `ui` / `logic` and `risk:*` labels. An unsure call carries no `risk:*` label and defers to milestone-driver's rubric, which defaults heavy.
+- `create` leaves an adopted body as-is; `update` PATCHes any live body that differs from the re-authored plan, diff shown first. `plan` then `update` strips both sections from every open issue it reconciles.
+- A resolved consumer issue template still wins. This changes the built-in default only.
+
+### ⚖️ Post-run audit trail
+
+Judgment-call PRs for this release: #362
+
+- Clause 5 yields to the return-wrapper rule. A `risk:*` label is an operator override that skips milestone-driver's rubric, so an unsure feeder emitting `risk:heavy` suppresses a better-informed classifier to reach the same default.
+- `skills/setup/SKILL.md`'s risk-override citation retargets to milestone-driver's `skills/triage/SKILL.md`, not the deleted `SPEC.md` §4 line. §4 is the issue-body template, not the driver contract.
+- Patch, not minor: v0.12.2 and v0.12.3 shipped authored-body shape changes as patch, and v0.12.3 added `## Impact`.
+
 ## v0.13.0 — citation anchors
 
 **Theme:** Every citation the feeder authors was pinned to a line number, so any edit above the cited line silently invalidated it. The feeder now offers the content-anchored `path (anchor)` form at every grounding slot it writes, adopting the definition milestone-driver shipped rather than re-deriving it.
