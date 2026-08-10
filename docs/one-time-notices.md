@@ -528,7 +528,7 @@ try {
 
 ## Consumer issue-template notice
 
-- **Marker:** `.milestone-config/.runtime/issue-template-notice`.
+- **Marker:** `.milestone-config/.runtime/issue-template-notice-v2`.
 - **Skills:** plan
 - **Trigger:** the per-clone marker is absent. Otherwise unconditional: there is no repo-state condition, because the notice announces a behavior change.
 - **Legacy-fallback:** none.
@@ -544,17 +544,19 @@ try {
 |      | single template under .github/ISSUE_TEMPLATE/ (the reserved
 |      | config.yml is not counted, so bug.yml + config.yml counts as one).
 |      | No key and no single template keeps the built-in structure.
-| When | Every plan run. The built-in structure itself also changed: it now
-|      | carries an Impact section, and a Non-goals section when the issue
-|      | records a scope boundary.
-| Note | This notice shows at most once per clone.
+| When | Every plan run. The built-in structure authors four sections:
+|      | Summary, Acceptance criteria, Design (recorded, consistent),
+|      | and Dependencies, plus Non-goals when the issue records a scope
+|      | boundary.
+| Note | This notice shows once per clone, and again after an upgrade
+|      | that revises it.
 ```
 
 ```bash
 # bash — one-time consumer-issue-template discovery notice; read-only; marker-gated; never aborts plan.
 # printf '%s\n' (NOT a heredoc): the same indent-safe construct the sibling Step-0 notices use,
 # so all sites emit one consistent form. The notice text is the quoted args — prints flush-left.
-marker=".milestone-config/.runtime/issue-template-notice"
+marker=".milestone-config/.runtime/issue-template-notice-v2"
 if [ ! -f "$marker" ]; then
   printf '%s\n' \
     '🟡 New: plan now adopts your repo'"'"'s issue template' \
@@ -565,10 +567,12 @@ if [ ! -f "$marker" ]; then
     '|      | single template under .github/ISSUE_TEMPLATE/ (the reserved' \
     '|      | config.yml is not counted, so bug.yml + config.yml counts as one).' \
     '|      | No key and no single template keeps the built-in structure.' \
-    '| When | Every plan run. The built-in structure itself also changed: it now' \
-    '|      | carries an Impact section, and a Non-goals section when the issue' \
-    '|      | records a scope boundary.' \
-    '| Note | This notice shows at most once per clone.'
+    '| When | Every plan run. The built-in structure authors four sections:' \
+    '|      | Summary, Acceptance criteria, Design (recorded, consistent),' \
+    '|      | and Dependencies, plus Non-goals when the issue records a scope' \
+    '|      | boundary.' \
+    '| Note | This notice shows once per clone, and again after an upgrade' \
+    '|      | that revises it.'
   mkdir -p .milestone-config/.runtime 2>/dev/null && : > "$marker" 2>/dev/null || true
 fi
 ```
@@ -576,7 +580,7 @@ fi
 ```powershell
 # PowerShell 7+ — same one-time consumer-issue-template discovery notice; read-only; marker-gated; never aborts plan.
 try {
-  $marker = Join-Path '.milestone-config' (Join-Path '.runtime' 'issue-template-notice')
+  $marker = Join-Path '.milestone-config' (Join-Path '.runtime' 'issue-template-notice-v2')
   if (-not (Test-Path $marker)) {
     # Indent-safe array-join (the #120/#121 self-heal construct) — NOT a here-string; byte-identical
     # to the bash printf args and the text template above.
@@ -589,10 +593,12 @@ try {
       '|      | single template under .github/ISSUE_TEMPLATE/ (the reserved'
       '|      | config.yml is not counted, so bug.yml + config.yml counts as one).'
       '|      | No key and no single template keeps the built-in structure.'
-      '| When | Every plan run. The built-in structure itself also changed: it now'
-      '|      | carries an Impact section, and a Non-goals section when the issue'
-      '|      | records a scope boundary.'
-      '| Note | This notice shows at most once per clone.'
+      '| When | Every plan run. The built-in structure authors four sections:'
+      '|      | Summary, Acceptance criteria, Design (recorded, consistent),'
+      '|      | and Dependencies, plus Non-goals when the issue records a scope'
+      '|      | boundary.'
+      '| Note | This notice shows once per clone, and again after an upgrade'
+      '|      | that revises it.'
     ) -join "`n")
     New-Item -ItemType Directory -Force -Path (Join-Path '.milestone-config' '.runtime') | Out-Null
     New-Item -ItemType File -Force -Path $marker | Out-Null

@@ -42,7 +42,7 @@ You guarantee the five criteria the driver's triage checks, 1:1. Each clause bel
 
 4. **Dependencies.** You record each architect edge touching this candidate as `Depends on #<tag> — <reason / the exact reference>`, transcribing the exact artifact reference. You **record** edges; you do not invent them and you do not reorder the Waves — the architect owns the dependency graph and its topological sort (satisfies `milestone-driver/agents/triage-reviewer.md` criterion 4, Dependencies).
 
-5. **UI vs logic + risk.** Classify `Surface: ui | logic` — **ui** when the issue touches a `uiSurfaceGlobs` path or carries a visible/interactive affordance, **logic** otherwise. For a **ui** issue, the Design section must carry what the design-reviewer needs: the existing pattern to mirror at `path (anchor)` or `file:line` (the anchor form is preferred when the cited region will outlive the line it sits on today, and is never required; both forms are defined in `milestone-driver/skills/citation-format.md` and bound by the Rigor gate below, which carries the grep and code-span requirements), the required states (empty/loading/error/disabled), the affordances (including a confirm affordance for any destructive op), and accessibility labels for interactive elements. Set `Risk: light | heavy` — default **heavy** when unsure (satisfies `milestone-driver/agents/triage-reviewer.md` criterion 5, UI flag; the UI sub-criteria are the five criteria in `milestone-driver/agents/design-reviewer.md`, states at its criterion 4, Missing states, and affordances + accessibility at its criterion 5, Missing affordances and accessibility).
+5. **UI vs logic + risk.** Classify `Surface: ui | logic` — **ui** when the issue touches a `uiSurfaceGlobs` path or carries a visible/interactive affordance, **logic** otherwise. For a **ui** issue, the Design section must carry what the design-reviewer needs: the existing pattern to mirror at `path (anchor)` or `file:line` (the anchor form is preferred when the cited region will outlive the line it sits on today, and is never required; both forms are defined in `milestone-driver/skills/citation-format.md` and bound by the Rigor gate below, which carries the grep and code-span requirements), the required states (empty/loading/error/disabled), the affordances (including a confirm affordance for any destructive op), and accessibility labels for interactive elements (satisfies `milestone-driver/agents/triage-reviewer.md` criterion 5, UI flag; the UI sub-criteria are the five criteria in `milestone-driver/agents/design-reviewer.md`, states at its criterion 4, Missing states, and affordances + accessibility at its criterion 5, Missing affordances and accessibility). Set `Risk: light | heavy` **only when confident of the level**; when unsure set none, and `LABELS` omits the `risk:*` label, leaving the call to the driver's own rubric, which defaults **heavy** when inconclusive (`milestone-driver/skills/triage/SKILL.md` (Risk classification): a `risk:*` label is an operator override checked first that **skips** that rubric). **Both determinations are returned in the `LABELS` field of the return wrapper (*Output format* below) and appear NOWHERE in the `ISSUE_BODY`: not as a section, not as a bullet under `## Design (recorded, consistent)` beside the `Layer:` and `Config pointers:` lines, not inline in any other line, under any wording.**
 
 ## Output format (your return value to the orchestrator)
 
@@ -51,9 +51,6 @@ The `ISSUE_BODY` you author reproduces the §4 issue-body template verbatim:
 ```markdown
 ## Summary
 <2-3 plain sentences: what changes and why, in product terms>
-
-## Impact
-<who is affected, and what breaks or changes for them if this is not done>
 
 ## Acceptance criteria
 - [ ] <happy path, observable>
@@ -73,13 +70,9 @@ project docs or a cited sibling pattern. No contradictions.>
 
 ## Dependencies
 - Depends on #<n> — <one-line reason / the exact reference>
-
-## Classification
-- Surface: UI | logic
-- Risk: light | heavy   (sets the driver's risk:* override; default heavy when unsure)
 ```
 
-**Section order is locked, and the two adjacencies are the reason.** `## Impact` sits directly after `## Summary` — the motivation adjacency Rust RFCs use, where Motivation is "one of the most important sections". `## Non-goals` sits directly after `## Acceptance criteria` because it is the scope boundary of exactly those criteria — the Goals / Non-Goals adjacency Kubernetes KEPs use. `## Impact` names who is affected and what breaks or changes for them if this is not done; it is bound by `## Prose style` below like every other line. `## Non-goals` is **omitted entirely** when the issue records no scope boundary — never emitted empty, the same omit-when-absent convention the `Layer:` and `Config pointers:` lines already follow in this template.
+**Section order is locked, and the one adjacency is the reason.** `## Non-goals` sits directly after `## Acceptance criteria` because it is the scope boundary of exactly those criteria — the Goals / Non-Goals adjacency Kubernetes KEPs use. `## Non-goals` is **omitted entirely** when the issue records no scope boundary — never emitted empty, the same omit-when-absent convention the `Layer:` and `Config pointers:` lines already follow in this template.
 
 Wrap that body in this return wrapper — the value you hand back to the orchestrator:
 
@@ -114,15 +107,15 @@ PRODUCT_GAP (only when STATUS: PRODUCT_GAP): { what: <the product decision with 
 <example>
 Context: /milestone-feeder:plan dispatched the architect, which returned candidate #A (logic, light): "add CSV export to the contacts list", grounded in the project docs' export-format convention and the existing ContactsListService pattern. No edge touches #A.
 user: "Author issue #A to the §4 output contract."
-assistant: "Dispatching issue-author for candidate #A to author its full §4 spec — recording the export-format convention from your project docs, enumerating happy/empty/error/disabled acceptance criteria, declaring no dependencies, classifying logic/light."
-<commentary>A clean logic issue records every design call against a stated convention (a Convention followed: line citing the project docs or file:line), enumerates the happy path AND the empty, error, and disabled states — not just the happy path — and declares no edges because the architect emitted none. STATUS: AUTHORED.</commentary>
+assistant: "Dispatching issue-author for candidate #A to author its full §4 spec — recording the export-format convention from your project docs, enumerating happy/empty/error/disabled acceptance criteria, declaring no dependencies, and settling surface and risk on the issue's own facts."
+<commentary>A clean logic issue records every design call against a stated convention (a Convention followed: line citing the project docs or file:line), enumerates the happy path AND the empty, error, and disabled states — not just the happy path — and declares no edges because the architect emitted none. The classification is the author's own call, never a forwarded architect hint: a service-layer export mirroring ContactsListService touches no uiSurfaceGlobs path and carries no destructive op, so logic and light hold on the issue's own facts. STATUS: AUTHORED, LABELS: [logic, risk:light].</commentary>
 </example>
 
 <example>
 Context: The architect flagged candidate #B (ui, heavy): "add a prayer-list screen with a delete action". The brief and your project docs point at ConfirmImportPage as the pattern to mirror. This UI issue must pre-satisfy the design-reviewer.
 user: "Author issue #B to the §4 output contract."
 assistant: "Dispatching issue-author for candidate #B to author its §4 spec — Design section names the existing pattern to mirror (ConfirmImportPage at file:line), the required states (empty/loading/error), the confirm affordance for the destructive delete, and accessibility labels for the interactive elements."
-<commentary>A UI issue carries exactly what the design-reviewer checks: a concrete existing pattern to mirror at file:line, the required states, the destructive-action confirm affordance, and accessibility labels — so it clears the design lens before any code is written. STATUS: AUTHORED, Surface: ui.</commentary>
+<commentary>A UI issue carries exactly what the design-reviewer checks: a concrete existing pattern to mirror at file:line, the required states, the destructive-action confirm affordance, and accessibility labels — so it clears the design lens before any code is written. The risk label is the author's own call, never a forwarded architect hint: a new screen carrying a destructive delete is heavy on the issue's own facts, so the label is emitted. An author who cannot settle the level that way returns LABELS: [ui] with no risk entry. STATUS: AUTHORED, LABELS: [ui, risk:heavy].</commentary>
 </example>
 
 <example>
@@ -149,7 +142,7 @@ assistant: "Dispatching issue-author for candidate #C to author its spec to the 
 
 ## Prose style (hard — confidence lives in the citation)
 
-The Rigor gate above governs WHAT you record; these rules govern HOW it reads. They bind every line of the `ISSUE_BODY` you return, **keyed to the content each line carries** — the summary, the impact statement, every acceptance criterion, the non-goals, every recorded design decision, every declared dependency, and the classification enums — **wherever they land in the body**. The section set is consumer-determined (*Authoring to a resolved consumer template* above), so these rules key to content, never to a heading string: a template that renames or omits a section changes which header the content sits under, never whether it is bound. Padding an issue to sound more confident is the failure mode this section exists to kill: in this pipeline confidence has one currency — the grounding citation — not the word count.
+The Rigor gate above governs WHAT you record; these rules govern HOW it reads. They bind every line of the `ISSUE_BODY` you return, **keyed to the content each line carries** — the summary, every acceptance criterion, the non-goals, every recorded design decision, and every declared dependency — **wherever they land in the body**. The section set is consumer-determined (*Authoring to a resolved consumer template* above), so these rules key to content, never to a heading string: a template that renames or omits a section changes which header the content sits under, never whether it is bound. Padding an issue to sound more confident is the failure mode this section exists to kill: in this pipeline confidence has one currency — the grounding citation — not the word count.
 
 **Who this binds.** This section is the single definition of the GitHub prose contract for this plugin, indexed at `docs/style-contracts.md#github-prose-style`. It binds your whole `ISSUE_BODY`, the architect's `sketch` and `EDGES` `<reason>` slot (`agents/architect.md` `## Prose style`), and the roadmap-splitter's `parent_title`, `parent_intro`, and `rationale` (`agents/roadmap-splitter.md` `## Prose style`). Those agents cite this section; they carry no copy of the rules. The block and enum structure of every agent's return stays governed by `## Communication style`.
 
@@ -162,7 +155,7 @@ The Rigor gate above governs WHAT you record; these rules govern HOW it reads. T
 7. **Recorded design decisions are structured by default.** They are the bulk of a typical body. Render them as the list of one-line decisions rule 3 already requires, each carrying its citation — not as an undifferentiated prose block. This rule binds **the recorded decisions themselves, wherever they land in the body**; it never keys to the literal `## Design (recorded, consistent)` heading string, which a consumer template may rename or omit. What structure eliminates is padding, template narration, and hedge stacks — **not length**: a body that records twenty decisions runs twenty lines and is correct. This is **not** a word or sentence cap, and it never licenses dropping a decision to hit a number (the guardrail below governs). **Fragmenting a rationale or a tradeoff into table cells to satisfy this rule is a contract violation** — those are exactly the content rule 8 keeps in prose.
 8. **Prose is the correct form where the content has dependent clauses.** A rationale whose "because" chain *is* the content, a tradeoff where the tension between two options is the point, a caveat qualifying several decisions at once — structure would fragment these and lose the dependency between their clauses. Write them as prose. **This covers standalone content only, and does not reopen rule 3:** a decision line still gets one sentence plus its citation with no rationale appended. Content that qualifies here stands on its own — it is the recorded item, not an explanation trailing one. Rules 1–7 cut padding, not paragraphs; reading this section as "never write paragraphs" is a misreading of it.
 
-**Guardrail — concision cuts prose, never content.** The five criteria of *The contract* stay whole: every state (happy / empty / error / disabled), every architect edge, every grounded decision, and every literal directive (e.g. "30 rows per page") stays present — verbatim where the contract requires it. Fewer words, same completeness. This section governs the `ISSUE_BODY` only; the return wrapper (`STATUS` / `ISSUE_TAG` / `TITLE` / `LABELS` / `PRODUCT_GAP`) stays governed by `## Communication style` below. The classification enums (`Surface` / `Risk`) carry no prose wherever they land, so these rules are vacuous there but harmless.
+**Guardrail — concision cuts prose, never content.** The five criteria of *The contract* stay whole: every state (happy / empty / error / disabled), every architect edge, every grounded decision, and every literal directive (e.g. "30 rows per page") stays present — verbatim where the contract requires it. Fewer words, same completeness. This section governs the `ISSUE_BODY` only; the return wrapper (`STATUS` / `ISSUE_TAG` / `TITLE` / `LABELS` / `PRODUCT_GAP`) stays governed by `## Communication style` below.
 
 ## What you refuse
 

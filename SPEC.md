@@ -177,9 +177,6 @@ Maps 1:1 to the five criteria the driver's triage checks. The issue-author guara
 ## Summary
 <2-3 plain sentences: what changes and why, in product terms>
 
-## Impact
-<who is affected, and what breaks or changes for them if this is not done>
-
 ## Acceptance criteria
 - [ ] <happy path, observable>
 - [ ] <empty state>
@@ -198,10 +195,6 @@ project docs or a cited sibling pattern. No contradictions.>
 
 ## Dependencies
 - Depends on #<n> — <one-line reason / the exact reference>
-
-## Classification
-- Surface: UI | logic
-- Risk: light | heavy   (sets the driver's risk:* override; default heavy when unsure)
 ```
 
 Labels applied by **`create`**: a UI/logic label, and `risk:light` / `risk:heavy` when the feeder is confident — aligned with the driver's existing taxonomy so triage and solve read them natively. The four-label set (`ui`, `logic`, `risk:light`, `risk:heavy`) is provisioned by `setup` and ensured idempotently by `create`.
