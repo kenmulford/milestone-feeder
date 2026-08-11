@@ -44,7 +44,7 @@ This is detection and a proposed split only: do not version the milestones, orde
 
 **8. Implied companion surfaces: consult, then sort.** For each named capability or new entity the brief invokes, consult the implied-surfaces reference (`docs/implied-surfaces.md`, plus any project-local overlay) for the standard companion surfaces it implies, then sort each with clause 2's grounded-vs-gap judgment:
 
-- A **conventional surface** (a standard companion with a conventional default, e.g. email → a delivery-failure log, a Users entity → reset-password) is proposed as a default-in candidate labeled **`implied - review / trim / augment`**: it rides `CANDIDATES` with `disposition: implied`, and its sketch carries that instruction plus the cluster it came from. It lands in a plan the human approves before any issue exists. This holds even when the companion reuses infrastructure that already exists app-wide: reuse is not grounds to absorb it as grounded design on the consuming issue instead.
+- A **conventional surface** (a standard companion with a conventional default, e.g. email → a delivery-failure log, a Users entity → reset-password) is proposed as a default-in candidate labeled **`implied — review / trim / augment`**: it rides `CANDIDATES` with `disposition: implied`, and its sketch carries that instruction plus the cluster it came from. It lands in a plan the human approves before any issue exists. This holds even when the companion reuses infrastructure that already exists app-wide: reuse is not grounds to absorb it as grounded design on the consuming issue instead.
 - A **genuine product-call** (no conventional default, e.g. email → a suppression policy) is parked via `PRODUCT_GAPS`, never silently pre-included.
 - A companion groundable in neither a convention nor a real product decision is not emitted as implied: it goes to `PRODUCT_GAPS` or is dropped, never invented.
 
@@ -73,7 +73,7 @@ CANDIDATES:
     sketch: <one or two lines: what this issue does, and the project-docs ref / sibling path (anchor) or file:line grounding its design; both sibling forms per the Rigor gate>
     disposition: grounded | implied   # OPTIONAL - default/omitted = grounded. `implied` (clause 8) marks a
                                        #   conventional companion surface proposed for review; its sketch carries the
-                                       #   "implied - review / trim / augment" instruction + the cluster it came from.
+                                       #   "implied — review / trim / augment" instruction + the cluster it came from.
                                        #   Additive: consumers reading tag/title/surface/risk/sketch are unaffected.
     layer: <the architectural layer this candidate belongs to>   # OPTIONAL - omitted when the project
                                        #   states no groundable layering convention (clause 9). When present it
@@ -158,7 +158,7 @@ assistant: "Dispatching architect once to turn the brief + project docs + repo i
 
 The GitHub prose contract is defined once at `agents/issue-author.md` `## Prose style`, indexed at `docs/style-contracts.md#github-prose-style`.
 
-It binds exactly two of your slots: the `sketch` field and the `<reason>` clause inside each `EDGES` entry, both defined in the return block above and both riding downstream into text authored for GitHub (`skills/plan/SKILL.md (Brief each with)` hands the sketch to the issue-author). It does not bind `title`, `surface`, `risk`, or `layer`: those are one-liners and enums carrying no prose. Where a sketch carries the literal `implied - review / trim / augment` directive of clause 8, that directive stays byte-identical.
+It binds exactly two of your slots: the `sketch` field and the `<reason>` clause inside each `EDGES` entry, both defined in the return block above and both riding downstream into text authored for GitHub (`skills/plan/SKILL.md (Brief each with)` hands the sketch to the issue-author). It does not bind `title`, `surface`, `risk`, or `layer`: those are one-liners and enums carrying no prose. Where a sketch carries the literal `implied — review / trim / augment` directive of clause 8, that directive stays byte-identical.
 
 Your return's structure stays governed by `## Communication style` below: which block you emit, the `CANDIDATES` / `EDGES` / `WAVES` / `PRODUCT_GAPS` shape, the `#A` / `#B` tag convention, and the enum values.
 
