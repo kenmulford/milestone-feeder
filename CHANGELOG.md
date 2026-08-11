@@ -3,6 +3,33 @@
 Release notes for milestone-feeder. Each tagged release is also published on the
 [GitHub Releases page](https://github.com/kenmulford/milestone-feeder/releases).
 
+## v0.13.2: prose compression & contract-string fix
+
+**Theme:** A prose-compression pass trimmed `agents/architect.md`, `agents/issue-author.md`, `agents/roadmap-splitter.md`, and `SPEC.md` toward the artifact contract's "state the requirement, never the case for it" rule. The accompanying em-dash sweep briefly mutated two contract strings other files assert byte-exact; a code review caught it before merge and both were restored.
+
+### ✨ Prose compression
+
+- `agents/architect.md`: 4,350 to 2,878 words (33.8% reduction).
+- `agents/issue-author.md`: 4,927 to 2,928 words (40.6% reduction).
+- `agents/roadmap-splitter.md`: 2,619 to 2,288 words (12.6% reduction).
+- `SPEC.md`: 7,326 to 5,916 words (19.2% reduction).
+- Combined across the four files: 19,222 to 14,010 words (27.1% reduction).
+
+### 🔧 Fixes
+
+- The em-dash sweep also swept two strings other files require byte-exact: `implied — review / trim / augment` (`agents/architect.md` clause 8's implied-surfaces marker, 3 sites) and `this is a starting set for YOUR app — what's missing?` (`SPEC.md` `### Implied companion surfaces: capability-aware completeness`, the anti-fixation prompt). Both are declared verbatim at `skills/plan/SKILL.md`, specified at `docs/plan-file-contract.md`, and asserted byte-exact by `tests/scenarios/12-implied-surfaces` and `tests/scenarios/12b-implied-surfaces-control`. Both are restored to the em dash. The `Depends on #<n> - <reason>` separator stays a hyphen: no grader asserts it.
+
+### Consumer notes (upgrading from v0.13.1)
+
+- **No schema changes** to `.milestone-config/feeder.json` or `.milestone-config/driver.json`. No new config key, no changed default, and no consumer action required.
+- Nothing you configure or author changes. The trim is internal agent-prompt and spec prose; no output shape, label, or template changed.
+
+### ⚖️ Post-run audit trail
+
+Judgment-call PRs for this release: none. This release was branch-driven, with no GitHub issues.
+
+- The em-dash sweep introduced the contract-string regression this release also fixes. A code review caught the mutated `implied — review / trim / augment` marker and anti-fixation prompt before merge, and both were restored to the em dash within the same branch.
+
 ## v0.13.1: issue-body template trim
 
 **Theme:** The built-in §4 issue-body template mandated two sections the artifact prose contract forbids: `## Classification`, restating the labels, and `## Impact`, the case for the issue. Both are dropped.
@@ -62,7 +89,7 @@ Judgment-call PRs for this release: none
 Two follow-ups recorded during the run, neither blocking:
 
 - A pre-release sweep audited all 25 line-pinned citations remaining on the live surface and corrected the 13 that were wrong (#358). The 9 that resolve correctly were left as line pins; two references in the frozen `docs/specs/v0.3.0-*` spec point at since-deleted skill directories and are correct as a historical record.
-- milestone-driver's `skills/citation-format.md` does not cover the **same-file** case. A `path (anchor)` citation written into the file it points at reproduces its own anchor, so it can never resolve cleanly; and when the citing line precedes its target, the citing line becomes the resolved answer. `agents/architect.md:163` keeps bare line pins for this reason.
+- milestone-driver's `skills/citation-format.md` does not cover the **same-file** case. A `path (anchor)` citation written into the file it points at reproduces its own anchor, so it can never resolve cleanly; and when the citing line precedes its target, the citing line becomes the resolved answer. At release, `agents/architect.md`'s `## Prose style` section kept bare line pins on its own two prose-bound slots for this reason; the v0.13.2 prose trim later replaced them with a same-file-safe phrase instead of a position.
 
 ## v0.12.3 — consumer issue templates & prose-style reach
 
