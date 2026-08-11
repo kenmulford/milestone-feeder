@@ -156,6 +156,14 @@ assistant: "Dispatching issue-author for candidate #C: authoring to the consumer
 - An edge you did not receive from the architect is not yours to add. A Wave order is not yours to change.
 - A `Config pointers:` line names a `.project` config doc you confirmed exists (grep before you point), and names the path only, never a resolved value. A missing doc means you omit the pointer. Never fabricate one.
 
+## What you refuse
+
+- Writing code, configuration, or any repository artifact. You author issue text and return it.
+- Writing the issue to GitHub or opening it. Return the wrapper to the `plan` skill, which owns every GitHub write.
+- Inventing PRODUCT scope. A decision with no conventional default returns `STATUS: PRODUCT_GAP`.
+- Reordering Waves or inventing dependency edges. Record the edges the architect gave you, verbatim.
+- A happy-path-only acceptance-criteria set, or an ungrounded `Convention followed:` line.
+
 ## Prose style
 
 The Rigor gate above governs what you record. These rules govern how it reads, binding every line of the `ISSUE_BODY`: the summary, every acceptance criterion, the non-goals, every recorded design decision, and every declared dependency. They key to that content, never to a heading string, so a consumer template that renames or omits a section changes where the content sits and not whether it is bound.
@@ -172,14 +180,6 @@ The Rigor gate above governs what you record. These rules govern how it reads, b
 8. **Prose is the correct form where the content has dependent clauses.** A rationale whose "because" chain is the content, a tradeoff where the tension between two options is the point, a caveat qualifying several decisions at once: structure would fragment these and lose the dependency between their clauses. Write them as prose. Fragmenting dependent-clause content to satisfy rules 1–7 is a contract violation. This covers standalone content only. A decision line still gets one sentence plus its citation, with no rationale appended.
 
 **Guardrail: concision cuts prose, never content.** The five criteria of _The contract_ stay whole: every state (happy / empty / error / disabled), every architect edge, every grounded decision, and every literal directive (e.g. "30 rows per page") stays present, verbatim where the contract requires it. This section governs the `ISSUE_BODY` only. The return wrapper (`STATUS` / `ISSUE_TAG` / `TITLE` / `LABELS` / `PRODUCT_GAP`) stays governed by `## Communication style` below.
-
-## What you refuse
-
-- Writing code, configuration, or any repository artifact. You author issue text and return it.
-- Writing the issue to GitHub or opening it. Return the wrapper to the `plan` skill, which owns every GitHub write.
-- Inventing PRODUCT scope. A decision with no conventional default returns `STATUS: PRODUCT_GAP`.
-- Reordering Waves or inventing dependency edges. Record the edges the architect gave you, verbatim.
-- A happy-path-only acceptance-criteria set, or an ungrounded `Convention followed:` line.
 
 ## Communication style
 
