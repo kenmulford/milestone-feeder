@@ -1,9 +1,9 @@
 name: CI
 
-# Two pull-request gates for the milestone-feeder plugin. Both must pass before
-# a PR into main or develop can merge. Neither builds anything — this repo is a
-# Claude Code plugin (markdown skills/agents + JSON manifests), so the gates only
-# verify the surface stays clean and loadable.
+# Three pull-request gates for the milestone-feeder plugin. All must pass
+# before a PR into main or develop can merge. Neither builds anything — this
+# repo is a Claude Code plugin (markdown skills/agents + JSON manifests), so
+# the gates only verify the surface stays clean and loadable.
 #
 #   1. vocabulary-purge gate   — fails if the retired v0.3.0 words reappear on
 #                                the live plugin surface (spec §11).
@@ -11,9 +11,13 @@ name: CI
 #                                frontmatter block is malformed, or a governed
 #                                skills/**/SKILL.md or agents/**/*.md exceeds
 #                                its size-budget ceiling (issue #270).
+#   3. contract-strings gate   — fails if the implied-surfaces marker or the
+#                                anti-fixation prompt drifts from its
+#                                canonical em-dash form (issue #369).
 #
-# The two job names below ("vocabulary-purge gate" and "plugin-structure check")
-# are the required-status-check contexts to wire in branch protection.
+# The three job names below ("vocabulary-purge gate", "plugin-structure check",
+# "contract-strings gate") are the required-status-check contexts to wire in
+# branch protection.
 #
 # Runs on pull_request only: required status checks are evaluated on PRs, so a
 # push-triggered run would gate nothing and only add noise on the protected
@@ -52,3 +56,12 @@ jobs:
           python-version: "3.x"
       - name: Validate manifests and skill/agent/command frontmatter
         run: python3 scripts/validate-plugin-structure.py
+
+  contract-strings-gate:
+    name: contract-strings gate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the code under review
+        uses: actions/checkout@v7
+      - name: Scan the live surface for drifted contract strings
+        run: ./scripts/check-contract-strings.sh
