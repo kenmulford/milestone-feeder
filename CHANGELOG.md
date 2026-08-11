@@ -18,6 +18,7 @@ Release notes for milestone-feeder. Each tagged release is also published on the
 ### 🔧 Fixes
 
 - The em-dash sweep also swept two strings other files require byte-exact: `implied — review / trim / augment` (`agents/architect.md` clause 8's implied-surfaces marker, 3 sites) and `this is a starting set for YOUR app — what's missing?` (`SPEC.md` `### Implied companion surfaces: capability-aware completeness`, the anti-fixation prompt). Both are declared verbatim at `skills/plan/SKILL.md`, specified at `docs/plan-file-contract.md`, and asserted byte-exact by `tests/scenarios/12-implied-surfaces` and `tests/scenarios/12b-implied-surfaces-control`. Both are restored to the em dash. The `Depends on #<n> - <reason>` separator stays a hyphen: no grader asserts it.
+- New `contract-strings gate` CI job (`scripts/check-contract-strings.sh`) fails a pull request when either contract string drifts from its canonical em-dash form, scanning the tracked surface except `CHANGELOG.md` and the `tests/**/*observed-*.md` run records. Closes #369.
 
 ### Consumer notes (upgrading from v0.13.1)
 
