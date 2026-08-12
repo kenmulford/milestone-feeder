@@ -1,7 +1,7 @@
 # Engineering conventions
 
 This is a nested monorepo. The application is split into two app roots; nothing
-application-level sits at the repo root — the root holds only config and tooling.
+application-level sits at the repo root: the root holds only config and tooling.
 
 ## App roots
 - **Web frontend** (`siteroot/web`): the user-facing app. Owns every page, component, and the
@@ -18,6 +18,6 @@ root is governed by the project's baked source/UI globs, not restated here.
   with the correct HTTP status.
 
 ## Web
-- Pages call the backend through the shared API client — never `fetch` directly from a page.
+- Pages call the backend through the shared API client, never `fetch` directly from a page.
 - User-facing surfaces: show a success/error toast via the shared `useToast()` hook; empty and
   error states are required on every surface.

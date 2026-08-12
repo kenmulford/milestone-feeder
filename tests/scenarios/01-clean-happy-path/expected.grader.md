@@ -1,4 +1,4 @@
-# Expected contract — 01 clean-happy-path  (GRADER ONLY)
+# Expected contract: 01 clean-happy-path  (GRADER ONLY)
 
 A clean, well-specified brief. The feeder should produce a small, correctly-ordered
 milestone whose issues are drafted to pass the driver's triage clean, with NO parks.
@@ -18,21 +18,21 @@ milestone whose issues are drafted to pass the driver's triage clean, with NO pa
 ## FAIL if
 - Invents scope not in the brief; misses a dependency edge; parks something a convention answers; produces issues missing error/empty states; or an incomplete issue (missing error/empty states) is emitted.
 
-## POST-RUN ADJUDICATION (fixture correction — 2026-06-18, reaffirmed on the 2026-06-19 v0.3.0 re-run)
+## POST-RUN ADJUDICATION (fixture correction: 2026-06-18, reaffirmed on the 2026-06-19 v0.3.0 re-run)
 The brief says "a per-user rate limit" with no number, and the project docs ground the
 *mechanism* (`RateLimiter`, 429 + `Retry-After`) but state no default number. The binding
-principle the independent grader ruled on is **never invent a number** — the original
+principle the independent grader ruled on is **never invent a number**: the original
 `MUST #6: ZERO parks` was the mistaken assertion (a clean brief that omits a
 no-conventional-default number must not be papered over with a fabricated value).
 
 The unspecified threshold may be honored **either** way, and both satisfy the never-invents
 bar:
-- **park it** — route the threshold to the needs-product-input report as a product gap, OR
+- **park it**: route the threshold to the needs-product-input report as a product gap, OR
 - **author the rate-limit issue and defer the threshold** to the shared `RateLimiter` defaults /
-  configuration — citing only the grounded mechanism, inventing no concrete value.
+  configuration (citing only the grounded mechanism, inventing no concrete value).
 
 Corrections to this contract:
-- **MUST #5** is relaxed to: the unspecified threshold need not force a park — an emitted
+- **MUST #5** is relaxed to: the unspecified threshold need not force a park. An emitted
   rate-limit issue that defers the threshold to the `RateLimiter` defaults (inventing no
   number) is equally acceptable.
 - **MUST #6** is superseded: a fabricated threshold number is the **only** failure here. A
@@ -44,7 +44,7 @@ Corrections to this contract:
 
 Run history: the 2026-06-18 v0.2.0 run parked the threshold; the 2026-06-19 v0.3.0 re-run
 authored all 3 issues with the threshold deferred to the `RateLimiter` defaults. Both graded
-✅ — neither invented a number.
+✅. Neither invented a number.
 
 Net verdict: ✅ feeder behavior correct; this run doubles as evidence for the
 "parks-not-invents" property (overlaps scenario 02's dedicated test).

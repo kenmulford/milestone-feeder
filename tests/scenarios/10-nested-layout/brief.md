@@ -9,4 +9,4 @@ In scope:
 
 Out of scope:
 - Starting or cancelling exports (the export pipeline already exists).
-- Push/websocket delivery — polling the endpoint is fine for now.
+- Push/websocket delivery: polling the endpoint is fine for now.

@@ -1,4 +1,4 @@
-# Design system — data tables (standing convention)
+# Design system: data tables (standing convention)
 
 Every data table in the admin app MUST follow these rules:
 
@@ -9,5 +9,5 @@ Every data table in the admin app MUST follow these rules:
 - **Empty state:** when there are no rows, show the shared `EmptyState` illustration plus a
   primary CTA relevant to the entity.
 - **Loading state:** skeleton rows while the page loads.
-- **Reuse the shared `DataTable` component** (`src/components/DataTable.tsx`) — do not
+- **Reuse the shared `DataTable` component** (`src/components/DataTable.tsx`). Do not
   hand-roll tables.

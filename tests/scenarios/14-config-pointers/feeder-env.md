@@ -1,4 +1,4 @@
-# Test environment — 14 config pointers (what the run assumes)
+# Test environment: 14 config pointers (what the run assumes)
 
 The brief adds a styling change (a `danger` button variant) to a project whose
 `.project` states its colors in a **token doc** (`project/tokens.json`) and its button
@@ -8,8 +8,8 @@ tokens and never hard-code a hex value. The danger color's resolved value lives 
 the token doc (`color.danger`); it is the driver's to consume at build time.
 
 The claim under test: **a styling-touching issue POINTS at the token + design-system
-docs by path in its `## Design (recorded, consistent)` block — a reference, never a
-pre-solved design — so the issue body does NOT inline the resolved hex / token values;
+docs by path in its `## Design (recorded, consistent)` block (a reference, never a
+pre-solved design), so the issue body does NOT inline the resolved hex / token values;
 a grounded design decision with a conventional default (mirror the existing button
 component) is still recorded; and a project missing the token / design-system docs
 simply omits that pointer, no error, no fabricated reference.**

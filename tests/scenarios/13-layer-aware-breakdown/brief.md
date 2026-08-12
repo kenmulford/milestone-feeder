@@ -10,4 +10,4 @@ In scope:
 
 Out of scope:
 - Editing or deleting a note.
-- Any web/UI surface — this is the backend only.
+- Any web/UI surface: this is the backend only.
