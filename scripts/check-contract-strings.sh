@@ -139,10 +139,17 @@ esac
 #
 # Every row is checked before the script reports, so one run names every miss
 # rather than only the first.
+#
+# A fragment must occur EXACTLY ONCE in its named file, or the gate is blind: a
+# second occurrence elsewhere keeps the grep green after the load-bearing clause
+# is deleted. "30 rows per page" fails that test (it appears both in the clause
+# at `agents/issue-author.md (The pointer names where the values live)` and as an
+# illustrative example inside the concision guardrail), so that row pins the
+# clause's unique tail instead.
 PRESENCE_ROWS=(
   "agents/architect.md|reuse is not grounds to absorb"
   "agents/architect.md|never both"
-  "agents/issue-author.md|30 rows per page"
+  "agents/issue-author.md|weakening it to \"a sensible page size\" is a failure"
   "agents/issue-author.md|concision cuts prose, never content"
 )
 
