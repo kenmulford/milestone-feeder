@@ -1,8 +1,8 @@
 #!/usr/bin/env pwsh
-# milestone-feeder — no-source-edit gate (Claude PreToolUse: Write|Edit|MultiEdit|NotebookEdit)
+# milestone-feeder: no-source-edit gate (Claude PreToolUse: Write|Edit|MultiEdit|NotebookEdit)
 #
 # Blocks edits to the feeder's own source globs. The feeder reads code and
-# authors issue text — it never writes source. The deny applies to the feeder's
+# authors issue text; it never writes source. The deny applies to the feeder's
 # OWN actors (the main thread and the feeder's own subagents); a positively-
 # identified non-feeder subagent (e.g. the driver's implementer building the
 # feeder) is allowed through. The orchestrator keeps /docs/, /.claude/, and
@@ -10,14 +10,14 @@
 # sourceGlobs are gated even when markdown.
 #
 # Actor gate (PreToolUse hooks carry no skill/plugin identity, only the agent
-# fields below — code.claude.com/docs/en/hooks.md):
+# fields below; see code.claude.com/docs/en/hooks.md):
 #   - agent_id is present ONLY inside a subagent call; absent => main thread.
 #   - agent_type is the subagent's BARE frontmatter `name` (NOT namespaced); for
 #     custom subagents it is "the `name` field from the agent's frontmatter, not
 #     the filename".
 # Decision (only when the target matches a source glob):
 #   BLOCK  when there is no agent_id (main thread) OR agent_type is one of the
-#          feeder's OWN agents ($FeederOwnAgents below) — fail-closed: an
+#          feeder's OWN agents ($FeederOwnAgents below). Fail-closed: an
 #          unknown/empty agent_type with an agent_id present also blocks.
 #   ALLOW  when agent_id is present AND agent_type is a positively-identified
 #          non-feeder subagent.
@@ -34,8 +34,8 @@
 # The feeder's OWN agent names (bare frontmatter `name`, NOT namespaced). This is
 # a SECURITY control, so the set is HARDCODED here inside the protected hooks/**
 # boundary rather than read from feeder.json. It MUST stay in sync with the
-# `name:` of every agents/*.md — enforced by the CI drift-guard in
-# scripts/validate-plugin-structure.py. Machine-parseable literal (one
+# `name:` of every agents/*.md (enforced by the CI drift-guard in
+# scripts/validate-plugin-structure.py). Machine-parseable literal (one
 # space-separated set on the next line; keep that exact shape for the guard):
 # FEEDER_OWN_AGENTS: architect issue-author roadmap-splitter
 $FeederOwnAgents = @('architect', 'issue-author', 'roadmap-splitter')
@@ -99,11 +99,11 @@ foreach ($g in $globs) {
         # agent_type that is not one of the feeder's own agents). The main thread
         # (no agent_id), the feeder's own subagents, and any ambiguous actor
         # (agent_id present but empty agent_type) all fall through and are
-        # BLOCKED — fail-closed.
+        # BLOCKED (fail-closed).
         if ($hasAgentId -and $agentType -ne '' -and ($FeederOwnAgents -cnotcontains $agentType)) {
             exit 0   # positively-identified non-feeder subagent
         }
-        [Console]::Error.WriteLine("milestone-feeder: edits to source ('$rel') are blocked — the feeder authors no code. Set CLAUDE_HOOK_DISABLE_NO_SOURCE_EDIT=1 to override.")
+        [Console]::Error.WriteLine("milestone-feeder: edits to source ('$rel') are blocked. The feeder authors no code. Set CLAUDE_HOOK_DISABLE_NO_SOURCE_EDIT=1 to override.")
         exit 2
     }
 }
