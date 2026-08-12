@@ -2,7 +2,7 @@
 
 Build the whole product: a small-business app where an owner manages clients,
 sends invoices, takes payment, and gives each client a portal to view and pay.
-This is a from-scratch, multi-release build — far more than one milestone.
+This is a from-scratch, multi-release build: far more than one milestone.
 
 The sections below are the author's own grouping. They are the natural seams the
 build splits along; the split may merge, reorder, or keep them as it sees fit.
@@ -32,7 +32,7 @@ build splits along; the split may merge, reorder, or keep them as it sees fit.
 - Record each payment against its invoice and flip the invoice to **paid** when
   fully covered.
 - (The brief does not name a payment provider, a currency, or how tax/processor
-  fees are handled — those are left open.)
+  fees are handled. Those are left open.)
 
 ## Client portal (screens)
 - A client signs in to a portal and sees a list of their invoices with status.

@@ -71,5 +71,5 @@ reads as a directive with a stated failure mode, not an enforced guarantee.
 **Follow-up (done 2026-07-06):** scenarios 02 / 03 / 06 / 12 were run against the installed
 plugin and verdicts recorded in `tests/RESULTS.md` (brief item 4a). This upgraded three class-5
 claims from asserted to demonstrated and surfaced the implied-surfaces PARTIAL (#284). The
-remaining class-5 fixtures (and the six unrun scenarios generally) are the next candidates for
+remaining class-5 fixtures (and the eight unrun scenarios generally) are the next candidates for
 the same treatment when budget allows.

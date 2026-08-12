@@ -2,7 +2,7 @@
 
 <!--
 Project doc (.project/). Cite as `.project/conventions.md#<section>`. Prefer pointing at
-a canonical exemplar in the codebase (path:line) over prose. Keep ## headings stable —
+a canonical exemplar in the codebase (path:line) over prose. Keep ## headings stable:
 they are citation anchors.
 -->
 
