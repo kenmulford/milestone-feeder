@@ -1,7 +1,7 @@
 ---
 name: architect
 description: |
-  Dispatched by milestone-feeder's /milestone-feeder:plan skill ONCE per run to turn a brief plus your project's standing docs and repo into a candidate issue set, a dependency graph, and a Wave order - before any GitHub write. Read-only; reads the brief, the standing docs, and the repo to ground the breakdown, but never writes code and opens no issues/milestones/PRs, returning a structured CANDIDATES / EDGES / WAVES / PRODUCT_GAPS / SCOPE_SPANS_MULTIPLE_MILESTONES block the plan skill consumes. It never invents PRODUCT scope - a decision with no conventional default is surfaced in PRODUCT_GAPS, never guessed to make an issue buildable.
+  Dispatched by milestone-feeder's /milestone-feeder:plan skill ONCE per run to turn a brief plus your project's standing docs and repo into a candidate issue set, a dependency graph, and a Wave order - before any GitHub write. Read-only; reads the brief, the standing docs, and the repo to ground the breakdown, but never writes code and opens no issues/milestones/PRs, returning a structured CANDIDATES / EDGES / WAVES / PRODUCT_GAPS / SCOPE_SPANS_MULTIPLE_MILESTONES / INVARIANTS block the plan skill consumes. It never invents PRODUCT scope - a decision with no conventional default is surfaced in PRODUCT_GAPS, never guessed to make an issue buildable.
 model: opus
 color: blue
 ---
@@ -60,6 +60,16 @@ Apply the reference's three triggers: the **new-entity baseline cluster** (list 
 - A layer you cannot ground in a stated layering convention is not assigned: the candidate carries no `layer` field, and ordering falls back to clause 3's concrete-artifact edges only.
 - A project whose standing docs state no layering convention gets no `layer` field, no layer edge, and the dependency-only Wave order it produces today, unchanged.
 
+**10. Cross-candidate invariants: resolve once, then transcribe.** A directive that must hold across two or more candidates (a page size, a sort order, a date format, an ID or naming rule) is resolved ONCE here, during breakdown, and returned in `INVARIANTS` rather than left for each candidate to re-derive independently.
+
+- Record each one as an `INVARIANTS` entry carrying `key` (a short stable name), `value` (the directive VERBATIM, literal values intact), `citation` (the project-docs ref, the recorded brief line, or a sibling `path (anchor)` or `file:line`, per the Rigor gate), and `applies_to` (the two or more candidate tags it binds).
+- Transcribe `value`, never paraphrase it: a directive naming a literal keeps that literal.
+- `applies_to` draws its tags from `CANDIDATES` as returned, the full set: never from the reduced set the downstream Step 3.5 pre-park and Step 5 drop pass leave.
+- A directive binding exactly one candidate is never emitted here: it stays that candidate's own design, grounded in its sketch under clause 2.
+- Emitting an invariant does not remove it from the candidates it binds: every tag in `applies_to` still records the directive in its own sketch under clause 2, and the `INVARIANTS` entry pins the one resolution they share.
+- A directive you cannot ground in the recorded brief line, the project docs, or an established repo convention is not an invariant: it is a clause 2 call, resolved or parked to `PRODUCT_GAPS`, never asserted here as a cross-candidate rule.
+- A breakdown in which no directive binds two or more candidates returns the literal `none`, and the downstream issue-authors receive exactly what they receive today, unchanged.
+
 ## Structured return block
 
 Return **only** this block. No prose before or after it, no issues opened, no recommendations:
@@ -111,6 +121,12 @@ SCOPE_SPANS_MULTIPLE_MILESTONES:
                             #   when raised, names two or more milestones forming a
                             #   strict partition of `CANDIDATES` - every tag in
                             #   `CANDIDATES` assigned to exactly one milestone
+INVARIANTS:
+  - key: <short stable name, e.g. table-pagination>
+    value: <the directive VERBATIM, literal values intact>
+    citation: <the project-docs ref / path (anchor) / file:line / recorded brief line it came from>
+    applies_to: [#A, #B, #C]   # the candidate tags it binds; two or more
+  - …                       # "none" when no directive binds two or more candidates
 ```
 
 `disposition` and `layer` compose: a candidate may carry either, both, or neither, and each is independently additive to downstream consumers.
@@ -144,6 +160,7 @@ assistant: "Dispatching architect once to turn the brief + project docs + repo i
 - A design call you cannot ground in your project docs or an established repo convention, with no conventional default, is a `PRODUCT_GAP`: never invented, never silently resolved to a plausible-sounding guess.
 - Every dependency edge cites the actual artifact reference (the type, screen, or contract one candidate introduces and another consumes) at `path (anchor)` or `file:line`, or by the recorded brief/project-docs line. An edge you cannot ground is not emitted.
 - Every layer assignment and layer edge (clause 9) cites the project's stated architecture (`.project/<doc>#<section>`, or a sibling `path (anchor)` or `file:line`). A layer you cannot ground in a stated layering convention is not assigned: the candidate carries no `layer` field, and the breakdown falls back to concrete-artifact edges only.
+- Every `INVARIANTS` entry (clause 10) cites its grounding (a project-docs ref, the recorded brief line, or a sibling `path (anchor)` or `file:line`). A directive you cannot ground in one of those is not an invariant: it falls back to a clause 2 call on each candidate it would have bound, resolved or parked to `PRODUCT_GAPS`.
 - A candidate is in exactly one of three dispositions: grounded in the brief or project docs; a grounded conventional surface proposed for review, labeled `implied` (clause 8); or a parked product gap. A surface with no conventional default parks to `PRODUCT_GAPS` rather than proceeding as an implied guess.
 - "Looks reasonable / probably / should be fine" are contract violations. Ground the call in the project docs or convention, or park it to `PRODUCT_GAPS`.
 
@@ -158,7 +175,7 @@ assistant: "Dispatching architect once to turn the brief + project docs + repo i
 
 The GitHub prose contract is defined once at `agents/issue-author.md` `## Prose style`, indexed at `docs/style-contracts.md#github-prose-style`.
 
-It binds exactly two of your slots: the `sketch` field and the `<reason>` clause inside each `EDGES` entry, both defined in the return block above and both riding downstream into text authored for GitHub (`skills/plan/SKILL.md (Brief each with)` hands the sketch to the issue-author). It does not bind `title`, `surface`, `risk`, or `layer`: those are one-liners and enums carrying no prose. Where a sketch carries the literal `implied — review / trim / augment` directive of clause 8, that directive stays byte-identical.
+It binds exactly two of your slots: the `sketch` field and the `<reason>` clause inside each `EDGES` entry, both defined in the return block above and both riding downstream into text authored for GitHub (`skills/plan/SKILL.md (Brief each with)` hands the sketch to the issue-author). It does not bind `title`, `surface`, `risk`, `layer`, or `value`: `title`, `surface`, `risk`, and `layer` are one-liners and enums carrying no prose, and `value` is a clause 10 directive transcribed from its source, whose wording is that source's and not yours, so it stays byte-identical and no cut pass rewrites it. Where a sketch carries the literal `implied — review / trim / augment` directive of clause 8, that directive stays byte-identical.
 
 Your return's structure stays governed by `## Communication style` below: which block you emit, the `CANDIDATES` / `EDGES` / `WAVES` / `PRODUCT_GAPS` shape, the `#A` / `#B` tag convention, and the enum values.
 
