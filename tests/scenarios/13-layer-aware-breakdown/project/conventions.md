@@ -3,7 +3,7 @@
 <!--
 Project doc (.project/). Cite as `.project/conventions.md#<section>`. Prefer pointing
 at a canonical exemplar in the codebase (path:line) over prose. Keep ## headings
-stable — they are citation anchors.
+stable: they are citation anchors.
 -->
 
 ## Naming
@@ -15,7 +15,7 @@ Repositories: `src/data/<Entity>Repository.ts` (type `<Entity>Repository`). Serv
 
 ## File & folder layout
 Where things go, and the shape of a feature.
-`src/util/` (pure helpers) · `src/data/` (repositories — CRUD / persistence) ·
+`src/util/` (pure helpers) · `src/data/` (repositories, CRUD / persistence) ·
 `src/services/` (business logic) · `src/controllers/` (HTTP handlers + request
 validation) · `src/routes/` (path→controller wiring). A feature adds one file per
 layer it touches, each in the folder its layer owns above.

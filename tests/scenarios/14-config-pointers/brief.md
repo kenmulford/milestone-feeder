@@ -9,5 +9,5 @@ In scope:
   color from the design system.
 
 Out of scope:
-- Any new screen or page — this only extends the existing button component.
+- Any new screen or page: this only extends the existing button component.
 - Changing the primary or secondary variants.

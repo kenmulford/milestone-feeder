@@ -8,5 +8,5 @@ In scope:
 - The activity-log list, newest first, paginated at 30 rows per page.
 
 Out of scope:
-- Any new event type — the list only surfaces events the system already records.
+- Any new event type: the list only surfaces events the system already records.
 - Export or filtering.
