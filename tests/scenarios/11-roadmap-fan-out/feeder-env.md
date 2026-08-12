@@ -1,7 +1,7 @@
-# Test environment — 11 roadmap fan-out (what the run assumes)
+# Test environment: 11 roadmap fan-out (what the run assumes)
 
-This is an **oversized whole-app brief** — many features, a data model, auth, and
-billing — so it spans **several milestones** and `plan`'s front-door (Step 3.6)
+This is an **oversized whole-app brief** (many features, a data model, auth, and
+billing), so it spans **several milestones** and `plan`'s front-door (Step 3.6)
 routes it into the `build-roadmap` flow instead of the single-milestone pipeline.
 
 - `feeder.json`: defaults (`projectDocs: project/`).
@@ -18,8 +18,8 @@ routes it into the `build-roadmap` flow instead of the single-milestone pipeline
 > Client management / Invoicing / Payments & billing / Client portal / Admin
 > dashboard / Notifications). The roadmap split partitions these into a sequenced
 > set of milestones and records, per milestone, how it changed the author's
-> grouping (merged / split / reordered / unchanged) — so the split has a real diff
+> grouping (merged / split / reordered / unchanged), so the split has a real diff
 > to record. The fixture's `project/conventions.md` grounds the design and
 > implementation calls (REST shape, auth guard, owner scoping, toast, states,
 > `DataTable`); it deliberately does **not** name a payment provider, currency, or
-> fee/tax policy — that is a product call with no conventional default.
+> fee/tax policy. That is a product call with no conventional default.
