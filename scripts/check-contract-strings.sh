@@ -3,6 +3,10 @@
 # check-contract-strings.sh — the contract-strings gate.
 #
 # What this checks, in plain terms:
+#   Two checks run in order: a DRIFT scan over the whole live surface, then a
+#   per-file PRESENCE assertion. Both must be clean for exit 0.
+#
+#   Check 1 (drift).
 #   Two prompt strings are contract-declared byte-exact, em dash and all.
 #   A prose pass can quietly swap that em dash for a hyphen, en dash, colon,
 #   comma, or drop the separator entirely — the words survive, only the
@@ -15,6 +19,18 @@
 #   up. A variant hit is, by construction, a real occurrence of the phrase
 #   with corrupted punctuation, so it inherently names its own file and line
 #   — no separate canonical-location table to keep in sync.
+#
+#   Check 2 (presence).
+#   Four load-bearing clauses of the two authoring agents are pinned by a
+#   literal prose fragment plus the ONE file that fragment must live in. Check
+#   1 deliberately asserts nothing about presence, for the reason just given;
+#   check 2 can, precisely because every row names a specific file. That turns
+#   "absent somewhere in the repo" (unfailable) into "absent from this exact
+#   path" (failable, with a real path to print). It exists because a prose
+#   pass has already silently deleted clauses of this kind: v0.13.2 (commit
+#   59c0aff) compressed the authoring agents and dropped three, with every CI
+#   gate then in place staying green. The presence table is at PRESENCE_ROWS
+#   below; each row is verified with fixed-string matching, not regex.
 #
 # The two contract strings (canonical form, em dash U+2014):
 #   implied — review / trim / augment
@@ -48,12 +64,16 @@
 #   FAIL CLOSED on a scan error instead of silently passing.
 #
 # Run it locally from the repo root:  ./scripts/check-contract-strings.sh
-# Exit 0 = clean. Exit 1 = a drifted variant found (file:line:match printed).
-# Exit 2 = the scan itself failed (treated as a failure, never as "clean").
+# Exit 0 = both checks clean. Exit 1 = a drifted variant found (check 1,
+# file:line:match printed), or a pinned fragment missing from its named file
+# (check 2, fragment and file printed), or a named file missing from disk.
+# Exit 2 = a scan itself failed (treated as a failure, never as "clean").
 
 set -euo pipefail
 
 cd "$(git rev-parse --show-toplevel)"
+
+# --- check 1: drifted variants of the two contract strings -------------------
 
 # Match the two contract strings with anything OTHER than the canonical em
 # dash (U+2014) in the separator position: an ASCII hyphen, an en dash
@@ -90,12 +110,91 @@ case "${status}" in
     exit 1
     ;;
   1)
-    echo "PASS: both contract strings are intact wherever they appear."
-    echo "      (checked: the implied-surfaces marker and anti-fixation prompt)"
-    exit 0
+    # No drifted variant anywhere. Check 1 is clean; fall through to check 2.
+    # The PASS message covering BOTH checks prints at the end of the script.
     ;;
   *)
     echo "ERROR: 'git grep' failed (exit ${status}) — scan unreliable; failing closed." >&2
     exit 2
     ;;
 esac
+
+# --- check 2: per-file presence of pinned contract clauses -------------------
+#
+# Rows are `<file>|<fragment>`: the ONE file the clause must live in, and a
+# literal prose fragment unique enough to pin it. Matched with `grep -F`
+# (fixed strings, no regex) because these are literal prose, not patterns.
+#
+# Self-match is structurally impossible here, so no interpolation trick is
+# needed (contrast the SEP-built pattern check 1 requires). Each grep is
+# scoped to the single file its own row names, and this script is not one of
+# those files, so the table can carry every fragment verbatim without ever
+# scanning itself.
+#
+# A row whose file is MISSING from disk FAILS; it never silently passes. That
+# mirrors scripts/validate-plugin-structure.py's size-budget loop, which
+# iterates SKILL_WORD_CEILINGS itself rather than a glob so a renamed or
+# deleted governed file cannot quietly drop out of its gate. Same reason the
+# loop below iterates PRESENCE_ROWS rather than discovering files.
+#
+# Every row is checked before the script reports, so one run names every miss
+# rather than only the first.
+PRESENCE_ROWS=(
+  "agents/architect.md|reuse is not grounds to absorb"
+  "agents/architect.md|never both"
+  "agents/issue-author.md|30 rows per page"
+  "agents/issue-author.md|concision cuts prose, never content"
+)
+
+presence_failures=0
+
+for row in "${PRESENCE_ROWS[@]}"; do
+  file="${row%%|*}"
+  fragment="${row#*|}"
+
+  if [ ! -f "${file}" ]; then
+    echo "FAIL: a file named in the presence table is missing from disk." >&2
+    echo "      file:     ${file}" >&2
+    echo "      fragment: ${fragment}" >&2
+    echo "      A renamed or deleted governed file must update PRESENCE_ROWS" >&2
+    echo "      in the same change, not silently drop out of this gate." >&2
+    presence_failures=$((presence_failures + 1))
+    continue
+  fi
+
+  # Capture the status explicitly so a grep *error* (exit >1) can't masquerade
+  # as either a hit or a clean miss. 0 = present, 1 = absent, >1 = scan error.
+  set +e
+  grep -Fq -e "${fragment}" -- "${file}"
+  grep_status=$?
+  set -e
+
+  case "${grep_status}" in
+    0)
+      ;;
+    1)
+      echo "FAIL: a pinned contract clause is missing from its file." >&2
+      echo "      file:     ${file}" >&2
+      echo "      fragment: ${fragment}" >&2
+      echo "      This clause is load-bearing and was dropped by a prose pass" >&2
+      echo "      once already (v0.13.2). Restore it, or if the removal is" >&2
+      echo "      deliberate, record the decision and update PRESENCE_ROWS in" >&2
+      echo "      this script in the same change." >&2
+      presence_failures=$((presence_failures + 1))
+      ;;
+    *)
+      echo "ERROR: 'grep' failed (exit ${grep_status}) on ${file} — scan unreliable; failing closed." >&2
+      exit 2
+      ;;
+  esac
+done
+
+if [ "${presence_failures}" -gt 0 ]; then
+  exit 1
+fi
+
+echo "PASS: both contract-string checks are clean."
+echo "      drift:    both contract strings intact wherever they appear"
+echo "                (the implied-surfaces marker and anti-fixation prompt)"
+echo "      presence: all ${#PRESENCE_ROWS[@]} pinned clauses found in their named files"
+exit 0

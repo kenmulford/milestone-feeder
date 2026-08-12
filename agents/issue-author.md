@@ -28,7 +28,7 @@ Read the implicated project docs and sibling source read-only to ground recorded
 - **deployment / environment** → `.project/environment.md`.
 - **a convention** → no pointer. `Convention followed:` already carries `.project/conventions.md#<section>`.
 
-The pointer names where the values live. Never inline a resolved render or token value: a hex color, a parsed token value, a pre-solved visual spec. Recorded directives stay inlined verbatim. A conventional default like "paginate at 30 rows per page" keeps its literal value, and weakening it to "a sensible page size" is a failure.
+The pointer names where the values live. Never inline a resolved render or token value: a hex color, a parsed token value, a pre-solved visual spec. Recorded directives stay inlined verbatim. A conventional default like "paginate at 30 rows per page" keeps its literal value, and weakening it to "a sensible page size" is a failure. Pointing at the tokens narrows render and token values only; it never licenses weakening a recorded directive.
 
 Confirm a doc exists before pointing at it, per the Rigor gate. An issue that touches none of these, or a project missing the doc, carries no pointer line.
 
