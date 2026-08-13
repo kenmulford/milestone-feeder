@@ -1,14 +1,14 @@
-# RESULTS — milestone-feeder scenario fixture catalog
+# RESULTS: milestone-feeder scenario fixture catalog
 
-**What this is.** `tests/scenarios/` holds executable fixtures (each = `brief.md` + a `project/` fixture + `feeder-env.md` + a blind `expected.grader.md` grader contract) that specify what the feeder is supposed to do when run. This file catalogs those fixtures and what each asserts. It is deliberately **not** framed as an automated scorecard: `.github/workflows/ci.yml` runs exactly three static gates (vocabulary-purge, plugin-structure, contract-strings) and none dispatches an agent runner or grader, so repeatable, machine-verified re-execution of this suite is not something CI can do — any confidence this file records comes from whichever manual run is named below, never from an automated re-run.
+**What this is.** `tests/scenarios/` holds executable fixtures (each = `brief.md` + a `project/` fixture + `feeder-env.md` + a blind `expected.grader.md` grader contract) that specify what the feeder is supposed to do when run. This file catalogs those fixtures and what each asserts. It is deliberately **not** framed as an automated scorecard: `.github/workflows/ci.yml` runs exactly three static gates (vocabulary-purge, plugin-structure, contract-strings) and none dispatches an agent runner or grader, so repeatable, machine-verified re-execution of this suite is not something CI can do. Any confidence this file records comes from whichever manual run is named below, never from an automated re-run.
 
 **Status (as of 2026-08-13).** Three scenarios ran on 2026-08-13 (see the dated run record below). Scenario **06 was re-run against the v0.14.0 tree with proxied agents and graded ❌ FAIL**; its 2026-07-06 PASS stands only for the tree that run executed against, and the flagship consistency claim is **not currently demonstrated**. Scenario **12 was re-run with the real registered agents against the installed plugin at `0.13.2` and graded ⚠️ PARTIAL again, on a new cause**: the rule-(a) defect #284 corrected is **closed**, and the verdict now rests on implied candidates losing their marker when a park cascade drops them. That PARTIAL sits one contested reading of a `FAIL if` bullet away from FAIL, recorded in its run subsection. Scenario **15 was executed for the first time, twice, and graded ⚠️ PARTIAL** on the worse of a split verdict: its prose-style assertions are demonstrated, and its CONTROL padded-rewrite item stays asserted because no fixture ships one. Four scenarios were executed on 2026-07-06 against the **installed** plugin with the real `milestone-feeder:architect` and `milestone-feeder:issue-author` agents dispatched (not proxied): **02, 03, 06 PASS; 12 PARTIAL** (see that record below). That was the first execution of the current post-v0.9.0, gate-free pipeline, and it closes the old from-repo fidelity gap for those four fixtures. The other seven (01, 04, 10, 11, 12b, 13, 14) remain **unexecuted**, plus the `create`/`update` sandbox scenarios. The **v0.3.0 preview run (2026-06-19)**, kept in the historical section, still backs **none** of the current claims: it exercised the removed pre-v0.9.0 pipeline through proxied `general-purpose` subagents, and its per-scenario transcripts were removed.
 
-> **v0.9.0 removed the model this catalog's historical run was written around.** Through v0.8.0 the feeder ran the driver's `triage-reviewer` + `design-reviewer` itself as an in-`plan` **self-check gate** — the "keystone" the historical section below celebrates. v0.9.0 **removes that gate**: the feeder now **drafts** well-formed issues that **target** the driver's triage bar, and the driver's own triage is the single automated entry gate (you still review the plan before `create`). Every "self-check gate" / "real-reviewer gate PASS" note below is therefore **historical** — it describes the v0.3.0 pipeline, not the shipped v0.9.0 one. Product-gap parking (park a no-conventional-default decision; invent nothing) is unchanged.
+> **v0.9.0 removed the model this catalog's historical run was written around.** Through v0.8.0 the feeder ran the driver's `triage-reviewer` + `design-reviewer` itself as an in-`plan` **self-check gate**, the "keystone" the historical section below celebrates. v0.9.0 **removes that gate**: the feeder now **drafts** well-formed issues that **target** the driver's triage bar, and the driver's own triage is the single automated entry gate (you still review the plan before `create`). Every "self-check gate" / "real-reviewer gate PASS" note below is therefore **historical**: it describes the v0.3.0 pipeline, not the shipped v0.9.0 one. Product-gap parking (park a no-conventional-default decision; invent nothing) is unchanged.
 
 ## Current scenario suite (v0.9.0)
 
-What each fixture asserts — the `expected.grader.md` contract, not a fresh execution verdict:
+What each fixture asserts (the `expected.grader.md` contract, not a fresh execution verdict):
 
 | # | Scenario | What it asserts |
 |---|----------|-----------------|
@@ -22,10 +22,10 @@ What each fixture asserts — the `expected.grader.md` contract, not a fresh exe
 | 12 | implied-surfaces | a named capability proposes its conventional companion surfaces as reviewable `implied` candidates |
 | 12b | implied-surfaces-control | a capability-free, entity-free brief makes the implied-surfaces consult a no-op: zero `implied` disposition, no `[implied — review / trim / augment]` marker, no anti-fixation prompt |
 | 13 | layer-aware-breakdown | issues assigned/ordered by the project's `.project` layering convention; degrades to dependency-only when none is declared |
-| 14 | config-pointers | a styling issue points at `.project` config by path — a reference, never inlined token/render values |
+| 14 | config-pointers | a styling issue points at `.project` config by path. That is a reference, never inlined token/render values |
 | 15 | prose-style | the authored issue reads concise per the prose-style ruleset while every completeness state, the literal "30 rows per page" directive, and the `Convention followed:` citation survive verbatim |
 
-`05-reviewer-backends` was **removed in v0.9.0** — its subject (the retired `reviewer` config key + reviewer backends) no longer exists.
+`05-reviewer-backends` was **removed in v0.9.0**: its subject (the retired `reviewer` config key + reviewer backends) no longer exists.
 
 ## Run record: 2026-08-13
 
@@ -108,7 +108,7 @@ The artifacts sit at `tests/scenarios/12-implied-surfaces/observed-2026-08-13.md
 
 **That disposition differs from 12's, and the difference sets this row.** 12's subsection records its own asserted alternate as not exercised rather than as met, and its PARTIAL rests on a separate observation. Here the unexercised alternate is the sole basis for the verdict: score it 12's way and run 1 is a clean pass and this row reads ✅ PASS. The verdict stands as recorded because it is the graders' call under #392's mechanical worse-of-two rule, not a re-grade available to the runner. The inconsistency belongs to the contract, which states the same construct as a METRIC item in one place and an "asserted alternate" in another.
 
-**Fixture and answer key disagree on one token, and it decided nothing.** `expected.grader.md ("the four completeness states")` requires "populated (happy), empty, load-error, single-page disabled-pagination". #383's em-dash recast (`eb8adb7`) rewrote the fixture's `project/conventions.md#Test patterns` and dropped the inner `(happy)` in the same edit, leaving "(populated, empty, load-error, and the single-page disabled-pagination edge)". Neither observed body contains `(happy)`, and neither grader failed on it: both scored the guardrail on the four states being present as acceptance criteria, which both bodies carry. That is a fixture-versus-key defect, not a product FAIL. #383's own scope lists scenarios 01, 02, 03, 04, 10, 11, 12b, 13, and 14 and not 15, so the commit edited a fixture outside the scope it declared and left that scenario's grader untouched. #396 owns that grader, and neither file was edited to make the run pass.
+**Fixture and answer key disagreed on one token, and it decided nothing.** At run time `expected.grader.md ("the four completeness states")` required "populated (happy), empty, load-error, single-page disabled-pagination". #383's em-dash recast (`eb8adb7`) rewrote the fixture's `project/conventions.md#Test patterns` and dropped the inner `(happy)` in the same edit, leaving "(populated, empty, load-error, and the single-page disabled-pagination edge)". Neither observed body contains `(happy)`, and neither grader failed on it: both scored the guardrail on the four states being present as acceptance criteria, which both bodies carry. That was a fixture-versus-key defect, not a product FAIL. #383's own scope lists scenarios 01, 02, 03, 04, 10, 11, 12b, 13, and 14 and not 15, so the commit edited a fixture outside the scope it declared and left that scenario's grader untouched. #396 moved the grader to the fixture after both runs had been scored, so neither file was edited to make the run pass.
 
 **A second contract-versus-fixture gap, same disposition.** A later bullet in the same guardrail list parenthesizes the expected citation as "mirror `src/lists/ActivityListService.ts`", and the fixture ships no `src/` at all. Both runs cited `project/conventions.md#Lists` and disclosed the absence in the plan file's grounding block rather than fabricating the path, which is what the issue-author's Rigor gate requires. Both graders scored it as not moving the verdict.
 
@@ -145,7 +145,7 @@ The feeder's own agents (`milestone-feeder:architect`, `:issue-author`) are not 
 
 ---
 
-## Historical run record — v0.3.0 preview run (2026-06-19) · superseded, does not back current claims
+## Historical run record: v0.3.0 preview run (2026-06-19) · superseded, does not back current claims
 
 > Kept as a record of the last full execution. Mode: preview-only, prose-direct. The self-check-gate framing here describes the **pre-v0.9.0** pipeline (the gate was removed in v0.9.0, above). Run-now that day: 01, 02, 03, 06.
 
@@ -158,7 +158,7 @@ The feeder's own agents (`milestone-feeder:architect`, `:issue-author`) are not 
 
 Findings from that run that still stand:
 
-1. **`create` zero-survivors is under-specified** (surfaced by 02). When every candidate parks/drops, the `create` write path would still create a bare milestone + labels + report but **no issues** — emergent behavior, not a stated case. Recommend an explicit zero-survivors branch in the `create` write sequence, mirroring the Step-2 STOP rule. *(skill improvement)*
+1. **`create` zero-survivors is under-specified** (surfaced by 02). When every candidate parks/drops, the `create` write path would still create a bare milestone + labels + report but **no issues**: emergent behavior, not a stated case. Recommend an explicit zero-survivors branch in the `create` write sequence, mirroring the Step-2 STOP rule. *(skill improvement)*
 2. **Subagent-registration fidelity** (all from-repo runs). The feeder's own agents aren't dispatchable from-repo, so tests proxy their contracts. A true `create`/`update` run against a throwaway sandbox **after install** closes the last fidelity gap. *(test-infra)*
 
 ## Bottom line (v0.9.0)
