@@ -24,7 +24,7 @@ The plan file is the **build artifact** (see [The plan file as build artifact](#
 | Roadmap-splitter agent | `agents/roadmap-splitter.md` | Roadmap lens: an oversized whole-app brief + standing docs → a strict, build-ordered partition into named milestones (the `ROADMAP` block). Dispatched once by `build-roadmap`. Read-only. Supersedes the architect's passive multi-milestone advisory with a real, ordered split. |
 | Hook: `no-source-edit` | `hooks/` (`hooks.json`, `run-hook.cmd`, `.sh`, `.ps1`) | `PreToolUse` (`Write`/`Edit`/`MultiEdit`/`NotebookEdit`): unconditionally deny edits to the feeder's own `sourceGlobs`. The only mechanical gate the feeder needs: it authors no code and opens no PRs. See [The mechanical gate](#the-mechanical-gate). |
 | Manifest + registration | `.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`, `hooks/hooks.json` | Plugin metadata (`superpowers` is a documented prerequisite, not a manifest dependency; see `README.md`), marketplace registration, and Claude-side hook registration. |
-| Update skill | `skills/update/SKILL.md` | Plan-driven reconcile against an existing milestone: reconcile the recorded plan onto the live milestone (patch gapped bodies, fill missing edges, re-render the Wave order). `/milestone-feeder:update <brief>`. Creates and deletes no issues; a clean milestone is a no-op. Reuses `create`'s write-primitives by reference. |
+| Update skill | `skills/update/SKILL.md` | Plan-driven reconcile against an existing milestone: reconcile the recorded plan onto the live milestone by patching gapped bodies, filling missing edges, and re-rendering the Wave order. `/milestone-feeder:update <brief>`. Creates and deletes no issues; a clean milestone is a no-op. Reuses `create`'s write-primitives by reference. |
 | Implied-surfaces reference | `docs/implied-surfaces.md` | The stack-agnostic implied-surfaces **reasoning reference** the architect consults during breakdown: the standard companion surfaces a capability or a new entity implies, framed as a reviewable floor (a robust start, never a scope-emitting catalog). Also **defines** the project-local overlay shape (`.milestone-config/implied-surfaces.md`, additive-merge: add / extend, never delete a global surface). PR-able; shipped so the capability set grows by community PR. |
 | One-time-notices reference | `docs/one-time-notices.md` | The canonical source for seven one-time Step-0 units (a self-heal + six notices) shared across `plan`, `create`, and `update` (each announces a self-heal one of them performed, flags a repo-state problem to fix by hand, points at a new/optional capability, or announces a behavior change), shown at most once per clone via a per-clone marker. Reference content only; the live emitters are `skills/plan/SKILL.md`, `skills/create/SKILL.md`, and `skills/update/SKILL.md` Step 0, each iterating the sections whose `Skills` field names it. |
 | Plan-file-contract reference | `docs/plan-file-contract.md` | The shared definition of the plan file's fields and output templates: the field table, the plan-file output template, and the needs-product-input report template that `create` and `update` parse. The three artifacts are defined there once, and `skills/plan/SKILL.md` Step 7 cites them and instantiates their scaffolds byte-exact rather than carrying a copy, so downstream skills cite one definition instead of each repeating the contract. |
@@ -107,9 +107,9 @@ feature brief (file / inline / GitHub epic issue)
 
 The park boundary is the load-bearing constraint: the feeder makes *design and
 implementation* calls when your project's standing docs or a stated repo convention
-supplies the answer, and parks *product* calls (what to build, or user-facing
-behavior with no conventional default) to a "needs product input" report rather
-than guessing them.
+supplies the answer, and parks *product* calls to a "needs product input" report
+rather than guessing them. A *product* call is what to build, or user-facing
+behavior with no conventional default.
 
 ## The mechanical gate
 
@@ -151,7 +151,7 @@ once-per-run outer boundary. `plan` wraps the routine in a **conditional outer
 loop**:
 
 - **Single / normal brief (the default).** The architect's
-  `SCOPE_SPANS_MULTIPLE_MILESTONES` signal is `none`: `plan` runs the inner
+  `SCOPE_SPANS_MULTIPLE_MILESTONES` signal is `none`; `plan` runs the inner
   routine **exactly once** on the whole brief. Byte-for-byte the prior behavior.
 - **Oversized whole-app brief.** The architect raises the signal, and `plan`'s
   front-door (Step 3.6) routes the brief into the internal **`build-roadmap`**
@@ -196,9 +196,9 @@ already applies** (`agents/architect.md` clause 8):
 `plan` threads the `disposition` field from the architect (Step 3) through the
 issue-author brief (Step 4) to the plan file (Step 7); a candidate the architect did
 not mark is recorded `grounded`, byte-for-byte as before. At Step 7 `plan` renders
-each `implied` candidate **distinctly** (carrying the
-`[implied — review / trim / augment]` marker on its issue heading) and, **only when
-the plan carries at least one implied candidate**, fires a structural
+each `implied` candidate **distinctly**, carrying the
+`[implied — review / trim / augment]` marker on its issue heading. And **only when
+the plan carries at least one implied candidate**, it fires a structural
 **anti-fixation prompt** at the same
 confirm/override moment the user already sees the milestone identity:
 `this is a starting set for YOUR app — what's missing?`. It is advisory and
@@ -215,8 +215,8 @@ for what a curated list can't know. A project extends it with an optional
 which `plan` Step 0 resolves and merges into the bundled reference **additively**:
 an overlay can add a capability and extend an existing one, but never remove a
 surface the global reference defines (per-run trimming is the plan review's job). The
-overlay is discovered by that fixed path: **no new config key**
-([`profile-schema.md`](profile-schema.md)); an absent overlay (the common case) is
+overlay is discovered by that fixed path; there is **no new config key**
+([`profile-schema.md`](profile-schema.md)). An absent overlay (the common case) is
 never an error. A one-time per-clone notice in `plan` / `update` Step 0 announces the
 overlay to existing users (`SPEC.md` §3.1, the discovery-path principle).
 
@@ -318,11 +318,11 @@ a–e write sequence, not as a sixth write pass.
 
 The `autoHandoff` own-key (default `"prompt"`) governs it: `"prompt"`
 asks first, `"auto"` kicks off immediately, `"off"` never offers. Three gates must
-all hold: the run is **clean** (no product gap, nothing parked/dropped, the
+all hold: the run is **clean**, with no product gap and nothing parked/dropped (the
 `## Needs human input` pointer is "none"); the driver
 resolves in this session (absent → **silently skipped**, no prompt / no error); and
-the handoff is **build-kickoff only** (`solve-milestone` merges to the integration
-branch and `develop → main` stays a manual human call). It never auto-merges to a
+the handoff is **build-kickoff only**: `solve-milestone` merges to the integration
+branch and `develop → main` stays a manual human call. It never auto-merges to a
 protected branch and never removes the release gate.
 
 ## The quality bar

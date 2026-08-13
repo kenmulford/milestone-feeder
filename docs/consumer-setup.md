@@ -34,9 +34,9 @@ milestone card on your board** when it finishes deploying: one card on the board
 queue list, with the milestone's issues as a checklist, so a freshly-planned
 milestone shows up on your project board the moment it's created (instead of waiting
 for the driver's first build run). It reads that setting from the **driver's**
-profile: **there is no feeder-side Trello setting to add** (the driver already owns
-the board destination). If you don't use the driver's Trello integration (or run no
-driver at all), **nothing changes**: `create` deploys to GitHub exactly as before and
+profile. **There is no feeder-side Trello setting to add** (the driver already owns
+the board destination). If you don't use the driver's Trello integration, or run no
+driver at all, **nothing changes**: `create` deploys to GitHub exactly as before and
 the mirror is a silent no-op. The card's shape and its best-effort, never-blocking
 behavior are the driver's; `create` just seeds the card. See milestone-driver's
 `skills/solve-milestone/trello-sync.md` for the details, and
@@ -78,9 +78,9 @@ project uses version numbers. Set it to `"semver"` if your project is versioned
 (every milestone gets a version), or `"none"` if it isn't (no version is ever
 added and you're never asked). It is **optional**. You can leave
 it out, and the feeder degrades gracefully: **if you skip it, the feeder figures
-out whether you version by looking at your repo** (your existing milestone titles
-first, then your git tags) and only **asks you once at plan time** if it can't
-tell. So skipping it costs you nothing on a repo that already has versioned
+out whether you version by looking at your repo** and only **asks you once at plan
+time** if it can't tell. It checks your existing milestone titles first, then your
+git tags. So skipping it costs you nothing on a repo that already has versioned
 milestones or `vX.Y.Z` tags; on a brand-new repo with neither, you'll get one
 quick question the first time you plan. Set it explicitly to skip even that
 question:
@@ -94,7 +94,7 @@ question:
 
 ## 3. Restart Claude Code
 
-The one mechanical gate (`no-source-edit`) is a plugin `PreToolUse` hook
+The one mechanical gate, `no-source-edit`, is a plugin `PreToolUse` hook
 registered in `hooks/hooks.json`. It **loads at session start**, so restart Claude
 Code after installing or updating the plugin for the hook to take effect. No
 separate native-hook installation step is required.
@@ -124,10 +124,10 @@ shape that matters:
 | Author | Dispatches the `issue-author` per candidate → each issue's full §4 spec (acceptance criteria covering empty/error/disabled states, recorded consistent design, declared edges, UI/logic + risk), drafted to pass the driver's triage clean. |
 | Drop + emit | Drops parked issues and their dependents, then writes a plan file to `.milestone-feeder/plan-<slug>.md` and a "needs product input" report when product gaps remain. The plan file carries the milestone description (Wave order) plus every surviving issue body. **No GitHub writes**: the GitHub artifacts are built later by `create`. |
 
-**The park boundary.** A decision with no conventional default (what to build, or
-user-facing behavior the standing docs and conventions do not answer) is **parked**
-to the "needs product input" report, never guessed. Decide each, record it, and
-re-run.
+**The park boundary.** Some decisions have no conventional default: what to build,
+or user-facing behavior the standing docs and conventions do not answer. Those are
+**parked** to the "needs product input" report, never guessed. Decide each, record
+it, and re-run.
 
 ## When your brief spans several releases (the roadmap)
 
@@ -147,7 +147,7 @@ that happens:
 | Check coverage | As its last step, `create` reads the deployed milestones and issues back from GitHub and checks they cover **everything your original brief asked for**, surfacing a short punch-list of anything missed, covered twice, or drifted. It never edits your issues; the punch-list is yours to act on. |
 
 **A normal, single-release brief is unchanged.** The roadmap only kicks in when your
-brief reads as several releases: you get no extra step and no extra prompt
+brief reads as several releases. You get no extra step and no extra prompt
 otherwise. And there is **nothing new to configure**: the roadmap reuses the same
 project docs `plan` already grounds on. The first time the roadmap path could apply,
 `plan` shows a one-time heads-up so you know the behavior exists.
@@ -161,7 +161,8 @@ comes with it: a delivery-failure log for email, activate / deactivate /
 reset-password for users, a list and a detail screen for a new record. `plan`
 consults a built-in reference of these companions and proposes the conventional ones
 into your plan, each marked `[implied — review / trim / augment]` so you can keep it,
-trim it, or add the ones it missed (**before any issue is created**). It also asks
+trim it, or add the ones it missed. That all happens **before any issue is
+created**. It also asks
 you, out loud, "this is a starting set for YOUR app — what's missing?", because a
 built-in list can't know your domain. (A real product call with no obvious default
 isn't guessed: it's set aside for your decision, exactly like any other product
@@ -217,11 +218,11 @@ the driver yourself. The `autoHandoff` setting in your `feeder.json` controls th
   feature existed.
 
 Three things have to be true for the offer to appear: the run must be **clean** (no
-product gaps, nothing flagged for your decision: a run with gaps surfaces them
-instead of offering to build), `milestone-driver` must be **installed** (if it
-isn't, `create` just finishes quietly: no prompt, no error), and the handoff only
-**starts the build**. The driver builds onto your integration branch (e.g.
-`develop`); it never merges to your protected branch (e.g. `main`): releasing stays
+product gaps, nothing flagged for your decision), `milestone-driver` must be
+**installed** (if it isn't, `create` just finishes quietly: no prompt, no error),
+and the handoff only **starts the build**. A run with gaps surfaces them instead of
+offering to build. The driver builds onto your integration branch (e.g.
+`develop`); it never merges to your protected branch (e.g. `main`). Releasing stays
 your manual call, exactly as it is when you run the driver yourself. To keep the
 pre-handoff behavior (`create` finishes and stops), set `autoHandoff` to `"off"`.
 
@@ -231,8 +232,8 @@ pre-handoff behavior (`create` finishes and stops), set `autoHandoff` to `"off"`
 that **already exists**, the maintenance counterpart of `create`. Where `create`
 *builds* a milestone, `update` *reconciles* the plan against the live one,
 **creating and deleting no issues**. The flow: edit your brief, re-run `plan` to
-refresh the plan file, then `update` reconciles it against the live milestone
-(showing the diff before it writes):
+refresh the plan file, then `update` reconciles it against the live milestone. It
+shows you the diff before it writes:
 
 | Step | Command | What happens |
 |---|---|---|
@@ -242,7 +243,7 @@ refresh the plan file, then `update` reconciles it against the live milestone
 `update` **never closes and never deletes**: a live issue absent from your
 refreshed plan is flagged in the report, not auto-closed (closing is your call). It
 is **idempotent**: re-running it on an already-synced milestone writes nothing. If
-the named milestone does not exist, `update` **stops** (it never creates one: run
+the named milestone does not exist, `update` **stops** (it never creates one; run
 `/milestone-feeder:create` first).
 
 ---
