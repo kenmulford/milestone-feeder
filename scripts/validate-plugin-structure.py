@@ -19,9 +19,11 @@ It checks:
      strict-scalar checked: no unquoted plain scalar may carry a colon+space that
      Claude Desktop's strict YAML loader would reject (issue #292; see the
      strict-scalar note below).
-  4. Size budgets (issue #270) — every governed skills/**/SKILL.md stays at or
-     under its own per-file word-count ceiling, and every agents/**/*.md
-     frontmatter `description` stays at or under a flat 150-word ceiling. A
+  4. Size budgets (issue #270) — every governed prose file stays at or under
+     its own per-file word-count ceiling: the five skills/**/SKILL.md, the
+     three agents/**/*.md, SPEC.md, and the twelve docs/*.md a skill or an
+     agent references at run time. Every agents/**/*.md frontmatter
+     `description` also stays at or under a flat 150-word ceiling. A
      written size standard with no gate is exactly what let these regrow past
      their targets before (see "--- 6: size budgets ---" below).
 
@@ -543,61 +545,95 @@ for skill_md in sorted((REPO_ROOT / "skills").rglob("SKILL.md")):
 #
 # Ceiling discipline (documented, not machine-enforced — mirrors the
 # milestone-driver plugin's scripts/check-size-budgets.sh ratchet, issue #295):
-#   - SKILL_WORD_CEILINGS values ONLY GO DOWN, NEVER UP. A ceiling starts at
-#     the governed file's actual word count (when the ratchet was introduced,
-#     or last tightened) plus ~5% headroom, rounded to a clean number. Raising
-#     one requires a recorded decision on the issue that grows the file.
+#   - FILE_WORD_CEILINGS values ONLY GO DOWN, NEVER UP. A ceiling is the
+#     governed file's actual `len(text.split())` count (when the ratchet was
+#     introduced, or last tightened) times 1.05, rounded up to the next 50.
+#     Where that product exceeds the ceiling already recorded, the recorded
+#     ceiling stands: the never-up rule outranks the formula, which sets a
+#     minimum headroom and never authorizes widening an existing ceiling.
+#     Raising a ceiling requires a recorded decision on the issue that
+#     grows the file.
 #   - The agents/**/*.md description ceiling (AGENT_DESCRIPTION_WORD_CEILING)
 #     is a flat policy ceiling, not ratcheted from any single file's count.
-#   - A skills/**/SKILL.md not named in SKILL_WORD_CEILINGS is not yet governed
-#     by this check — it is silently unchecked until a ceiling is added for it
+#   - A file not named in FILE_WORD_CEILINGS is not yet governed by this
+#     check — it is silently unchecked until a ceiling is added for it
 #     (a deliberate scope choice: an ungoverned file has no ceiling to violate).
-#   - A path NAMED in SKILL_WORD_CEILINGS but absent from disk (renamed or
+#   - A path NAMED in FILE_WORD_CEILINGS but absent from disk (renamed or
 #     deleted without updating this table) IS a failure, never a silent pass —
 #     mirrors both the driver twin's MISSING case and this same file's
 #     "--- 4 ---" reverse-coverage check just above (a hook-listed agent name
 #     with no matching agents/*.md file fails too). This is why the loop below
-#     iterates SKILL_WORD_CEILINGS itself, not a `skills/**/SKILL.md` glob.
+#     iterates FILE_WORD_CEILINGS itself, not a `skills/**/SKILL.md` glob.
 #
 # Measurement: whole-file word count (`len(text.split())`, confirmed identical
-# to `wc -w`) for every governed SKILL.md; the frontmatter `description`
+# to `wc -w`) for every file in the table below, uniformly, so fenced code
+# blocks and <example> blocks count everywhere; the frontmatter `description`
 # field's word count only (reusing parse_frontmatter()) for every
 # agents/**/*.md. A file whose frontmatter doesn't parse, or that has no
 # `description`, is skipped here — the structural check in "--- 3 ---" above
 # already fails that file, so this check does not double-report or crash on it.
+# An agent file is therefore checked twice, once whole-file against the table
+# below and once description-only against the flat ceiling. That is deliberate.
+# The two ceilings govern different things, so neither subsumes the other.
 # (No analogous "listed but missing" guard is needed for agent descriptions:
 # there is no per-file table to go stale — the ceiling is a flat number applied
 # to whatever agents/*.md files are discovered, and a deleted/renamed agent
 # already fails "--- 4 ---"'s reverse-coverage check above, so adding a second
 # one here would only duplicate it.)
 
-SKILL_WORD_CEILINGS: dict[str, int] = {
-    "skills/create/SKILL.md": 4700,
-    "skills/update/SKILL.md": 7200,
-    "skills/build-roadmap/SKILL.md": 2750,
+# The governed set is the 5 skills/**/SKILL.md, the 3 agents/**/*.md, SPEC.md,
+# and the 12 docs/*.md a skill or an agent references at run time. Deliberately
+# ungoverned, and never added by a later sweep without a recorded decision:
+# docs/specs/*.md are frozen historical design specs, cited as provenance and
+# never re-authored, so a ceiling on them would gate nothing; and
+# docs/architecture.md, docs/consumer-setup.md, and docs/never-claims-audit.md
+# carry no runtime reference from skills/ or agents/, so no run reads them.
+# Every value below was measured on the integration branch (issue #394).
+FILE_WORD_CEILINGS: dict[str, int] = {
+    "skills/create/SKILL.md": 4450,
+    "skills/update/SKILL.md": 6550,
+    "skills/build-roadmap/SKILL.md": 2700,
     "skills/setup/SKILL.md": 2550,
+    # 9404 words times 1.05 is 9874.2, which rounds up to 9900; the recorded
+    # 9880 stands instead, because the never-up rule outranks the formula.
     "skills/plan/SKILL.md": 9880,
+    "agents/architect.md": 3500,
+    "agents/issue-author.md": 3200,
+    "agents/roadmap-splitter.md": 2400,
+    "SPEC.md": 6850,
+    "docs/create-deploy-sequence.md": 13350,
+    "docs/file-map.md": 1450,
+    "docs/implied-surfaces.md": 1250,
+    "docs/one-time-notices.md": 5350,
+    "docs/plan-file-contract.md": 1600,
+    "docs/profile-schema.md": 2400,
+    "docs/roadmap-fan-out.md": 2450,
+    "docs/roadmap-manifest-format.md": 1050,
+    "docs/step-0-grounding.md": 2050,
+    "docs/style-contracts.md": 800,
+    "docs/update-reconcile-parent.md": 2450,
+    "docs/version-ladder.md": 1300,
 }
 AGENT_DESCRIPTION_WORD_CEILING = 150
 
-for rel_path, ceiling in sorted(SKILL_WORD_CEILINGS.items()):
-    skill_md = REPO_ROOT / rel_path
+for rel_path, ceiling in sorted(FILE_WORD_CEILINGS.items()):
+    governed_md = REPO_ROOT / rel_path
     checked += 1
-    if not skill_md.is_file():
+    if not governed_md.is_file():
         err(
-            skill_md,
-            f"is listed in SKILL_WORD_CEILINGS ({ceiling}-word ceiling) "
+            governed_md,
+            f"is listed in FILE_WORD_CEILINGS ({ceiling}-word ceiling) "
             f"but is missing from disk — a renamed or deleted governed "
             f"file must update this table in the same change, not "
             f"silently drop out of the size-budget gate",
         )
         continue
-    word_count = len(skill_md.read_text(encoding="utf-8-sig").split())
+    word_count = len(governed_md.read_text(encoding="utf-8-sig").split())
     if word_count > ceiling:
         err(
-            skill_md,
+            governed_md,
             f"is {word_count} words, over its {ceiling}-word "
-            f"size-budget ceiling (SKILL_WORD_CEILINGS in this script) "
+            f"size-budget ceiling (FILE_WORD_CEILINGS in this script) "
             f"— trim it, or if the growth is deliberate, record a "
             f"decision on the issue that grows it and raise the "
             f"ceiling in the same change",

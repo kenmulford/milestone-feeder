@@ -9,8 +9,10 @@ name: CI
 #                                the live plugin surface (spec §11).
 #   2. plugin-structure check  — fails if a manifest or a skill/agent/command
 #                                frontmatter block is malformed, or a governed
-#                                skills/**/SKILL.md or agents/**/*.md exceeds
-#                                its size-budget ceiling (issue #270).
+#                                prose file (a skills/**/SKILL.md, an
+#                                agents/**/*.md, SPEC.md, or a
+#                                runtime-referenced docs/*.md) exceeds its
+#                                size-budget ceiling (issue #270).
 #   3. contract-strings gate   — fails if the implied-surfaces marker or the
 #                                anti-fixation prompt drifts from its
 #                                canonical em-dash form (issue #369).
