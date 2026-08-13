@@ -41,9 +41,9 @@ plan-side portion of scenario 11.
   **delivery-failure log** (with resend), and the **provider configuration + retry**
   and **send audit** surfaces.
 - Each `implied` candidate renders **distinctly** in the plan's `## Issues`,
-  carrying the **verbatim** marker `[implied — review / trim / augment]` on its
+  carrying the **verbatim** marker `[implied - review / trim / augment]` on its
   heading (`skills/plan/SKILL.md`, the bracketed marker; #180 as-built). The
-  literal words `implied — review / trim / augment` must appear inside the brackets.
+  literal words `implied - review / trim / augment` must appear inside the brackets.
 - These companions are grounded on the fixture's conventions (the delivery-failure
   log, retry, and audit defaults `project/conventions.md` states). So they are
   proposed because they have a **conventional default**, but they are **proposed for
@@ -72,7 +72,7 @@ plan-side portion of scenario 11.
 
 - Because the plan carries one or more `implied` candidates, `plan` fires the
   structural **anti-fixation prompt** at the milestone-identity confirm/override
-  moment, with the **verbatim** string `this is a starting set for YOUR app — what's missing?`
+  moment, with the **verbatim** string `this is a starting set for YOUR app - what's missing?`
   (`skills/plan/SKILL.md`, the implied-surfaces review prompt; #180 as-built). It is
   **advisory and non-blocking**: it never gates the run; the plan stays fully
   deployable as-is.
@@ -83,7 +83,7 @@ plan-side portion of scenario 11.
   new entity** (e.g. "reword the copy on the existing admin settings page" or
   "rename a label") triggers **NO** implied fan-out: the architect's clause-8
   consult is a **no-op**, **no** candidate carries `disposition: implied`, no
-  `[implied — review / trim / augment]` marker is rendered, and `plan` surfaces **NO**
+  `[implied - review / trim / augment]` marker is rendered, and `plan` surfaces **NO**
   anti-fixation prompt. Plan behaves **byte-for-byte as today**. This is an asserted
   success outcome, not an error and not a park.
 
@@ -101,8 +101,8 @@ plan-side portion of scenario 11.
   implied or grounded candidate instead of parked, or **invented** with a fabricated
   opt-out default.
 - The anti-fixation prompt is **absent** when the plan carries `implied` candidates,
-  or its string is not verbatim `this is a starting set for YOUR app — what's missing?`.
-- The implied candidates are **unlabeled** (no `[implied — review / trim / augment]`
+  or its string is not verbatim `this is a starting set for YOUR app - what's missing?`.
+- The implied candidates are **unlabeled** (no `[implied - review / trim / augment]`
   marker) or rendered as plain grounded candidates hiding their implied origin; or
   the implied set is framed as **complete / exhaustive / a ceiling** rather than a
   floor.

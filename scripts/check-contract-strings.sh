@@ -7,11 +7,12 @@
 #   per-file PRESENCE assertion. Both must be clean for exit 0.
 #
 #   Check 1 (drift).
-#   Two prompt strings are contract-declared byte-exact, em dash and all.
-#   A prose pass can quietly swap that em dash for a hyphen, en dash, colon,
-#   comma, or drop the separator entirely — the words survive, only the
+#   Two prompt strings are contract-declared byte-exact, separator and all.
+#   A prose pass can quietly swap that hyphen for an em dash, en dash, colon,
+#   comma, or drop the separator entirely. The words survive, only the
 #   canonical punctuation drifts, and nothing else notices (issue #369: a
-#   prose sweep did exactly this and both existing CI gates stayed green).
+#   prose sweep drifted this separator and both existing CI gates stayed
+#   green; it ran in the opposite direction, before the hyphen was canonical).
 #   This script does NOT assert the strings are present anywhere — most files
 #   never mention them, and a presence-anywhere scan can't fail closed with a
 #   real file:line either way. Instead it scans the live, committed surface
@@ -32,9 +33,9 @@
 #   gate then in place staying green. The presence table is at PRESENCE_ROWS
 #   below; each row is verified with fixed-string matching, not regex.
 #
-# The two contract strings (canonical form, em dash U+2014):
-#   implied — review / trim / augment
-#   this is a starting set for YOUR app — what's missing?
+# The two contract strings (canonical form, ASCII hyphen U+002D):
+#   implied - review / trim / augment
+#   this is a starting set for YOUR app - what's missing?
 #
 # Authoritative definition (do not widen without updating these anchors):
 #   Both strings are declared verbatim at skills/plan/SKILL.md ("Surface the
@@ -47,13 +48,20 @@
 #   tests/**/*observed-*.md scenario run records (historical, same reason —
 #   the pathspec's leading `*` covers both the `observed-*.md` files and the
 #   `needs-product-input-observed-*.md` sibling that a plain `observed-*.md`
-#   glob would miss). Not excluded: scripts/ and .github/. Unlike
+#   glob would miss), and docs/specs/** (frozen historical specs, which quote
+#   whichever form was canonical when they were written; scripts/check-
+#   vocabulary.sh carves out the same path, there because spec §11 mandates it,
+#   here because a frozen spec must keep the form it shipped with. Both of
+#   v0.7.0's quotes wrap mid-phrase, so this pathspec is inert against today's
+#   tree and stands for the next one). Not excluded: scripts/ and .github/.
+#   Unlike
 #   scripts/check-vocabulary.sh, whose pattern is a bare literal alternation
 #   that self-matches its own source, this gate's pattern is built by
 #   shell-variable interpolation (see SEP below), so the drifted-variant
-#   regex never appears literally anywhere in this file, including this
-#   header's own canonical em-dash quotes — verified by scanning this file
-#   with no scripts/ or .github/ exclusion: zero hits.
+#   regex never appears literally anywhere in this file. That includes this
+#   header's own canonical hyphen quotes, which the pattern structurally
+#   cannot match; verified by scanning this file with no scripts/ or .github/
+#   exclusion: zero hits.
 #
 # Why `git grep`:
 #   Same reasoning as scripts/check-vocabulary.sh: the "live surface" is
@@ -75,18 +83,24 @@ cd "$(git rev-parse --show-toplevel)"
 
 # --- check 1: drifted variants of the two contract strings -------------------
 
-# Match the two contract strings with anything OTHER than the canonical em
-# dash (U+2014) in the separator position: an ASCII hyphen, an en dash
-# (U+2013), a colon, a comma, or nothing at all (just whitespace). Case-
-# insensitive via -i below, same as check-vocabulary.sh.
+# Match the two contract strings with anything OTHER than the canonical ASCII
+# hyphen in the separator position: an em dash (U+2014), an en dash (U+2013),
+# a colon, a comma, or nothing at all (just whitespace). Case-insensitive via
+# -i below, same as check-vocabulary.sh.
 #
 # [[:space:]]* on both sides of an optional single-character separator group
-# means: if the separator is the em dash, the group can't consume it (it's
+# means: if the separator is the hyphen, the group can't consume it (it's
 # not one of the four alternatives) and the following [[:space:]]* can't
-# consume it either (it isn't whitespace) — so the canonical form can never
-# match. Any of the four drifted punctuation marks, or no punctuation mark
-# at all, matches cleanly.
-SEP='[[:space:]]*(-|–|:|,)?[[:space:]]*'
+# consume it either (it isn't whitespace). The canonical form can never match.
+# Any of the four drifted punctuation marks, or no punctuation mark at all,
+# matches cleanly.
+#
+# KNOWN GAP, tracked on issue #399: this alternation carries only the colon and
+# the comma out of the five marks .project/conventions.md (## Em-dash ban)
+# prescribes. A sweeper following that ban writes a PERIOD, a SEMICOLON, or a
+# PAREN PAIR, and all three pass this gate clean. The ban's carve-out 2 is what
+# holds these two strings today, not this pattern.
+SEP='[[:space:]]*(—|–|:|,)?[[:space:]]*'
 PATTERN="implied${SEP}review / trim / augment|this is a starting set for YOUR app${SEP}what's missing\\?"
 
 # Scan tracked files minus the historical records (this gate's own machinery
@@ -95,16 +109,16 @@ PATTERN="implied${SEP}review / trim / augment|this is a starting set for YOUR ap
 # stderr — a real failure should be visible.
 set +e
 MATCHES="$(git grep -EIinH "${PATTERN}" -- \
-  ':!:CHANGELOG.md' ':!:tests/**/*observed-*.md')"
+  ':!:CHANGELOG.md' ':!:tests/**/*observed-*.md' ':!:docs/specs/**')"
 status=$?
 set -e
 
 case "${status}" in
   0)
-    echo "FAIL: a contract string drifted from its canonical em-dash form." >&2
-    echo "      Canonical (em dash U+2014):" >&2
-    echo "        implied — review / trim / augment" >&2
-    echo "        this is a starting set for YOUR app — what's missing?" >&2
+    echo "FAIL: a contract string drifted from its canonical hyphen form." >&2
+    echo "      Canonical (ASCII hyphen U+002D):" >&2
+    echo "        implied - review / trim / augment" >&2
+    echo "        this is a starting set for YOUR app - what's missing?" >&2
     echo >&2
     echo "${MATCHES}" >&2
     exit 1
