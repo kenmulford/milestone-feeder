@@ -79,8 +79,8 @@ bump above is for a release cut outside a driver run.
 
 ### Release checklist
 
-When a release is cut, bump `.claude-plugin/plugin.json` `version`, the single
-source of truth. The `SPEC.md` as-built header carries no version, so there is
+When a release is cut, bump `.claude-plugin/plugin.json` `version` (the single
+source of truth). The `SPEC.md` as-built header carries no version, so there is
 nothing to re-sync there.
 
 Any other hand-maintained in-doc version reference (e.g. the `README.md` status
