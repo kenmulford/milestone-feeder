@@ -15,7 +15,7 @@ name: CI
 #                                size-budget ceiling (issue #270).
 #   3. contract-strings gate   — fails if the implied-surfaces marker or the
 #                                anti-fixation prompt drifts from its
-#                                canonical em-dash form (issue #369).
+#                                canonical hyphen form (issue #369).
 #
 # The three job names below ("vocabulary-purge gate", "plugin-structure check",
 # "contract-strings gate") are the required-status-check contexts to wire in

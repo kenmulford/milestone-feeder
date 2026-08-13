@@ -160,10 +160,10 @@ When `plan` breaks your brief into issues, it also catches the work your brief
 comes with it: a delivery-failure log for email, activate / deactivate /
 reset-password for users, a list and a detail screen for a new record. `plan`
 consults a built-in reference of these companions and proposes the conventional ones
-into your plan, each marked `[implied — review / trim / augment]` so you can keep it,
+into your plan, each marked `[implied - review / trim / augment]` so you can keep it,
 trim it, or add the ones it missed. That all happens **before any issue is
 created**. It also asks
-you, out loud, "this is a starting set for YOUR app — what's missing?", because a
+you, out loud, "this is a starting set for YOUR app - what's missing?", because a
 built-in list can't know your domain. (A real product call with no obvious default
 isn't guessed: it's set aside for your decision, exactly like any other product
 gap.)

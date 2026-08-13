@@ -12,7 +12,7 @@ brief already yields an implied candidate).
 The claim under test: when a brief names no capability and introduces no new
 entity, the architect's clause-8 implied-surfaces consult (`agents/architect.md`
 clause 8) is a genuine no-op. Zero candidates carry `disposition: implied`, no
-`[implied — review / trim / augment]` marker is rendered, and `plan` never fires
+`[implied - review / trim / augment]` marker is rendered, and `plan` never fires
 the anti-fixation prompt. Plan behaves byte-for-byte as today.
 
 This is a **plan-side, preview-only** scenario (zero GitHub writes), mirroring
@@ -29,10 +29,10 @@ scenario 12's own execution model.
   implied-surfaces consult therefore has nothing to concept-match against and is a
   genuine no-op.
 - **Zero** candidates in the observed breakdown carry `disposition: implied`.
-- **Zero** occurrences of the verbatim marker `[implied — review / trim / augment]`
+- **Zero** occurrences of the verbatim marker `[implied - review / trim / augment]`
   anywhere in the plan file's `## Issues` section.
 - The plan does **not** fire the anti-fixation prompt: the verbatim string
-  `this is a starting set for YOUR app — what's missing?` does not appear anywhere
+  `this is a starting set for YOUR app - what's missing?` does not appear anywhere
   in the observed plan file.
 - No scope is invented beyond the brief's literal reword (no new screen, endpoint,
   job, or setting proposed alongside it).
@@ -44,9 +44,9 @@ scenario 12's own execution model.
 ## METRIC for this scenario
 
 - Any `implied`-disposition candidate present (yes/no). Target: no.
-- The `[implied — review / trim / augment]` marker present anywhere in `## Issues`
+- The `[implied - review / trim / augment]` marker present anywhere in `## Issues`
   (yes/no). Target: no.
-- The anti-fixation prompt (`this is a starting set for YOUR app — what's
+- The anti-fixation prompt (`this is a starting set for YOUR app - what's
   missing?`) present anywhere in the plan file (yes/no). Target: no.
 - A needs-product-input report produced (yes/no). Target: no.
 - Every issue cites `project/conventions.md` for its design decision (yes/no).
@@ -54,7 +54,7 @@ scenario 12's own execution model.
 
 ## FAIL if
 
-- Any candidate carries `disposition: implied`, or the `[implied — review / trim /
+- Any candidate carries `disposition: implied`, or the `[implied - review / trim /
   augment]` marker appears anywhere in the observed plan.
 - The anti-fixation prompt fires (its verbatim string appears anywhere in the plan
   file) for a brief that names no capability and introduces no new entity.

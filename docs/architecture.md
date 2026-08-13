@@ -198,11 +198,11 @@ named capability or new entity implies. That reference is a stack-agnostic
 issue-author brief (Step 4) to the plan file (Step 7); a candidate the architect did
 not mark is recorded `grounded`, byte-for-byte as before. At Step 7 `plan` renders
 each `implied` candidate **distinctly**, carrying the
-`[implied — review / trim / augment]` marker on its issue heading. And **only when
+`[implied - review / trim / augment]` marker on its issue heading. And **only when
 the plan carries at least one implied candidate**, it fires a structural
 **anti-fixation prompt** at the same
 confirm/override moment the user already sees the milestone identity:
-`this is a starting set for YOUR app — what's missing?`. It is advisory and
+`this is a starting set for YOUR app - what's missing?`. It is advisory and
 non-blocking: the user reviews, trims, or augments the implied candidates before
 running `create`, and every proposed surface lands in a plan reviewed before any
 issue exists. When no candidate is implied, nothing here surfaces (no marker, no
