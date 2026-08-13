@@ -85,22 +85,37 @@ cd "$(git rev-parse --show-toplevel)"
 
 # Match the two contract strings with anything OTHER than the canonical ASCII
 # hyphen in the separator position: an em dash (U+2014), an en dash (U+2013),
-# a colon, a comma, or nothing at all (just whitespace). Case-insensitive via
-# -i below, same as check-vocabulary.sh.
+# every mark in the em-dash ban's closed replacement set (a period, a
+# semicolon, an opening paren, a colon, a comma), or nothing at all (just
+# whitespace). Case-insensitive via -i below, same as check-vocabulary.sh.
 #
 # [[:space:]]* on both sides of an optional single-character separator group
-# means: if the separator is the hyphen, the group can't consume it (it's
-# not one of the four alternatives) and the following [[:space:]]* can't
+# means: if the separator is the hyphen, the group can't consume it (the
+# hyphen is not one of the alternatives) and the following [[:space:]]* can't
 # consume it either (it isn't whitespace). The canonical form can never match.
-# Any of the four drifted punctuation marks, or no punctuation mark at all,
-# matches cleanly.
+# Any listed drifted mark, or no punctuation mark at all, matches cleanly.
 #
-# KNOWN GAP, tracked on issue #399: this alternation carries only the colon and
-# the comma out of the five marks .project/conventions.md (## Em-dash ban)
-# prescribes. A sweeper following that ban writes a PERIOD, a SEMICOLON, or a
-# PAREN PAIR, and all three pass this gate clean. The ban's carve-out 2 is what
-# holds these two strings today, not this pattern.
-SEP='[[:space:]]*(—|–|:|,)?[[:space:]]*'
+# The period and the opening paren are backslash-escaped. Unescaped, `.` is the
+# ERE any-character metacharacter: it would match the canonical hyphen itself
+# and fire this gate on the one form it exists to protect.
+#
+# The paren case is matched by its OPENING paren alone. A paren-pair recast
+# puts that paren in the separator position, which already decides the drift;
+# the closing paren rides past the end of the phrase, so pinning it would add
+# nothing. This comment states that shape rather than spelling a drifted
+# variant out, and deliberately so: the self-match invariant recorded in the
+# header (no drifted variant appears literally anywhere in this file) now
+# covers the period, the semicolon, and the paren too, so an illustrative
+# example would fire this gate on its own source.
+#
+# GAP CLOSED by issue #399. #398 left this alternation carrying only the colon
+# and the comma out of the five marks .project/conventions.md (## Em-dash ban)
+# prescribes, so a sweeper FOLLOWING that ban wrote a PERIOD, a SEMICOLON, or a
+# PAREN PAIR and passed both gates clean: scripts/check-vocabulary.sh found no
+# em dash, and this gate did not recognise the substitution. All five are
+# listed now, so the pattern holds these two strings itself rather than leaning
+# on the ban's carve-out 2 alone.
+SEP='[[:space:]]*(—|–|\.|;|\(|:|,)?[[:space:]]*'
 PATTERN="implied${SEP}review / trim / augment|this is a starting set for YOUR app${SEP}what's missing\\?"
 
 # Scan tracked files minus the historical records (this gate's own machinery
