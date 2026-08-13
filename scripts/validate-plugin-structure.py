@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""validate-plugin-structure.py — the plugin-structure validation gate.
+"""validate-plugin-structure.py: the plugin-structure validation gate.
 
 What this checks, in plain terms:
   A Claude Code plugin only loads if its manifests are valid JSON and its
@@ -8,10 +8,10 @@ What this checks, in plain terms:
   pull request that breaks a manifest or a frontmatter block fails before merge.
 
 It checks:
-  1. .claude-plugin/plugin.json      — parses as JSON, has required key `name`.
-  2. .claude-plugin/marketplace.json — parses as JSON, has required keys
-                                       `name` and `plugins` (a non-empty list).
-  3. Every skills/**/SKILL.md and agents/**/*.md  — opens with a `---`-fenced
+  1. .claude-plugin/plugin.json:      parses as JSON, has required key `name`.
+  2. .claude-plugin/marketplace.json: parses as JSON, has required keys
+                                      `name` and `plugins` (a non-empty list).
+  3. Every skills/**/SKILL.md and agents/**/*.md: opens with a `---`-fenced
      frontmatter block carrying non-empty `name` and `description`. Every
      commands/**/*.md needs `description` (a command's name comes from its
      filename, so `name` is not required there). Governed frontmatter
@@ -19,7 +19,7 @@ It checks:
      strict-scalar checked: no unquoted plain scalar may carry a colon+space that
      Claude Desktop's strict YAML loader would reject (issue #292; see the
      strict-scalar note below).
-  4. Size budgets (issue #270) — every governed prose file stays at or under
+  4. Size budgets (issue #270): every governed prose file stays at or under
      its own per-file word-count ceiling: the five skills/**/SKILL.md, the
      three agents/**/*.md, SPEC.md, and the twelve docs/*.md a skill or an
      agent references at run time. Every agents/**/*.md frontmatter
@@ -28,8 +28,8 @@ It checks:
      their targets before (see "--- 6: size budgets ---" below).
 
 Two readers, two rules (read before "upgrading" this):
-  Claude Code's frontmatter reader is tolerant — it takes everything after the
-  first colon on a `key:` line as that key's value — so the parser below
+  Claude Code's frontmatter reader is tolerant: it takes everything after the
+  first colon on a `key:` line as that key's value. So the parser below
   deliberately mirrors it for key extraction: split each top-level `key:` on its
   first colon, keep the rest as the value. It does not try to be a full YAML
   engine. Files are read as utf-8-sig so a leading BOM (e.g. from a Windows
@@ -38,12 +38,12 @@ Two readers, two rules (read before "upgrading" this):
   Claude Desktop's loader, by contrast, is STRICT (js-yaml): an unquoted plain
   scalar whose value contains a colon+space (": ") is read as a nested mapping,
   so the skill silently fails to register (issue #292). That strict loader is
-  ground truth for whether a skill loads in Desktop — so the strict-scalar check
+  ground truth for whether a skill loads in Desktop. So the strict-scalar check
   below FAILS any governed frontmatter (skills/**/SKILL.md, agents/**/*.md,
   commands/**/*.md) carrying that exact construct. This is not a false-fail risk: the governed
   files' long descriptions are folded block scalars (`description: >-`), which
   the strict loader accepts, and block-scalar or quoted values are exempt by
-  construction. The check stays stdlib-only by design — it detects the one
+  construction. The check stays stdlib-only by design: it detects the one
   rejected construct without parsing YAML, so CI needs no PyYAML and no
   dependency-install step.
 
@@ -93,9 +93,9 @@ def load_json(path: Path) -> dict | None:
 
 # Block-scalar indicators a top-level value may legitimately be (no inline value
 # follows on the header line; the real value is on the indented lines below).
-# Defined once here and consumed by BOTH walkers — parse_frontmatter (key
-# extraction) and check_strict_scalars (strict-loader gate) — so the set can
-# never drift between them.
+# Defined once here and consumed by BOTH walkers: parse_frontmatter (key
+# extraction) and check_strict_scalars (strict-loader gate). The set can
+# therefore never drift between them.
 _BLOCK_SCALAR_INDICATORS = ("|", ">", "|-", ">-", "|+", ">+")
 
 
@@ -141,7 +141,7 @@ def parse_frontmatter(path: Path) -> dict | None:
             key = key.strip()
             value = value.strip()
             if value in _BLOCK_SCALAR_INDICATORS:
-                # Block scalar — value continues on indented lines below.
+                # Block scalar: value continues on indented lines below.
                 current_key = key
                 data[key] = ""
                 collecting_block = True
@@ -185,18 +185,19 @@ def check_strict_scalars(path: Path) -> None:
     Claude Desktop's frontmatter loader is strict (js-yaml): an unquoted plain
     scalar whose value contains a colon+space (": ") is parsed as a nested
     mapping and the skill silently fails to register (issue #292). This check
-    catches exactly that defect class — stdlib-only, no YAML parse — across the
-    governed frontmatter (skills/**/SKILL.md, agents/**/*.md, commands/**/*.md).
-    It walks the top-level `key: value` lines of the frontmatter block and flags
-    any whose value is an unquoted plain scalar (does not start with |, >, ', or
-    ") containing ": ". Block-scalar header lines (`key: >-`) carry no inline
-    value and their indented continuation lines belong to the block, so both are
-    exempt; a quoted value escapes the colon and is exempt too.
+    catches exactly that defect class across the governed frontmatter
+    (skills/**/SKILL.md, agents/**/*.md, commands/**/*.md). It is stdlib-only,
+    with no YAML parse. It walks the top-level `key: value` lines of the
+    frontmatter block and flags any whose value is an unquoted plain scalar
+    (does not start with |, >, ', or ") containing ": ". Block-scalar header
+    lines (`key: >-`) carry no inline value and their indented continuation
+    lines belong to the block, so both are exempt; a quoted value escapes the
+    colon and is exempt too.
 
     The `collecting_block` state is load-bearing, not decorative: an indented line
     is exempt ONLY while inside a block scalar (its body). An indented line while
-    NOT collecting a block is a plain-scalar CONTINUATION line — a multi-line
-    plain value folded onto the next line — which js-yaml folds and rejects a
+    NOT collecting a block is a plain-scalar CONTINUATION line (a multi-line
+    plain value folded onto the next line), which js-yaml folds and rejects a
     ": " on exactly as it would on the header line (the #292 defect class,
     line-wrapped). So such a continuation line is flagged too, citing its own
     line number. The ": " test runs against the value with its TRAILING
@@ -230,7 +231,7 @@ def check_strict_scalars(path: Path) -> None:
         is_indented = raw[:1] in (" ", "\t")
         if collecting_block:
             if is_indented or raw.strip() == "":
-                continue  # continuation of a block scalar — exempt.
+                continue  # continuation of a block scalar, exempt.
             collecting_block = False  # unindented line ends the block; process it.
         if is_indented:
             # Not a block-scalar body (handled above) → a plain-scalar
@@ -240,7 +241,7 @@ def check_strict_scalars(path: Path) -> None:
                 err(
                     path,
                     f"frontmatter line {i + 1} plain-scalar continuation "
-                    f"'{raw.strip()}' contains a colon+space (': ') — {_MSG}",
+                    f"'{raw.strip()}' contains a colon+space (': '). {_MSG}",
                 )
             continue
         if ":" not in raw:
@@ -254,12 +255,12 @@ def check_strict_scalars(path: Path) -> None:
             collecting_block = True
             continue
         if not value.strip() or value[0] in ("|", ">", "'", '"'):
-            continue  # block scalar / quoted value — exempt by construction.
+            continue  # block scalar / quoted value, exempt by construction.
         if ": " in value:
             err(
                 path,
                 f"frontmatter line {i + 1} value '{value.strip()}' is an "
-                f"unquoted plain scalar containing a colon+space (': ') — {_MSG}",
+                f"unquoted plain scalar containing a colon+space (': '). {_MSG}",
             )
 
 
@@ -288,7 +289,7 @@ if mj is not None:
 
 # --- 3: skill / agent / command frontmatter ---------------------------------
 
-# Skills: every skills/**/SKILL.md — require name + description.
+# Skills: every skills/**/SKILL.md. Require name + description.
 for skill_md in sorted((REPO_ROOT / "skills").rglob("SKILL.md")):
     checked += 1
     fm = parse_frontmatter(skill_md)
@@ -296,7 +297,7 @@ for skill_md in sorted((REPO_ROOT / "skills").rglob("SKILL.md")):
         require_keys(skill_md, fm, ["name", "description"])
         check_strict_scalars(skill_md)
 
-# Agents: every agents/**/*.md (recursive) — require name + description.
+# Agents: every agents/**/*.md (recursive). Require name + description.
 # Also collect each agent's `name` for the no-source-edit drift-guard below.
 agent_names: list[str] = []
 agents_dir = REPO_ROOT / "agents"
@@ -311,7 +312,7 @@ if agents_dir.is_dir():
             if name:
                 agent_names.append(name)
 
-# Commands: every commands/**/*.md (recursive) — require description only
+# Commands: every commands/**/*.md (recursive). Require description only
 # (a command's name is derived from its filename). None exist today.
 commands_dir = REPO_ROOT / "commands"
 if commands_dir.is_dir():
@@ -327,8 +328,8 @@ if commands_dir.is_dir():
 # --- 4: no-source-edit actor-gate drift-guard -------------------------------
 #
 # Why this exists: hooks/no-source-edit.{sh,ps1} carry a HARDCODED set of the
-# feeder's OWN agent names. That set is a security control — it must live inside
-# the protected hooks/** boundary, NOT be read from feeder.json — so it cannot be
+# feeder's OWN agent names. That set is a security control: it must live inside
+# the protected hooks/** boundary, NOT be read from feeder.json. So it cannot be
 # auto-derived at runtime. This guard prevents the safety-relevant drift: if
 # someone adds or renames an agents/*.md without updating the hooks, that agent
 # would be MISSING from the hook set, so the gate would mis-classify it (treating
@@ -337,26 +338,26 @@ if commands_dir.is_dir():
 # Each hook carries the set TWICE and the two must agree:
 #   1. A machine-parseable COMMENT literal:  # FEEDER_OWN_AGENTS: <name> <name>
 #      (identical text in both scripts; one regex parses it for sh and ps1).
-#   2. The RUNTIME literal the hook actually executes — language-specific:
+#   2. The RUNTIME literal the hook actually executes, language-specific:
 #        sh:   FEEDER_OWN_AGENTS="architect issue-author"   (space-separated)
 #        ps1:  $FeederOwnAgents = @('architect', 'issue-author')  (PS array)
 # The guard verifies BOTH literals: it parses the runtime set the hook truly
 # uses, asserts it equals the comment set (so neither a stale comment nor a stale
-# runtime line can pass silently — a maintainer who updates one but not the other
+# runtime line can pass silently; a maintainer who updates one but not the other
 # is caught), and coverage-checks the RUNTIME set against agents/*.md (the runtime
 # set is the one the live gate executes, so it is the safety-relevant one to
 # cover). The comment set is also coverage-checked as belt-and-suspenders.
 #
 # The coverage check is BIDIRECTIONAL: it asserts every agent name in
-# agents/*.md appears in each hook's set (forward — a missing name would let the
+# agents/*.md appears in each hook's set (forward: a missing name would let the
 # gate mis-classify a real feeder subagent as an outside actor), AND that every
-# name in each hook's set has a matching agents/*.md file (reverse — a name with
+# name in each hook's set has a matching agents/*.md file (reverse: a name with
 # no matching agent is dead weight left behind by a deletion/rename, e.g. a
 # deleted agent never trimmed from the allowlist). Neither direction is
 # exempted: a missing name and an orphaned name both fail CI. The comment-vs-
 # runtime check, separately, IS strict set equality, because a disagreement
 # there is exactly the false-PASS this guard exists to catch. All parsing is
-# stdlib `re` only — NO shell/pwsh execution.
+# stdlib `re` only. NO shell/pwsh execution.
 
 FEEDER_AGENT_SET_RE = re.compile(r"^#\s*FEEDER_OWN_AGENTS:\s*(.+?)\s*$", re.MULTILINE)
 
@@ -406,7 +407,7 @@ def parse_hook_runtime_set(path: Path, label: str) -> set[str] | None:
     `FEEDER_OWN_AGENTS="..."` string or the ps1 `$FeederOwnAgents = @(...)`
     array. Returns the names as a set, or records an error and returns None if
     the runtime literal is missing or empty (a hook that lost its executable set
-    can mis-classify actors). stdlib `re` only — the script is never executed.
+    can mis-classify actors). stdlib `re` only. The script is never executed.
     """
     text = path.read_text(encoding="utf-8-sig")
     if label == "sh":
@@ -415,13 +416,13 @@ def parse_hook_runtime_set(path: Path, label: str) -> set[str] | None:
     elif label == "ps1":
         m = RUNTIME_PS1_RE.search(text)
         names = {t for t in PS1_TOKEN_RE.findall(m.group(1)) if t} if m else None
-    else:  # pragma: no cover — guard against an unknown script type.
+    else:  # pragma: no cover. Guard against an unknown script type.
         names = None
     if not names:
         err(
             path,
             "missing or empty RUNTIME FEEDER_OWN_AGENTS literal "
-            "(the set the hook actually executes) — required for the "
+            "(the set the hook actually executes), required for the "
             "actor-gate drift-guard",
         )
         return None
@@ -433,7 +434,7 @@ hook_scripts = {
     "ps1": REPO_ROOT / "hooks" / "no-source-edit.ps1",
 }
 # Set form of agent_names for O(1) `in` checks in the reverse-coverage loops
-# below (agent_names itself stays a list — order doesn't matter for membership,
+# below (agent_names itself stays a list; order doesn't matter for membership,
 # but no need to change its existing type/uses elsewhere in this script).
 agent_names_set = set(agent_names)
 for _label, hook_path in hook_scripts.items():
@@ -451,7 +452,7 @@ for _label, hook_path in hook_scripts.items():
             hook_path,
             f"FEEDER_OWN_AGENTS comment literal "
             f"{sorted(comment_set)} disagrees with the runtime literal "
-            f"{sorted(runtime_set)} the hook executes — update both so "
+            f"{sorted(runtime_set)} the hook executes. Update both so "
             f"the live actor gate matches its documented set",
         )
     # Coverage: every declared agent must appear in BOTH sets. The runtime set is
@@ -462,7 +463,7 @@ for _label, hook_path in hook_scripts.items():
             err(
                 hook_path,
                 f"runtime FEEDER_OWN_AGENTS set is missing agent "
-                f"'{agent_name}' (declared in agents/*.md) — the "
+                f"'{agent_name}' (declared in agents/*.md). The "
                 f"no-source-edit actor gate the hook executes has "
                 f"drifted from the real agent set; add it to keep the "
                 f"safety gate correct",
@@ -471,12 +472,12 @@ for _label, hook_path in hook_scripts.items():
             err(
                 hook_path,
                 f"FEEDER_OWN_AGENTS comment literal is missing agent "
-                f"'{agent_name}' (declared in agents/*.md) — the "
+                f"'{agent_name}' (declared in agents/*.md). The "
                 f"actor-gate drift-guard comment has drifted from the "
                 f"real agent set; add it to keep the safety gate correct",
             )
     # Reverse coverage: every name the hook actually carries must map to a real
-    # agents/*.md file. This is the NEW direction — an orphaned name (e.g. a
+    # agents/*.md file. This is the NEW direction. An orphaned name (e.g. a
     # deleted agent left behind in the hook's allowlist) is dead weight that
     # silently masks drift forever without this check. No escape hatch: any
     # orphaned name fails CI, full stop.
@@ -485,7 +486,7 @@ for _label, hook_path in hook_scripts.items():
             err(
                 hook_path,
                 f"runtime FEEDER_OWN_AGENTS set contains '{name}', "
-                f"which has no matching agents/*.md — this is a stale "
+                f"which has no matching agents/*.md. This is a stale "
                 f"orphaned name (e.g. from a deleted agent); remove it "
                 f"from the hook's allowlist",
             )
@@ -494,7 +495,7 @@ for _label, hook_path in hook_scripts.items():
             err(
                 hook_path,
                 f"FEEDER_OWN_AGENTS comment literal contains '{name}', "
-                f"which has no matching agents/*.md — this is a stale "
+                f"which has no matching agents/*.md. This is a stale "
                 f"orphaned name (e.g. from a deleted agent); remove it "
                 f"from the hook's comment literal",
             )
@@ -504,22 +505,23 @@ for _label, hook_path in hook_scripts.items():
 # Why this exists: the skills cross-reference one another to ground their design
 # decisions. When one skill cites another by ABSOLUTE LINE NUMBER (e.g.
 # `skills/plan/SKILL.md:579-591`), any later insertion into the cited file shifts
-# every line below it and SILENTLY invalidates the citation — it now points at
+# every line below it and SILENTLY invalidates the citation: it now points at
 # unrelated text, with nothing to flag the drift (issue #154 alone drifted ~10
-# such refs by ~67 lines). A STABLE NAMED ANCHOR — naming the cited target by its
-# Step / section / § heading instead of a line number — does not drift on insert,
-# because the heading text moves together with the content it labels.
+# such refs by ~67 lines). A STABLE NAMED ANCHOR names the cited target by its
+# Step / section / § heading instead of a line number. It does not drift on
+# insert, because the heading text moves together with the content it labels.
 #
 # This guard scans every skills/**/SKILL.md for a `…SKILL.md:NNN` (or `:NNN-MMM`)
 # reference and flags it WHEN the cited path is a DIFFERENT file than the one the
-# citation lives in — a cross-file line citation, the drift-prone kind. This
+# citation lives in (a cross-file line citation, the drift-prone kind). This
 # covers in-repo cross-file refs AND cross-repo `<plugin>/skills/.../SKILL.md:NNN`
-# refs (no exemptions). A SELF-REF — the cited path IS the containing file (e.g.
-# `skills/plan/SKILL.md:336` written inside skills/plan/SKILL.md) — is ALLOWED:
-# an intra-file line number is the author's own to keep current and is out of this
-# guard's scope. The fix for a flagged citation is always the same: replace the
-# `:NNN` with the target's stable heading name. stdlib `re` only; scoped to
-# skills/**/SKILL.md (docs / SPEC prose is intentionally NOT scanned).
+# refs (no exemptions). A SELF-REF is one where the cited path IS the containing
+# file (e.g. `skills/plan/SKILL.md:336` written inside skills/plan/SKILL.md). It
+# is ALLOWED: an intra-file line number is the author's own to keep current and
+# is out of this guard's scope. The fix for a flagged citation is always the
+# same: replace the `:NNN` with the target's stable heading name. stdlib `re`
+# only; scoped to skills/**/SKILL.md (docs / SPEC prose is intentionally NOT
+# scanned).
 
 CROSS_FILE_LINE_CITATION_RE = re.compile(r"([A-Za-z0-9_./-]*SKILL\.md):\d+(?:-\d+)?")
 
@@ -530,7 +532,7 @@ for skill_md in sorted((REPO_ROOT / "skills").rglob("SKILL.md")):
         if cited_path != skill_md.resolve():
             err(
                 skill_md,
-                f"cross-file line citation '{m.group(0)}' — line numbers "
+                f"cross-file line citation '{m.group(0)}'. Line numbers "
                 f"drift when the cited file changes, silently invalidating "
                 f"the reference; cite the target by its stable heading "
                 f"(its Step / section / § name) instead of a line number",
@@ -540,10 +542,10 @@ for skill_md in sorted((REPO_ROOT / "skills").rglob("SKILL.md")):
 #
 # Why this exists: a written size STANDARD with no enforcing GATE is exactly
 # what let skills/plan/SKILL.md and its siblings regrow past their own stated
-# targets before (issue #262's re-trim, issue #263's agent-description trim) —
-# this check is the gate that protects the standard going forward (issue #270).
+# targets before (issue #262's re-trim, issue #263's agent-description trim).
+# This check is the gate that protects the standard going forward (issue #270).
 #
-# Ceiling discipline (documented, not machine-enforced — mirrors the
+# Ceiling discipline (documented rather than machine-enforced; mirrors the
 # milestone-driver plugin's scripts/check-size-budgets.sh ratchet, issue #295):
 #   - FILE_WORD_CEILINGS values ONLY GO DOWN, NEVER UP. A ceiling is the
 #     governed file's actual `len(text.split())` count (when the ratchet was
@@ -556,11 +558,11 @@ for skill_md in sorted((REPO_ROOT / "skills").rglob("SKILL.md")):
 #   - The agents/**/*.md description ceiling (AGENT_DESCRIPTION_WORD_CEILING)
 #     is a flat policy ceiling, not ratcheted from any single file's count.
 #   - A file not named in FILE_WORD_CEILINGS is not yet governed by this
-#     check — it is silently unchecked until a ceiling is added for it
+#     check. It is silently unchecked until a ceiling is added for it
 #     (a deliberate scope choice: an ungoverned file has no ceiling to violate).
 #   - A path NAMED in FILE_WORD_CEILINGS but absent from disk (renamed or
-#     deleted without updating this table) IS a failure, never a silent pass —
-#     mirrors both the driver twin's MISSING case and this same file's
+#     deleted without updating this table) IS a failure, never a silent pass.
+#     This mirrors both the driver twin's MISSING case and this same file's
 #     "--- 4 ---" reverse-coverage check just above (a hook-listed agent name
 #     with no matching agents/*.md file fails too). This is why the loop below
 #     iterates FILE_WORD_CEILINGS itself, not a `skills/**/SKILL.md` glob.
@@ -570,13 +572,13 @@ for skill_md in sorted((REPO_ROOT / "skills").rglob("SKILL.md")):
 # blocks and <example> blocks count everywhere; the frontmatter `description`
 # field's word count only (reusing parse_frontmatter()) for every
 # agents/**/*.md. A file whose frontmatter doesn't parse, or that has no
-# `description`, is skipped here — the structural check in "--- 3 ---" above
+# `description`, is skipped here. The structural check in "--- 3 ---" above
 # already fails that file, so this check does not double-report or crash on it.
 # An agent file is therefore checked twice, once whole-file against the table
 # below and once description-only against the flat ceiling. That is deliberate.
 # The two ceilings govern different things, so neither subsumes the other.
 # (No analogous "listed but missing" guard is needed for agent descriptions:
-# there is no per-file table to go stale — the ceiling is a flat number applied
+# there is no per-file table to go stale; the ceiling is a flat number applied
 # to whatever agents/*.md files are discovered, and a deleted/renamed agent
 # already fails "--- 4 ---"'s reverse-coverage check above, so adding a second
 # one here would only duplicate it.)
@@ -594,12 +596,13 @@ for skill_md in sorted((REPO_ROOT / "skills").rglob("SKILL.md")):
 #   - docs/architecture.md, docs/consumer-setup.md, and
 #     docs/never-claims-audit.md carry no skills/ or agents/ reference at all,
 #     so no run loads them.
-# Every value below was measured on the integration branch (issue #394).
+# Every value below was measured on the integration branch (issue #394). #424
+# has since shrunk two governed files under their recorded ceilings:
+# skills/create/SKILL.md now measures 4357 (a tightening pass would record
+# 4600) and SPEC.md 6447 (6800). Both values below stand until that pass runs,
+# because the never-up rule permits a descent without compelling one. No other
+# governed file's count moved off its recorded ceiling.
 FILE_WORD_CEILINGS: dict[str, int] = {
-    # 4439 words times 1.05 is 4660.95, which rounds up to 4700, the value
-    # already recorded. This file is the one the milestone does not tighten:
-    # #395 added a 203-word separator-tolerance paragraph to Step 2, so there
-    # is no post-trim reduction here to lock in.
     "skills/create/SKILL.md": 4700,
     "skills/update/SKILL.md": 6550,
     "skills/build-roadmap/SKILL.md": 2700,
@@ -633,7 +636,7 @@ for rel_path, ceiling in sorted(FILE_WORD_CEILINGS.items()):
         err(
             governed_md,
             f"is listed in FILE_WORD_CEILINGS ({ceiling}-word ceiling) "
-            f"but is missing from disk — a renamed or deleted governed "
+            f"but is missing from disk. A renamed or deleted governed "
             f"file must update this table in the same change, not "
             f"silently drop out of the size-budget gate",
         )
@@ -643,8 +646,8 @@ for rel_path, ceiling in sorted(FILE_WORD_CEILINGS.items()):
         err(
             governed_md,
             f"is {word_count} words, over its {ceiling}-word "
-            f"size-budget ceiling (FILE_WORD_CEILINGS in this script) "
-            f"— trim it, or if the growth is deliberate, record a "
+            f"size-budget ceiling (FILE_WORD_CEILINGS in this script). "
+            f"Trim it, or if the growth is deliberate, record a "
             f"decision on the issue that grows it and raise the "
             f"ceiling in the same change",
         )
@@ -664,7 +667,7 @@ if agents_dir.is_dir():
                 agent_md,
                 f"frontmatter 'description' is {word_count} words, "
                 f"over the flat {AGENT_DESCRIPTION_WORD_CEILING}-word "
-                f"ceiling every agent description is held to — trim it",
+                f"ceiling every agent description is held to. Trim it",
             )
 
 # --- report -----------------------------------------------------------------
