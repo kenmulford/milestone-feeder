@@ -1,19 +1,25 @@
 name: CI
 
 # Three pull-request gates for the milestone-feeder plugin. All must pass
-# before a PR into main or develop can merge. Neither builds anything — this
-# repo is a Claude Code plugin (markdown skills/agents + JSON manifests), so
-# the gates only verify the surface stays clean and loadable.
+# before a PR into main or develop can merge. None of the three builds
+# anything: this repo is a Claude Code plugin (markdown skills/agents + JSON
+# manifests), so the gates only verify the surface stays clean and loadable.
 #
-#   1. vocabulary-purge gate   — fails if the retired v0.3.0 words reappear on
-#                                the live plugin surface (spec §11).
-#   2. plugin-structure check  — fails if a manifest or a skill/agent/command
+#   1. vocabulary-purge gate:    fails if a retired v0.3.0 word or a stray em
+#                                dash (U+2014) reaches the live plugin surface.
+#                                Both checked categories, and the allowlist of
+#                                sanctioned quotes, are defined in that
+#                                script's own header (issue #399).
+#   2. plugin-structure check:   fails if a manifest or a skill/agent/command
 #                                frontmatter block is malformed, or a governed
-#                                skills/**/SKILL.md or agents/**/*.md exceeds
-#                                its size-budget ceiling (issue #270).
-#   3. contract-strings gate   — fails if the implied-surfaces marker or the
+#                                prose file (a skills/**/SKILL.md, an
+#                                agents/**/*.md, SPEC.md, or a
+#                                runtime-referenced docs/*.md) exceeds its
+#                                size-budget ceiling (issue #270).
+#   3. contract-strings gate:    fails if the implied-surfaces marker or the
 #                                anti-fixation prompt drifts from its
-#                                canonical em-dash form (issue #369).
+#                                canonical hyphen form (gate from issue #369;
+#                                hyphen canonical since issue #398).
 #
 # The three job names below ("vocabulary-purge gate", "plugin-structure check",
 # "contract-strings gate") are the required-status-check contexts to wire in
@@ -41,7 +47,7 @@ jobs:
     steps:
       - name: Check out the code under review
         uses: actions/checkout@v7
-      - name: Scan the live surface for retired v0.3.0 vocabulary
+      - name: Scan the live surface for retired vocabulary and stray em dashes
         run: ./scripts/check-vocabulary.sh
 
   plugin-structure-check:

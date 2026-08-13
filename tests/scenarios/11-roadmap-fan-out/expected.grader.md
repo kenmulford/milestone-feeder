@@ -1,4 +1,4 @@
-# Expected contract — 11 roadmap-fan-out  (GRADER ONLY)
+# Expected contract: 11 roadmap-fan-out  (GRADER ONLY)
 
 An **oversized whole-app brief** that spans several milestones. `plan`'s front-door
 (Step 3.6) must route it into the `build-roadmap` flow: **split** the brief into a
@@ -18,14 +18,14 @@ Per the harness write-path rule (`tests/README.md` "Execution model", lines 29 &
 | Path | Artifacts | Run now? |
 |---|---|---|
 | **Plan-side:** split → confirm → parallel-plan | the roadmap **manifest** + the **N per-milestone plan files**, emitted as **text artifacts** under `.milestone-feeder/` with **zero GitHub writes** | **✅ preview now** |
-| **Create-side:** create deploy-loop (Step 1R) | live milestones/issues | **Sandbox follow-up** — designed here, run later against a throwaway repo, **labeled, not silently skipped** |
+| **Create-side:** create deploy-loop (Step 1R) | live milestones/issues | **Sandbox follow-up**: designed here, run later against a throwaway repo, **labeled, not silently skipped** |
 
 A grader runs the **✅** rows now and confirms the **sandbox** rows are designed (the
 assertions exist), not executed.
 
 ---
 
-## MUST — artifact class 1: the roadmap MANIFEST  (✅ preview)
+## MUST: artifact class 1: the roadmap MANIFEST  (✅ preview)
 
 - The front-door **routes** (architect raises `SCOPE_SPANS_MULTIPLE_MILESTONES`;
   `plan` Step 3.6 enters `build-roadmap`). It does **not** fall through to the
@@ -36,23 +36,23 @@ assertions exist), not executed.
   `Confirmed: yes` (the user-confirmed split, not the raw proposal), and a
   `Build order: <M1> → <M2> → … → <MN>` line.
 - A **`## Original brief` … `## End original brief` paired-delimiter section persists
-  the FULL whole-app brief, multi-line** — every author section, verbatim or
+  the FULL whole-app brief, multi-line**: every author section, verbatim or
   near-verbatim, with the literal `## End original brief` line emitted immediately after
   the brief text. The brief extracts **intact even when it contains its own `## `
-  headings** — the lines strictly between the paired markers are the brief, so a brief
+  headings**: the lines strictly between the paired markers are the brief, so a brief
   with internal `## ` sections is NOT truncated at its first heading. The manifest
   persists the full whole-app brief as a durable record; persisting it is the manifest's contract.
 - `## Milestones (in build order)` lists **N ≥ 2** entries forming a **strict
   partition** of the brief's in-scope: every author section assigned to exactly one
   milestone, none dropped, none duplicated, positions running `1..N` with no gaps or
   repeats. Each `### <position>. <name>` entry carries all five fields:
-  - **name** — a milestone title,
-  - **Brief slice** — the author section(s) this milestone owns,
-  - **Build-order position** — its `1..N` slot,
-  - **Plan file** — the `.milestone-feeder/plan-<slug>.md` handle (PENDING when
+  - **name**: a milestone title,
+  - **Brief slice**: the author section(s) this milestone owns,
+  - **Build-order position**: its `1..N` slot,
+  - **Plan file**: the `.milestone-feeder/plan-<slug>.md` handle (PENDING when
     `build-roadmap` writes the manifest; **populated by the Step-3.7 fan-out** after
-    each milestone is planned — see artifact class 2),
-  - **Change-rationale** — `merged | split | reordered | unchanged` **vs the
+    each milestone is planned: see artifact class 2),
+  - **Change-rationale**: `merged | split | reordered | unchanged` **vs the
     author's headings**, with the reason.
 - **The split records a real diff:** at least one milestone's change-rationale is a
   non-trivial **merge** or **reorder** (e.g. the data-model section folded into the
@@ -65,7 +65,7 @@ assertions exist), not executed.
   only act on data another milestone introduces (notifications, payments,
   portal/reporting screens) sits **after** it.
 
-## MUST — artifact class 2: the N per-milestone PLAN FILES  (✅ preview)
+## MUST: artifact class 2: the N per-milestone PLAN FILES  (✅ preview)
 
 - The Step-3.7 fan-out plans **every** milestone the confirmed manifest names and
   emits **one plan file per milestone** at `.milestone-feeder/plan-<slug>.md`
@@ -77,7 +77,7 @@ assertions exist), not executed.
   planning reuses the single-milestone pipeline; the roadmap path adds the **outer**
   fan-out, not a new per-issue format.)
 - After the fan-out, **each manifest entry's `Plan file:` field is populated** with
-  that milestone's real path (no longer PENDING) — the handle `create`'s deploy-loop
+  that milestone's real path (no longer PENDING): the handle `create`'s deploy-loop
   later resolves each milestone by (never a name-derived slug).
 - **UI classification engages per milestone:** because `uiSurfaceGlobs` is set, the
   portal / dashboard / revenue-report **page-issues classify `ui`** and their
@@ -85,37 +85,37 @@ assertions exist), not executed.
   cited from `project/conventions.md`) the driver's design lens checks; the auth /
   data-model / API issues classify `logic`.
 
-## MUST — empty fan-out: single-milestone collapse is a valid outcome, not an error  (✅ preview)
+## MUST: empty fan-out: single-milestone collapse is a valid outcome, not an error  (✅ preview)
 
 - **Asserted alternate:** if the split **collapses to a single milestone** (the
-  splitter returns fewer than two entries — e.g. were the brief reduced to just
+  splitter returns fewer than two entries, e.g. were the brief reduced to just
   *Accounts & access*), then **NO manifest is written**, `build-roadmap` returns no
   manifest path, and `plan` **falls back to its single-milestone pipeline on the
-  whole brief, unchanged** — zero roadmap artifacts (no manifest, no fan-out). This
+  whole brief, unchanged**: zero roadmap artifacts (no manifest, no fan-out). This
   is an **asserted success outcome, not an error** and not a park.
 - The equivalent guard holds at the fan-out (`plan` Step 3.7.a): **N = 0 → no probe,
   no dispatch, no plan files**, surfaced as empty, not aborted.
 
-## MUST — degenerate: an undecided product call PARKS one issue and siblings continue  (✅ preview)
+## MUST: degenerate: an undecided product call PARKS one issue and siblings continue  (✅ preview)
 
 - The **Payments & billing** slice carries a product call with **no conventional
-  default** — the brief names no payment provider, no currency, no fee/tax policy,
+  default**: the brief names no payment provider, no currency, no fee/tax policy,
   and `project/conventions.md` supplies none (it fixes only the integer-minor-units
   storage representation). The issue that needs that decision must **PARK** to the
-  **needs-product-input** report — **never invent** a provider, currency, or fee
+  **needs-product-input** report: **never invent** a provider, currency, or fee
   rule.
 - **Parking is scoped, not fatal:** the park drops only the issue(s) that depend on
   the undecided call (and their dependents). **Sibling issues in the same milestone
-  that the conventions DO ground continue to plan** — e.g. the `Payment` data model,
+  that the conventions DO ground continue to plan**, e.g. the `Payment` data model,
   the payment→invoice association, the "paid" status flip / badge. The park does
   **not** abort the Payments milestone, and **does not abort the roadmap**: the other
-  milestones plan normally (`plan` Step 3.7.g — one milestone's trouble never aborts
+  milestones plan normally (`plan` Step 3.7.g: one milestone's trouble never aborts
   the roadmap; a failed-to-plan milestone is recorded, siblings continue).
 - The needs-product-input report itemizes the parked decision with its blocking
   reason and brief reference; the manifest/plan artifacts for the unaffected work
   still emit.
 
-## MUST — artifact class 3: the create deploy-loop  (SANDBOX follow-up — designed, not run now)
+## MUST: artifact class 3: the create deploy-loop  (SANDBOX follow-up: designed, not run now)
 
 Designed here; **run later against a throwaway sandbox repo** (this makes real
 GitHub writes, excluded from the preview run per `tests/README.md` lines 33–35):
@@ -125,39 +125,39 @@ GitHub writes, excluded from the preview run per `tests/README.md` lines 33–35
   path, deploy via Step 3 passes a–e (labels / create-or-adopt milestone by exact
   title / open surviving issues / slug→`#n` rewrite + Wave PATCH / route report), and
   PATCH a single canonical `build order: milestone X of N` line into its description.
-- **Idempotent / non-destructive:** create-or-adopt per milestone — never deletes,
+- **Idempotent / non-destructive:** create-or-adopt per milestone, never deletes,
   never duplicates a same-title open issue; a mid-loop failure **stops and reports**
-  which milestones deployed, which failed and at which pass, which remain — and a
-  re-run **resumes** (already-deployed milestones adopted by exact title) — now
+  which milestones deployed, which failed and at which pass, which remain. A re-run
+  **resumes** (already-deployed milestones adopted by exact title), now
   short-circuited for already-fully-deployed milestones by a per-run deploy
   checkpoint (`docs/create-deploy-sequence.md` → "The deploy checkpoint (resume
   short-circuit, roadmap-only)").
 - **Parked issues are never created**; they route to the needs-input report.
 
-## Disabled / edge — bash/pwsh parity
+## Disabled / edge: bash/pwsh parity
 
 - The plan-side preview portion (split → confirm → parallel-plan) is **prose-only**:
   the only scripted twins it touches are the scratch-dir self-ignore
   (`.milestone-feeder/.gitignore` ← `*`) writes, which carry no scenario-specific
   finding. **Parity is recorded N/A for the preview portion.**
 - The cross-platform-parity obligation therefore **lands on the sandbox create-loop
-  run**: where the deploy-loop `gh` twins (Step 1R — bash +
+  run**: where the deploy-loop `gh` twins (Step 1R: bash +
   PowerShell 7+) are exercised, the sandbox run MUST assert the two twins produce
   **identical** deploy receipts on the same inputs.
-  (Cross-platform parity is itself a test obligation — `nonNegotiables`;
+  (Cross-platform parity is itself a test obligation: `nonNegotiables`;
   `.project/conventions.md#Test patterns`.)
 
 ## SHOULD
 
 - Convention citations point at the provided `project/conventions.md` (real
-  grounding) — REST shape, `requireRole()` / owner-scope, `useToast()`, required
-  states, `DataTable` + 30/page — not invented.
+  grounding): REST shape, `requireRole()` / owner-scope, `useToast()`, required
+  states, `DataTable` + 30/page; not invented.
 - The milestone split mirrors real build dependencies (one milestone per coherent
   release boundary), not an arbitrary even slicing of the author sections.
 
 ## FAIL if
 
-- The oversized brief is **not routed** — `plan` plans it as one single milestone
+- The oversized brief is **not routed**: `plan` plans it as one single milestone
   (no manifest, no fan-out) when the brief plainly spans several releases.
 - The manifest is **not a strict partition** (an author section dropped or
   double-assigned; positions with a gap/repeat), or omits the `## Original brief`

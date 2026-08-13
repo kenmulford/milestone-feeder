@@ -1,4 +1,4 @@
-# Test environment — 13 layer-aware breakdown (what the run assumes)
+# Test environment: 13 layer-aware breakdown (what the run assumes)
 
 The brief adds a small backend feature (list + create notes, with a slug helper) to a
 project whose `.project` states a **strict layering convention**
@@ -6,7 +6,7 @@ project whose `.project` states a **strict layering convention**
 `services/` ← `controllers/` ← `routes/`, where CRUD lives in `data/`, request
 validation in `controllers/`, and formatting/slug helpers in `util/`. A service
 receives its repository by constructor injection (an interface), so the service source
-never names the concrete repository type — the **layer** dependency, not a textual
+never names the concrete repository type: the **layer** dependency, not a textual
 type reference, is what orders a service after its repository.
 
 The run must assign each candidate its architectural layer and key the Wave order to
