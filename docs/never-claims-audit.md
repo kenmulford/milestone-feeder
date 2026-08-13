@@ -41,7 +41,7 @@ honest deliverable is this claim-to-backing map plus the residual note below, no
 | **2. Hook-gated** | `hooks/no-source-edit.sh` / `.ps1` deny `Write\|Edit\|MultiEdit\|NotebookEdit` on `sourceGlobs` paths (exit 2), for the feeder's own actors. | plan / create / update "Authors no code, opens no PRs, never touches branches", "never edits a source file" | **gate-backed** |
 | **3. Structural invariant** | Deterministic control flow of the Step-0 outer boundary and the inner-routine refactor. | plan "resolved ONCE at Step 0... NEVER re-resolves per invocation", "never re-enters Step 3.6 or 3.7 (no recursion)"; create / update "read the manifest (never regenerate it)"; the additive merge "the global reference is the FLOOR, never reduced... no removal path", setup overlay "can never remove a surface" | **gate-backed** (control-flow / no-op-by-construction) |
 | **4. Error-philosophy branch** | The best-effort degrade behavior each step implements (`.project/design-philosophy.md#Error & failure philosophy`). | plan / create / update one-time notices "best-effort and never aborts", "skipped for that entry only, never a crash"; build-roadmap "surfaced, never silently dropped", "never leave a partial or corrupt manifest"; setup "never overwrite a user-edited .gitignore", "an absent overlay is never an error" | **gate-backed** (deterministic branch) |
-| **5. Scenario-asserted behavioral claim** | A behavioral promise a dispatched agent (architect / issue-author) delivers, asserted by a `tests/scenarios/` fixture. | plan "Parks product gaps, never invents scope" / "Never guessed" (scenarios 02, 12); "read best-effort, never fabricated... never grounded on" (03); the flagship directive-holds-unweakened claim (06) | **scenario-backed**, with the standing caveat below |
+| **5. Scenario-asserted behavioral claim** | A behavioral promise a dispatched agent (architect / issue-author) delivers, asserted by a `tests/scenarios/` fixture. | plan "Parks product gaps, never invents scope" / "Never guessed" (scenarios 02, 12); "read best-effort, never fabricated... never grounded on" (03); the flagship directive-holds-unweakened claim (06), **which the 2026-08-13 re-run graded FAIL and which is therefore asserted, not backed** (`tests/RESULTS.md#Run record: 2026-08-13 (v0.14.0 tree, proxied agents)`) | **scenario-backed**, with the standing caveat below |
 
 ## The residual (class 5) and its caveat
 
@@ -49,7 +49,7 @@ The class-5 claims are the only ones whose backing is behavioral rather than det
 **Update (2026-07-06):** four class-5 fixtures were executed against the installed plugin with
 the real agents dispatched (`tests/RESULTS.md` run record). Three load-bearing claims are now
 **demonstrated** on the current pipeline: never-invents-scope (02, PASS), resolve-and-cite-not-
-over-park (03, PASS), and directive-consistency-at-scale (06, PASS). The implied-surfaces claim
+over-park (03, PASS), and directive-consistency-at-scale (06, PASS **on 2026-07-06, then FAIL on the 2026-08-13 re-run against the v0.14.0 tree, so it is currently unbacked**). The implied-surfaces claim
 graded **PARTIAL** (12): the parking and anti-fixation behavior held, but companion surfaces
 that already exist as app-wide infra were absorbed as grounded rather than marked `implied`
 (tracked as #284). The remaining class-5 fixtures have not been run, so those claims stay
