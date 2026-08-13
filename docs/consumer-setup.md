@@ -124,10 +124,10 @@ shape that matters:
 | Author | Dispatches the `issue-author` per candidate → each issue's full §4 spec (acceptance criteria covering empty/error/disabled states, recorded consistent design, declared edges, UI/logic + risk), drafted to pass the driver's triage clean. |
 | Drop + emit | Drops parked issues and their dependents, then writes a plan file to `.milestone-feeder/plan-<slug>.md` and a "needs product input" report when product gaps remain. The plan file carries the milestone description (Wave order) plus every surviving issue body. **No GitHub writes**: the GitHub artifacts are built later by `create`. |
 
-**The park boundary.** Some decisions have no conventional default: what to build,
-or user-facing behavior the standing docs and conventions do not answer. Those are
-**parked** to the "needs product input" report, never guessed. Decide each, record
-it, and re-run.
+**The park boundary.** A decision with no conventional default (what to build, or
+user-facing behavior the standing docs and conventions do not answer) is **parked**
+to the "needs product input" report, never guessed. Decide each, record it, and
+re-run.
 
 ## When your brief spans several releases (the roadmap)
 
@@ -218,10 +218,10 @@ the driver yourself. The `autoHandoff` setting in your `feeder.json` controls th
   feature existed.
 
 Three things have to be true for the offer to appear: the run must be **clean** (no
-product gaps, nothing flagged for your decision), `milestone-driver` must be
-**installed** (if it isn't, `create` just finishes quietly: no prompt, no error),
-and the handoff only **starts the build**. A run with gaps surfaces them instead of
-offering to build. The driver builds onto your integration branch (e.g.
+product gaps and nothing flagged for your decision; a run with gaps surfaces them
+instead of offering to build), `milestone-driver` must be **installed** (if it
+isn't, `create` just finishes quietly: no prompt, no error), and the handoff only
+**starts the build**. The driver builds onto your integration branch (e.g.
 `develop`); it never merges to your protected branch (e.g. `main`). Releasing stays
 your manual call, exactly as it is when you run the driver yourself. To keep the
 pre-handoff behavior (`create` finishes and stops), set `autoHandoff` to `"off"`.
@@ -232,8 +232,8 @@ pre-handoff behavior (`create` finishes and stops), set `autoHandoff` to `"off"`
 that **already exists**, the maintenance counterpart of `create`. Where `create`
 *builds* a milestone, `update` *reconciles* the plan against the live one,
 **creating and deleting no issues**. The flow: edit your brief, re-run `plan` to
-refresh the plan file, then `update` reconciles it against the live milestone. It
-shows you the diff before it writes:
+refresh the plan file, then `update` reconciles it against the live milestone
+(showing you the diff before it writes):
 
 | Step | Command | What happens |
 |---|---|---|

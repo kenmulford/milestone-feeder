@@ -48,7 +48,7 @@ The rank is context-dependent at one point. A SEMICOLON outranks a COMMA only wh
 |---|---|
 | A fenced ASIDE | PARENTHESES |
 | A PIVOT to a contrast or a consequence | PERIOD or SEMICOLON |
-| An appositive or trailing qualifier | COMMA, only where the sentence carries no other comma at the same level |
+| An appositive or trailing qualifier | COMMA, only where the sentence carries no other comma delimiting a series or joining independent clauses at the same level |
 | A gloss on what precedes | COLON, only where what follows genuinely introduces, explains, or lists it |
 | An ATX heading line | ATTACHED COLON, unconditionally |
 

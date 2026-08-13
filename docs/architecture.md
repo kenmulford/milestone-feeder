@@ -108,8 +108,8 @@ feature brief (file / inline / GitHub epic issue)
 The park boundary is the load-bearing constraint: the feeder makes *design and
 implementation* calls when your project's standing docs or a stated repo convention
 supplies the answer, and parks *product* calls to a "needs product input" report
-rather than guessing them. A *product* call is what to build, or user-facing
-behavior with no conventional default.
+rather than guessing them. A *product* call is a decision with no conventional
+default: what to build, or user-facing behavior.
 
 ## The mechanical gate
 
@@ -179,10 +179,11 @@ A brief that names a capability ("add email", "user management", "sync") or
 introduces a new entity quietly commits to a standard set of companion surfaces
 (screens, endpoints, jobs, settings) it never spells out. So during breakdown the
 architect consults the bundled **implied-surfaces reference**
-([`implied-surfaces.md`](implied-surfaces.md), a stack-agnostic *reasoning prompt*,
-not a checklist) and considers the companions each named capability or new entity
-implies. It then sorts each one with the **same grounded-vs-product-gap judgment it
-already applies** (`agents/architect.md` clause 8):
+([`implied-surfaces.md`](implied-surfaces.md)) and considers the companions each
+named capability or new entity implies. That reference is a stack-agnostic
+*reasoning prompt*, not a checklist. The architect then sorts each companion with the
+**same grounded-vs-product-gap judgment it already applies**
+(`agents/architect.md` clause 8):
 
 - A **conventional companion** with a conventional default (e.g. email → a
   delivery-failure log; a Users entity → reset-password) rides `CANDIDATES` with the
