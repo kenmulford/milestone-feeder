@@ -582,12 +582,18 @@ for skill_md in sorted((REPO_ROOT / "skills").rglob("SKILL.md")):
 # one here would only duplicate it.)
 
 # The governed set is the 5 skills/**/SKILL.md, the 3 agents/**/*.md, SPEC.md,
-# and the 12 docs/*.md a skill or an agent references at run time. Deliberately
-# ungoverned, and never added by a later sweep without a recorded decision:
-# docs/specs/*.md are frozen historical design specs, cited as provenance and
-# never re-authored, so a ceiling on them would gate nothing; and
-# docs/architecture.md, docs/consumer-setup.md, and docs/never-claims-audit.md
-# carry no runtime reference from skills/ or agents/, so no run reads them.
+# and the 12 docs/*.md that a file under skills/ or agents/ references. That
+# reference is the criterion: a run loads a skill or an agent, and reaches a
+# doc only through one of them. Deliberately ungoverned, and not to be added
+# by a later sweep without a recorded decision:
+#   - docs/specs/*.md are per-release design records. Three of the four are
+#     referenced from skills/ or agents/, so the reference criterion alone
+#     would pull them in; they are excluded anyway because a ceiling there
+#     would ratchet a record of what a past release designed rather than
+#     protect a surface anyone is still authoring.
+#   - docs/architecture.md, docs/consumer-setup.md, and
+#     docs/never-claims-audit.md carry no skills/ or agents/ reference at all,
+#     so no run loads them.
 # Every value below was measured on the integration branch (issue #394).
 FILE_WORD_CEILINGS: dict[str, int] = {
     "skills/create/SKILL.md": 4450,
