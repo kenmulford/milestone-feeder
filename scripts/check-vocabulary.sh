@@ -137,9 +137,16 @@ ALLOWLIST_ROWS=(
 #
 # Every row is checked before the script reports, so one run names every miss
 # rather than only the first.
+#
+# Both loops over this table expand it as ${ALLOWLIST_ROWS[@]+"..."}. Bash 3.2
+# treats "${arr[@]}" on an EMPTY array as an unbound variable under `set -u`
+# and aborts; bash 5 does not. If every sanctioned quote is ever recast away,
+# the unguarded form would abort locally and run clean in CI: the same
+# local-versus-CI divergence this gate exists to prevent, in the opposite
+# direction. Verified on 3.2.57 and 5.3.15.
 allowlist_failures=0
 
-for row in "${ALLOWLIST_ROWS[@]}"; do
+for row in ${ALLOWLIST_ROWS[@]+"${ALLOWLIST_ROWS[@]}"}; do
   file="${row%%|*}"
   span="${row#*|}"
 
@@ -189,8 +196,24 @@ fi
 #
 # Capture the exit status explicitly so a grep *error* can't masquerade as a
 # clean tree. Do not discard stderr: a real failure should be visible.
+#
+# --no-color is load-bearing, not cosmetic. A developer with `color.ui` or
+# `color.grep` set to `always` gets ANSI escapes wrapped around the path field
+# and around every match, so `${match%%:*}` below yields a decorated path that
+# matches no ALLOWLIST_ROWS file, no span is stripped, and all four sanctioned
+# quotes report as violations on an unmodified tree. Verified: with
+# `color.ui=always` and no --no-color, this gate exits 1 on a clean checkout.
+# CI is unaffected (no color config, not a TTY), which makes it precisely the
+# local-versus-CI divergence the EMDASH note above guards against.
+#
+# The last pathspec needs an intermediate directory to match, so it covers
+# tests/scenarios/<n>/observed-*.md but not a record written straight into
+# tests/. All 15 run records live a level down today and every one is matched.
+# A record moved up a level would be SCANNED rather than excluded, which fails
+# closed and is visible. Kept in this form to mirror
+# scripts/check-contract-strings.sh (Authoritative definition) byte for byte.
 set +e
-MATCHES="$(git grep -EIinH "${PATTERN}" -- \
+MATCHES="$(git grep --no-color -EIinH "${PATTERN}" -- \
   ':!:docs/specs/**' ':!:CHANGELOG.md' ':!:scripts/**' ':!:.github/**' \
   ':!:tests/**/*observed-*.md')"
 status=$?
@@ -237,7 +260,7 @@ while IFS= read -r match; do
   rest="${match#*:}"
   survivor="${rest#*:}"
 
-  for row in "${ALLOWLIST_ROWS[@]}"; do
+  for row in ${ALLOWLIST_ROWS[@]+"${ALLOWLIST_ROWS[@]}"}; do
     [ "${row%%|*}" = "${file}" ] || continue
     span="${row#*|}"
     survivor="${survivor//"${span}"/}"
@@ -268,8 +291,8 @@ fi
 # Each category prints its own block, so a tree carrying both gets both.
 if [ -n "${vocab_hits}" ]; then
   echo "FAIL: retired v0.3.0 vocabulary found on the live plugin surface." >&2
-  echo "      Use the v0.3.0 words (docs/specs/v0.3.0-humanize-the-surface.md," >&2
-  echo "      ## 12. Vocabulary table):" >&2
+  echo "      Use the v0.3.0 words. Table: docs/specs/v0.3.0-humanize-the-surface.md" >&2
+  echo "      at '## 12. Vocabulary table (the backbone)'." >&2
   echo "        decompose -> plan / architect    --apply -> create" >&2
   echo "        substrateDir -> projectDocs       selfCheck -> reviewer" >&2
   echo >&2
