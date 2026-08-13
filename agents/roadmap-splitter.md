@@ -44,10 +44,10 @@ Return **only** this block. No prose before or after it, no milestones opened, n
 ROADMAP:
   - milestone: <name of proposed milestone>
     position: 1
-    brief_slice: <the portion of the brief this milestone owns. The author
+    brief_slice: <the portion of the brief this milestone owns: the author
                   sections / scope it covers, verbatim or closely paraphrased>
     rationale: <merged | split | reordered | unchanged vs the author's headings,
-                and why. Name the sections involved and the dependency, if any>
+                and why: name the sections involved and the dependency, if any>
   - milestone: <name of proposed milestone>
     position: 2
     brief_slice: <…>
