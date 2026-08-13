@@ -11,7 +11,8 @@
 #   A prose pass can quietly swap that hyphen for an em dash, en dash, colon,
 #   comma, or drop the separator entirely. The words survive, only the
 #   canonical punctuation drifts, and nothing else notices (issue #369: a
-#   prose sweep did exactly this and both existing CI gates stayed green).
+#   prose sweep drifted this separator and both existing CI gates stayed
+#   green; it ran in the opposite direction, before the hyphen was canonical).
 #   This script does NOT assert the strings are present anywhere — most files
 #   never mention them, and a presence-anywhere scan can't fail closed with a
 #   real file:line either way. Instead it scans the live, committed surface
