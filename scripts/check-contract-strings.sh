@@ -49,9 +49,12 @@
 #   the pathspec's leading `*` covers both the `observed-*.md` files and the
 #   `needs-product-input-observed-*.md` sibling that a plain `observed-*.md`
 #   glob would miss), and docs/specs/** (frozen historical specs, which quote
-#   whichever form was canonical when they were written; this mirrors the
-#   docs/specs/** carve-out scripts/check-vocabulary.sh already applies to its
-#   own scan for the same reason). Not excluded: scripts/ and .github/. Unlike
+#   whichever form was canonical when they were written; scripts/check-
+#   vocabulary.sh carves out the same path, there because spec §11 mandates it,
+#   here because a frozen spec must keep the form it shipped with. Both of
+#   v0.7.0's quotes wrap mid-phrase, so this pathspec is inert against today's
+#   tree and stands for the next one). Not excluded: scripts/ and .github/.
+#   Unlike
 #   scripts/check-vocabulary.sh, whose pattern is a bare literal alternation
 #   that self-matches its own source, this gate's pattern is built by
 #   shell-variable interpolation (see SEP below), so the drifted-variant
@@ -88,9 +91,15 @@ cd "$(git rev-parse --show-toplevel)"
 # [[:space:]]* on both sides of an optional single-character separator group
 # means: if the separator is the hyphen, the group can't consume it (it's
 # not one of the four alternatives) and the following [[:space:]]* can't
-# consume it either (it isn't whitespace), so the canonical form can never
-# match. Any of the four drifted punctuation marks, or no punctuation mark
-# at all, matches cleanly.
+# consume it either (it isn't whitespace). The canonical form can never match.
+# Any of the four drifted punctuation marks, or no punctuation mark at all,
+# matches cleanly.
+#
+# KNOWN GAP, tracked on issue #399: this alternation carries only the colon and
+# the comma out of the five marks .project/conventions.md (## Em-dash ban)
+# prescribes. A sweeper following that ban writes a PERIOD, a SEMICOLON, or a
+# PAREN PAIR, and all three pass this gate clean. The ban's carve-out 2 is what
+# holds these two strings today, not this pattern.
 SEP='[[:space:]]*(—|–|:|,)?[[:space:]]*'
 PATTERN="implied${SEP}review / trim / augment|this is a starting set for YOUR app${SEP}what's missing\\?"
 
