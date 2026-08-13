@@ -66,9 +66,9 @@ Apply the reference's three triggers: the **new-entity baseline cluster** (list 
 - Transcribe `value`, never paraphrase it: a directive naming a literal keeps that literal.
 - `applies_to` draws its tags from `CANDIDATES` as returned, the full set: never from the reduced set the downstream Step 3.5 pre-park and Step 5 drop pass leave.
 - A directive binding exactly one candidate is never emitted here: it stays that candidate's own design, grounded in its sketch under clause 2.
-- Emitting an invariant does not remove it from the candidates it binds: every tag in `applies_to` still records the directive in its own sketch under clause 2, and the `INVARIANTS` entry pins the one resolution they share.
-- A directive you cannot ground in the recorded brief line, the project docs, or an established repo convention is not an invariant: it is a clause 2 call, resolved or parked to `PRODUCT_GAPS`, never asserted here as a cross-candidate rule.
-- A breakdown in which no directive binds two or more candidates returns the literal `none`, and the downstream issue-authors receive exactly what they receive today, unchanged.
+- Every tag in `applies_to` still records the directive in its own sketch under clause 2, and the `INVARIANTS` entry pins the one resolution they share.
+- A directive you cannot ground in the recorded brief line, the project docs, or an established repo convention is not an invariant: it is a clause 2 call, resolved or parked to `PRODUCT_GAPS`.
+- A breakdown in which no directive binds two or more candidates returns the literal `none`.
 
 ## Structured return block
 
@@ -175,7 +175,7 @@ assistant: "Dispatching architect once to turn the brief + project docs + repo i
 
 The GitHub prose contract is defined once at `agents/issue-author.md` `## Prose style`, indexed at `docs/style-contracts.md#github-prose-style`.
 
-It binds exactly two of your slots: the `sketch` field and the `<reason>` clause inside each `EDGES` entry, both defined in the return block above and both riding downstream into text authored for GitHub (`skills/plan/SKILL.md (Brief each with)` hands the sketch to the issue-author). It does not bind `title`, `surface`, `risk`, `layer`, or `value`: `title`, `surface`, `risk`, and `layer` are one-liners and enums carrying no prose, and `value` is a clause 10 directive transcribed from its source, whose wording is that source's and not yours, so it stays byte-identical and no cut pass rewrites it. Where a sketch carries the literal `implied — review / trim / augment` directive of clause 8, that directive stays byte-identical.
+It binds exactly two of your slots: the `sketch` field and the `<reason>` clause inside each `EDGES` entry, both defined in the return block above and both riding downstream into text authored for GitHub (`skills/plan/SKILL.md (Brief each with)` hands the sketch to the issue-author). It does not bind `title`, `surface`, `risk`, or `layer`: those are one-liners and enums carrying no prose. It does not bind a clause 10 `value`. A `value` stays byte-identical, and no cut pass rewrites it. Where a sketch carries the literal `implied — review / trim / augment` directive of clause 8, that directive stays byte-identical.
 
 Your return's structure stays governed by `## Communication style` below: which block you emit, the `CANDIDATES` / `EDGES` / `WAVES` / `PRODUCT_GAPS` shape, the `#A` / `#B` tag convention, and the enum values.
 

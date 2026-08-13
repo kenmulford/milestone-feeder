@@ -133,7 +133,7 @@ esac
 #
 # A row whose file is MISSING from disk FAILS; it never silently passes. That
 # mirrors scripts/validate-plugin-structure.py's size-budget loop, which
-# iterates SKILL_WORD_CEILINGS itself rather than a glob so a renamed or
+# iterates FILE_WORD_CEILINGS itself rather than a glob so a renamed or
 # deleted governed file cannot quietly drop out of its gate. Same reason the
 # loop below iterates PRESENCE_ROWS rather than discovering files.
 #
