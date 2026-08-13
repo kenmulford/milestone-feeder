@@ -3,6 +3,65 @@
 Release notes for milestone-feeder. Each tagged release is also published on the
 [GitHub Releases page](https://github.com/kenmulford/milestone-feeder/releases).
 
+## v0.14.0: post-trim accuracy
+
+**Theme:** The v0.13.2 prose trim dropped three load-bearing clauses and mutated two contract strings other files assert byte-exact. This release restores what was lost, removes the em dash from every governed surface, and puts the result behind three CI gates: a vocabulary gate that fails on U+2014, the contract-strings gate re-pinned to the hyphen form, and a size ratchet over 21 governed prose files whose ceilings only descend. It also adds the cross-candidate invariants thread, so a directive resolved once for a plan reaches every issue it binds carrying the same value.
+
+### ✨ Cross-candidate invariants
+
+| Issue | PR | What |
+|---|---|---|
+| #374 Clause 10 and the `INVARIANTS` return entry | #401 | The architect resolves a directive that binds two or more candidates once, and returns it as a named entry carrying `key`, `value`, `citation`, and `applies_to` |
+| #386 Verbatim transcription | #412 | The issue-author writes a handed-in `value` into the body byte for byte and carries its `citation` as the grounding ref, rewording nothing |
+| #388 Step 4 enforcement | #417 | `plan` hands each candidate the entries whose `applies_to` names it, and re-dispatches once, feeding back the `key` and `value`, when a returned `ISSUE_BODY` drops one |
+| #390 The thread in `SPEC.md` | #418 | Sections 3 and 3.1 record the mechanism end to end |
+| Three clauses restored | #373 | `agents/architect.md` clause 8's parenthetical distinguishing the reuse rule from `Dedupe:`, the Rigor gate's "an anchor or a line number, never both", and the issue-author's guard against reading the config-pointer rule as license to weaken a recorded directive |
+
+### 🧹 The em dash is banned
+
+- Recast across every governed surface: skills (#377, #378, #391), docs (#379, #380, #381, #382), tests (#383, #396), scripts (#397), README and the `.project` standing docs (#384), consumer metadata, hook twins, and dotfiles (#385), and the CI workflow (#399).
+- `.project/conventions.md (## Em-dash ban)` records the mark rank a recast follows, and splits the five pathspecs the gate cannot scan into two kinds: `scripts/**` and `.github/**`, where the author stays bound, versus `CHANGELOG.md`, `docs/specs/**`, and `tests/**/*observed-*.md`, where recasting is itself the defect (#387, #399).
+- `scripts/check-vocabulary.sh` fails on U+2014, with a four-row allowlist covering the five byte-exact quotes in `docs/create-deploy-sequence.md` that the ban cannot reach. A deleted allowlist row, or drifted text on one, fails the gate, so the allowlist cannot rot (#399).
+- Bare-hyphen substitution is the forbidden replacement, not a shortcut.
+
+### 🔧 Contract strings and the plan-file separator
+
+- The two canonical contract strings take the hyphen: `implied - review / trim / augment` and `this is a starting set for YOUR app - what's missing?`. `scripts/check-contract-strings.sh` is inverted to pin that form, and its drift alternation widened to catch a period, a semicolon, or a paren pair, so a sweeper obeying the em-dash ban can no longer unpin them (#398, #399).
+- The plan-file per-issue heading separator and the `[parked ...]` and `[dropped ...]` markers take the hyphen form (#395).
+
+### 📏 Size ratchet
+
+- `scripts/validate-plugin-structure.py` carries `FILE_WORD_CEILINGS` for 21 governed prose files, each measured on the integration branch. Values only descend (#394).
+- `skills/plan/SKILL.md` compressed by 391 words (#375). This milestone's own added passages rewritten to bare directives (#424).
+
+### 🧪 Blind scenario runs
+
+Three scenarios ran blind on 2026-08-13. Every runner was blind to its grader and an independent grader scored each run. Full records in `tests/RESULTS.md`.
+
+| Scenario | Verdict | Note |
+|---|---|---|
+| 06 cross-cutting-consistency (flagship) | ❌ FAIL | One of nine authored issues dropped the pagination directive outright. Both agents were proxied, because the installed plugin predates the mechanism under test, so this run cannot isolate the FAIL to the tree. Reproduce against `c1bf097` |
+| 12 implied-surfaces | ⚠️ PARTIAL | The rule-(a) defect #284 corrected is closed. The verdict now rests on implied candidates losing their marker when a park cascade drops them |
+| 15 prose-style | ⚠️ PARTIAL | The prose-style assertions are demonstrated. The CONTROL padded-rewrite item stays asserted because no fixture ships one |
+
+**The flagship cross-issue-consistency claim is not currently demonstrated.** The 2026-07-06 PASS stands only for the tree that run executed against.
+
+### Consumer notes (upgrading from v0.13.2)
+
+- **No schema changes** to `.milestone-config/feeder.json` or `.milestone-config/driver.json`. No new config key, no changed default.
+- **Plan files change shape in three places**, hyphen for em dash: the per-issue heading separator, the `[parked ...]` and `[dropped ...]` markers, and the two contract strings above. Any script or grader asserting the em-dash forms needs updating.
+- `plan` re-dispatches an issue author whose return drops a handed-in invariant, so issues in one run carry the same value for a shared directive instead of each restating it.
+- Nothing else you configure or author changes.
+
+### ⚖️ Post-run audit trail
+
+Judgment-call PRs for this release: #400, #402, #403, #404, #405, #406, #407, #408, #409
+
+- Four PRs applied review findings to already-merged work: #411, #415, #416, #420. #419 shipped on a self-sweep after its reviewer stalled, and the real review then caught a loosened constraint, which #420 fixed.
+- `scripts/check-vocabulary.sh` was first written with a backslash-u ANSI-C escape, which stock macOS `/bin/bash` 3.2 emits as six literal bytes rather than the character. CI runs bash 5, where the escape resolves, so the false PASS was local-only. The gate now builds the character with `printf` and is proved on both shells: 27 probes, red baseline first, byte-identical output.
+- `scripts/check-contract-strings.sh` pinned only a colon and a comma as drift. A period, a semicolon, or a paren pair passed both gates clean, so a sweeper following the em-dash ban defeated the gate pinning the contract strings. Reproduced against the real script before the fix, and closed in #399.
+- Scenario 06's FAIL has a candidate mechanism recorded but no filed issue: `skills/plan/SKILL.md ("Also malformed: a `STATUS: AUTHORED` return that dropped or reworded a handed-in invariant")` tests the handed-in `value` as a literal substring of the whole `ISSUE_BODY`, so a Design block carrying it satisfies the check while the acceptance criteria vary freely.
+
 ## v0.13.2: prose compression & contract-string fix
 
 **Theme:** A prose-compression pass trimmed `agents/architect.md`, `agents/issue-author.md`, `agents/roadmap-splitter.md`, and `SPEC.md` toward the artifact contract's "state the requirement, never the case for it" rule. The accompanying em-dash sweep briefly mutated two contract strings other files assert byte-exact; a code review caught it before merge and both were restored.
