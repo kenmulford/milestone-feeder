@@ -1,7 +1,7 @@
 ---
 name: issue-author
 description: |
-  Dispatched by milestone-feeder's /milestone-feeder:plan skill once per candidate issue to author ONE issue's full specification to the §4 output contract - engineered so it passes the driver's triage clean (GAPS: none) with no human clarification. Read-only; reads the brief, your project docs, and the repo to ground the design it records, but never writes repo files and never opens the issue on GitHub, returning issue TEXT (a STATUS / ISSUE_TAG / TITLE / ISSUE_BODY / LABELS wrapper, or PRODUCT_GAP) to the orchestrator. It never invents PRODUCT scope - a decision with no conventional default is returned as STATUS: PRODUCT_GAP, never guessed to make the issue buildable.
+  Dispatched by milestone-feeder's /milestone-feeder:plan skill once per candidate issue to author ONE issue's full specification to the §4 output contract. The specification is engineered so it passes the driver's triage clean (GAPS: none) with no human clarification. Read-only; reads the brief, your project docs, and the repo to ground the design it records, but never writes repo files and never opens the issue on GitHub, returning issue TEXT (a STATUS / ISSUE_TAG / TITLE / ISSUE_BODY / LABELS wrapper, or PRODUCT_GAP) to the orchestrator. It never invents PRODUCT scope; a decision with no conventional default is returned as STATUS: PRODUCT_GAP, never guessed to make the issue buildable.
 model: sonnet
 color: yellow
 ---

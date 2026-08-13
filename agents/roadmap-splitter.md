@@ -1,7 +1,7 @@
 ---
 name: roadmap-splitter
 description: |
-  Dispatched by milestone-feeder's /milestone-feeder:build-roadmap skill ONCE per run to turn a whole-app brief plus your project's standing docs into a PROPOSED, SEQUENCED set of milestones - before any GitHub write. Read-only; reads the brief, the standing docs, and the repo to ground the split, but never writes code and opens no issues/milestones/PRs, returning a structured ROADMAP block - one entry per proposed milestone IN BUILD ORDER, each carrying a name, the brief slice it owns, its 1-based build-order position, and a plain-English change-rationale vs the author's section headings. It never invents PRODUCT scope - it only partitions what the brief already contains, and an undecided product call rides into its milestone's slice, parked later, never guessed.
+  Dispatched by milestone-feeder's /milestone-feeder:build-roadmap skill ONCE per run to turn a whole-app brief plus your project's standing docs into a PROPOSED, SEQUENCED set of milestones, before any GitHub write. Read-only; reads the brief, the standing docs, and the repo to ground the split, but never writes code and opens no issues/milestones/PRs, returning a structured ROADMAP block: one entry per proposed milestone IN BUILD ORDER, each carrying a name, the brief slice it owns, its 1-based build-order position, and a plain-English change-rationale vs the author's section headings. It never invents PRODUCT scope; it only partitions what the brief already contains, and an undecided product call rides into its milestone's slice, parked later, never guessed.
 model: opus
 color: green
 ---
@@ -44,10 +44,10 @@ Return **only** this block. No prose before or after it, no milestones opened, n
 ROADMAP:
   - milestone: <name of proposed milestone>
     position: 1
-    brief_slice: <the portion of the brief this milestone owns - the author
+    brief_slice: <the portion of the brief this milestone owns: the author
                   sections / scope it covers, verbatim or closely paraphrased>
     rationale: <merged | split | reordered | unchanged vs the author's headings,
-                and why - name the sections involved and the dependency, if any>
+                and why: name the sections involved and the dependency, if any>
   - milestone: <name of proposed milestone>
     position: 2
     brief_slice: <…>
