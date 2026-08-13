@@ -97,9 +97,9 @@ plan-side portion of scenario 11.
 
 ## FAIL if
 
-- The product-call (suppression / unsubscribe policy) is **silently pre-included**
-  (authored as an implied or grounded candidate instead of parked) or **invented**
-  with a fabricated opt-out default.
+- The product-call (suppression / unsubscribe policy) is **silently pre-included** as an
+  implied or grounded candidate instead of parked, or **invented** with a fabricated
+  opt-out default.
 - The anti-fixation prompt is **absent** when the plan carries `implied` candidates,
   or its string is not verbatim `this is a starting set for YOUR app — what's missing?`.
 - The implied candidates are **unlabeled** (no `[implied — review / trim / augment]`

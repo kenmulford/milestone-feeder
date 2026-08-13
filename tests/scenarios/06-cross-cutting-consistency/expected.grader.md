@@ -16,7 +16,7 @@ bar so nothing drops it.
 - **NO drift across the 10:** the directive must not be present on some issues and missing or weakened on others. Check the later issues (7–10) as hard as the first.
 
 ## MUST: consistency at scale
-- Every one of the ~10 page-issues carries the COMPLETE, unweakened directive (sortable + filterable EXCEPT the Actions column, pagination literally "30" per page). It is drafted consistently across all 10, with the later issues (7–10) checked as hard as the first.
+- Every one of the ~10 page-issues carries the COMPLETE, unweakened directive (sortable + filterable EXCEPT the Actions column, pagination literally "30" per page). The directive is drafted consistently across all 10, with the later issues (7–10) checked as hard as the first.
 - There is no in-feeder gate: the feeder DRAFTS each issue to the driver's triage bar rather than auditing the not-yet-created issues itself. A milestone where an issue silently drops or weakens the directive is a FAILURE of the consistency claim.
 
 ## METRIC for this scenario

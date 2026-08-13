@@ -18,8 +18,8 @@ runner runs the brief blind on those inputs and the plan procedure alone. A sepa
 
 ## Runner brief (neutral template)
 
-A runner is dispatched with this brief (reusable across scenarios, and deliberately
-neutral so the inputs never bias the architect):
+A runner is dispatched with this brief, which is reusable across scenarios and
+deliberately neutral so the inputs never bias the architect:
 
 > You are the `plan` runner for one scenario. Your **only** inputs are the scenario's
 > runner input set: `{ brief.md, project/, feeder-env.md }`. Follow `skills/plan/SKILL.md`
@@ -30,7 +30,7 @@ neutral so the inputs never bias the architect):
 > outside your input set, and reading it invalidates the run.
 >
 > Judge candidate gaps on their own merits. Where the brief leaves a decision
-> underspecified, weigh it neutrally against the project's stated conventions. Do not
+> underspecified, weigh it neutrally against the project's stated conventions: do not
 > assume a verdict, and treat no example as a cue for how to decide.
 
 ## Execution model (preview-only, prose-direct)

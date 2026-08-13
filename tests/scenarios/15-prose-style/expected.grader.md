@@ -82,7 +82,8 @@ The expected candidate set (local tags; exact titles may vary):
 - Each acceptance criterion / design decision is one declarative line; a citation-only
   decision has no appended sentence (yes/no).
 - No template narration (yes/no).
-- CONTROL: the padded rewrite fails the four checks above (yes/no), the anti-teeth proof.
+- CONTROL: the padded rewrite fails the four checks above (yes/no). That is the anti-teeth
+  proof.
 - Guardrail: the four states + "30 rows per page" + the `Convention followed:` citation +
   any edge survive verbatim, and a content-dropping trim fails (yes/no).
 
