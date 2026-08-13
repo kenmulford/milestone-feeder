@@ -49,16 +49,16 @@ Milestone number (GitHub): <n>   # OPTIONAL sibling header line: carried forward
 <the Step 5 Wave-ordered description, verbatim (the §4 template with local slugs)>
 
 ## Issues
-### #A — <title>   [<ui|logic>, <risk:*>]
+### #A - <title>   [<ui|logic>, <risk:*>]
 <the full §4 ISSUE_BODY for #A. The `<ui|logic>` tag is always rendered; the `, <risk:*>` slot is rendered ONLY when the issue carries a risk label, so an issue whose author was not confident of the level renders `[<ui|logic>]` alone (`agents/issue-author.md` The contract, clause 5) and deploys with the `ui`/`logic` label by itself (`docs/create-deploy-sequence.md` Absent-risk branch). Never an empty slot, never a placeholder value>
 
-### #F — <title>   [<ui|logic>, <risk:*>]   [implied — review / trim / augment]
+### #F - <title>   [<ui|logic>, <risk:*>]   [implied — review / trim / augment]
 <the full §4 ISSUE_BODY for #F: a `disposition: implied` candidate (architect clause 8) renders DISTINCTLY, carrying the `[implied — review / trim / augment]` marker (the verbatim words `implied — review / trim / augment` inside the brackets) alongside the [ui|logic, risk:*] tags; a grounded candidate (#A above) omits the marker and renders exactly as today>
 
-### #B — <title>   [parked — needs product input]
+### #B - <title>   [parked - needs product input]
 <marker only; no fabricated body (see the needs-product-input report)>
 
-### #D — <title>   [dropped — depends on parked #B]
+### #D - <title>   [dropped - depends on parked #B]
 <marker only; a dependent of a parked issue cannot build, so it is not carried (Step 5 drop pass)>
 
 ### … (one block per surviving candidate, in Wave order; only surviving (non-parked, non-dropped) issues carry a full body; a `disposition: implied` candidate additionally carries the `[implied — review / trim / augment]` marker on its heading, as #F above)

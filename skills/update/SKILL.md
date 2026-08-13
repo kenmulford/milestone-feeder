@@ -72,7 +72,7 @@ The plan file is the **load-bearing build artifact**: `update` reads it and reco
 - **Milestone title (exact)**: the load-bearing identity field `update` resolves the milestone by **on the title-fallback path, and compares against the live title on the receipt path** (Step 3); distinct from the descriptive one-line goal.
 - **Milestone description (Wave order)**: the build-order description with **local slugs** (`#A`/`#B`), the render target the reconcile re-renders + PATCHes when an edge is added (Step 4).
 - **Per surviving issue** (slug, title, the FULL §4 `ISSUE_BODY` verbatim, labels (`ui`|`logic` + `risk:*`), surface/risk): the issues to reconcile against the live milestone (Step 4), read verbatim, **no regeneration**.
-- **Parked / dropped issues** (read from the bracketed marker on the `### #X — <title>` heading; `skills/create/SKILL.md` Step 2): marked, **NEVER created**, routed to the needs-input report (Step 5).
+- **Parked / dropped issues** (read from the bracketed marker on the `### #X - <title>` heading; `skills/create/SKILL.md` Step 2): marked, **NEVER created**, routed to the needs-input report (Step 5).
 - **Source brief reference** (`inline` | `file:<path>` | `epic #<n>`): drives the report routing (Step 5); an `epic #<n>` reference is the `epicIssueNumber` for the epic-comment branch.
 
 `update` does **not** re-derive any of these: it does not re-dispatch the architect or the issue-author. It reads the recorded values and reconciles them onto the live milestone.
