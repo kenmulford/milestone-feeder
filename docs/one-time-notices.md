@@ -70,7 +70,7 @@ writes the nested `.gitignore`).
 - **Legacy-fallback:** none.
 - **Writes:** the nested `.milestone-config/.gitignore`.
 - **Safety:** best-effort; never clobbers a user-edited file; a failed self-heal never aborts the run.
-- **Sync:** keep this block byte-exact with this repo's own committed `.milestone-config/.gitignore` and feeder `setup`'s self-heal twin (`skills/setup/SKILL.md` Phase 3, which emits it verbatim from here). The driver's `tests-green` twin (`milestone-driver/hooks/tests-green.sh` / `tests-green.ps1`) currently **DIVERGES on the first comment line only**, which still carries the em-dash form this repo has purged; the driver plugin owns that purge in its own repo, so do not edit it from here.
+- **Sync:** this block is a strict SUBSET of this repo's committed `.milestone-config/.gitignore`, which is the authority for the entry set; #366 closes the gap. Keep it byte-exact with feeder `setup`'s self-heal twin (`skills/setup/SKILL.md` Phase 3, which emits it verbatim from here). The driver's `tests-green` twin (`milestone-driver/hooks/tests-green.sh` / `tests-green.ps1`) currently **DIVERGES on the first comment line only**, which still carries the em-dash form this repo has purged; the driver plugin owns that purge in its own repo, so do not edit it from here.
 
 ```gitignore
 # milestone-driver / milestone-feeder per-clone scratch, git-invisible by default.
