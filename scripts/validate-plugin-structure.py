@@ -20,8 +20,8 @@ It checks:
      Claude Desktop's strict YAML loader would reject (issue #292; see the
      strict-scalar note below).
   4. Size budgets (issue #270): every governed prose file stays at or under
-     its own per-file word-count ceiling: the five skills/**/SKILL.md, the
-     three agents/**/*.md, SPEC.md, and the twelve docs/*.md a skill or an
+     its own per-file word-count ceiling: the six skills/**/SKILL.md, the
+     four agents/**/*.md, SPEC.md, and the twelve docs/*.md a skill or an
      agent references at run time. Every agents/**/*.md frontmatter
      `description` also stays at or under a flat 150-word ceiling. A
      written size standard with no gate is exactly what let these regrow past
@@ -583,7 +583,7 @@ for skill_md in sorted((REPO_ROOT / "skills").rglob("SKILL.md")):
 # already fails "--- 4 ---"'s reverse-coverage check above, so adding a second
 # one here would only duplicate it.)
 
-# The governed set is the 5 skills/**/SKILL.md, the 3 agents/**/*.md, SPEC.md,
+# The governed set is the 6 skills/**/SKILL.md, the 4 agents/**/*.md, SPEC.md,
 # and the 12 docs/*.md that a file under skills/ or agents/ references. That
 # reference is the criterion: a run loads a skill or an agent, and reaches a
 # doc only through one of them. Deliberately ungoverned, and not to be added
@@ -609,14 +609,32 @@ FILE_WORD_CEILINGS: dict[str, int] = {
     "skills/build-roadmap/SKILL.md": 2650,
     "skills/setup/SKILL.md": 2400,
     "skills/plan/SKILL.md": 9550,
+    # New in issue #343, pinned by the formula on their as-authored counts:
+    # 3260 words times 1.05 is 3423, rounding up to 3450; 1434 times 1.05 is
+    # 1505.7, rounding up to 1550. Both go only down from here.
+    "skills/remediate/SKILL.md": 3450,
+    "agents/remediator.md": 1550,
     "agents/architect.md": 2950,
     "agents/issue-author.md": 2900,
     "agents/roadmap-splitter.md": 1850,
-    "SPEC.md": 6800,
+    # Ratcheted DOWN from 6800 by issue #343: an AI-prose pass cut 737 words
+    # (provenance, editing history, rejected-alternative framing, and the
+    # quality-bar statement that §1, §3 and §5 each carried in full). 6059
+    # words times 1.05 is 6361.95, which rounds up to 6400.
+    "SPEC.md": 6400,
     "docs/create-deploy-sequence.md": 12100,
     "docs/file-map.md": 1450,
     "docs/implied-surfaces.md": 1250,
-    "docs/one-time-notices.md": 2050,
+    # Raised from 2050 by issue #343; the decision is recorded on that issue's
+    # PR, as the never-up rule requires. The new `remediate` verb owes existing
+    # users a discovery notice (SPEC.md §3.1), and this doc carries one `##`
+    # section per unit, each of which must fence that unit's printed text
+    # verbatim ("Section fields" in the doc). An eighth such section does not
+    # fit in the headroom the 2050 ceiling left, whatever its wording, because
+    # the fenced copy is byte-pinned to scripts/emit-notice.json and is not the
+    # author's to shorten independently. 2185 words times 1.05 is 2294.25,
+    # which rounds up to 2300.
+    "docs/one-time-notices.md": 2300,
     "docs/plan-file-contract.md": 1600,
     "docs/profile-schema.md": 2400,
     "docs/roadmap-fan-out.md": 2450,

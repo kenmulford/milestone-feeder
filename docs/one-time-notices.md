@@ -1,7 +1,7 @@
 # One-time notices: shared reference
 
-This file is the authoritative reference for seven one-time Step-0 units (a
-self-heal and six printed notices) shared across `plan`, `create`, and
+This file is the authoritative reference for eight one-time Step-0 units (a
+self-heal and seven printed notices) shared across `plan`, `create`, and
 `update`. Each one either announces a self-heal `plan` just performed, flags a
 repo-state problem for you to fix by hand, points you at a new or optional
 capability you can opt into, or announces a behavior change. Every printed
@@ -12,8 +12,8 @@ is gated on file-absence, not a marker, so it re-checks every run and acts
 only when the file it writes is missing.
 
 No skill restates a notice's text or gating logic inline: `plan`, `create`,
-`update`, and `setup` each run the `scripts/emit-notice` twin pair (see "How
-each skill runs this file" below), which prints from
+`update`, `remediate`, and `setup` each run the `scripts/emit-notice` twin
+pair (see "How each skill runs this file" below), which prints from
 `scripts/emit-notice.json`.
 
 ## Section fields
@@ -29,7 +29,7 @@ Each `##` section below is one notice:
 - **Trigger**: the exact condition that must hold for the notice to fire.
 - **Legacy-fallback**: a stale pre-`.milestone-config/.runtime/` marker
   checked alongside the current marker, or `none` when the notice was born
-  entirely on the current path (`none` for all seven sections below).
+  entirely on the current path (`none` for all eight sections below).
 - **Writes**: what the unit writes when it fires.
 - **Safety**: its failure/abort behavior.
 - **Text**: the notice's printed lines, fenced below the bullets. The copy
@@ -39,16 +39,18 @@ Each `##` section below is one notice:
 ## How each skill runs this file
 
 Nothing reads this file at run time. Immediately after its own Step-0 config
-read, each of `plan`, `create`, `update`, and `setup` runs the emitter twin
-pair once: `scripts/emit-notice.sh` on a host with bash,
+read, each of `plan`, `create`, `update`, `remediate`, and `setup` runs the
+emitter twin pair once: `scripts/emit-notice.sh` on a host with bash,
 `scripts/emit-notice.ps1` on a Windows host without one. The script walks
 `scripts/emit-notice.json`, the runtime source of every unit's printed lines
 and the self-heal's file body, **in file order**, and for each selected unit
 performs the marker gate, the trigger check, the print, and the marker write
 in one step. Never re-type a notice as free-form agent text. `plan`,
-`create`, and `update` pass their own name and select the units whose
-`skills` list holds it; `setup` is none of those three, so it selects by
-section id (`--section <id>`). A unit a call site does not select is **never
+`create`, `update`, and `remediate` pass their own name and select the units
+whose `skills` list holds it; `setup` is none of those four, so it selects by
+section id (`--section <id>`). No unit names `remediate` today, so that verb's
+call selects nothing: its discovery notice rides `plan` and `update`, where
+existing users already work. A unit a call site does not select is **never
 evaluated** there. A malformed unit is **skipped for that entry only**: never
 a crash, never a partial print, never an aborted run. Every unit is
 **best-effort**, and read-only except for the `.runtime/` dir + marker (and
@@ -68,6 +70,7 @@ step.
 5. [Implied-surfaces notice](#implied-surfaces-notice)
 6. [md-epic parent notice](#md-epic-parent-notice)
 7. [Consumer issue-template notice](#consumer-issue-template-notice)
+8. [Remediate-verb notice](#remediate-verb-notice)
 
 ## Self-heal the nested .milestone-config/.gitignore
 
@@ -243,4 +246,27 @@ worktrees/
 |      | boundary.
 | Note | This notice shows once per clone, and again after an upgrade
 |      | that revises it.
+```
+
+## Remediate-verb notice
+
+- **Marker:** `.milestone-config/.runtime/remediate-notice`, shared between both skills below, so it shows at most once per clone across both.
+- **Skills:** plan, update
+- **Trigger:** the per-clone marker is absent. Otherwise unconditional: there is no repo-state condition, because the notice announces a new verb.
+- **Legacy-fallback:** none.
+- **Writes:** the `.runtime/` directory and the marker. `plan` Step 0 and `update` Step 0 only: the notice rides the verbs existing users already run, so `remediate` carries no twin.
+- **Safety:** best-effort; a failed notice or marker write never aborts the run.
+
+```text
+🟡 New: a driver triage Blocker now has a verb that fixes the issue
+
+| What | /milestone-feeder:remediate <issue-number> turns a driver
+|      | 🔴 Triage Blocker comment into a corrected issue body, editing
+|      | the text each finding names IN PLACE. The issue keeps one
+|      | statement per decision, instead of gaining a correction section
+|      | that contradicts the wording it was meant to replace.
+| When | After the driver parks an issue with a 🔴 Triage comment. A
+|      | finding needing a product or architecture call from you stays
+|      | parked: remediate never guesses one, and never touches labels.
+| Note | This notice shows at most once per clone.
 ```
