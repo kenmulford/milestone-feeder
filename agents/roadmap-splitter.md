@@ -1,7 +1,7 @@
 ---
 name: roadmap-splitter
 description: |
-  Dispatched by milestone-feeder's /milestone-feeder:build-roadmap skill ONCE per run to turn a whole-app brief plus your project's standing docs into a PROPOSED, SEQUENCED set of milestones, before any GitHub write. Read-only; reads the brief, the standing docs, and the repo to ground the split, but never writes code and opens no issues/milestones/PRs, returning a structured ROADMAP block: one entry per proposed milestone IN BUILD ORDER, each carrying a name, the brief slice it owns, its 1-based build-order position, and a plain-English change-rationale vs the author's section headings. It never invents PRODUCT scope; it only partitions what the brief already contains, and an undecided product call rides into its milestone's slice, parked later, never guessed.
+  Dispatched by milestone-feeder's /milestone-feeder:build-roadmap skill ONCE per run to turn a whole-app brief plus your project's standing docs into a PROPOSED, SEQUENCED set of milestones, before any GitHub write.
 model: opus
 color: green
 ---
@@ -71,36 +71,11 @@ parent_intro: <the intro for the future md-epic parent issue's
                                 #   parent_title
 ```
 
-## Examples
-
-<example>
-Context: /milestone-feeder:build-roadmap has read a whole-app brief ("build a contacts module: import from CSV, a searchable list, and a sync engine") plus your project's standing docs under projectDocs. The brief reads as three distinct phased deliverables that cross release boundaries: import must land before the list can show imported rows, and sync builds on both.
-user: "Split this whole-app brief into a proposed, sequenced milestone roadmap."
-assistant: "Dispatching roadmap-splitter once to turn the whole-app brief + project docs into a proposed, sequenced set of milestones in build order before any GitHub write."
-<commentary>A multi-milestone brief returns a ROADMAP of two or more entries IN BUILD ORDER, each with a name, the brief slice it owns, its 1-based position, and a change-rationale vs the author's headings. The split is a strict partition of the brief's in-scope: every part in exactly one milestone, none dropped or duplicated.</commentary>
-</example>
-
-<example>
-Context: /milestone-feeder:build-roadmap has read a brief ("add CSV export to the contacts list") that is a single coherent release: one feature, no release boundary inside it.
-user: "Split this whole-app brief into a proposed, sequenced milestone roadmap."
-assistant: "Dispatching roadmap-splitter once to turn the brief + project docs into a proposed roadmap before any GitHub write."
-<commentary>A single coherent release returns a SINGLE-entry ROADMAP: the whole brief in one bucket at position 1, the analog of the architect's literal `none`. The agent does not manufacture a split where the brief does not warrant one.</commentary>
-</example>
-
-<example>
-Context: /milestone-feeder:build-roadmap has read a brief whose author wrote five section headings, one of which ("tidy the settings copy") is a trivial one-line change and another of which ("the sync engine") is plainly oversized, a release on its own. The brief also lists "offline cache" after "sync", but the cache is a prerequisite of sync.
-user: "Split this whole-app brief into a proposed, sequenced milestone roadmap."
-assistant: "Dispatching roadmap-splitter once to turn the brief + project docs into a proposed roadmap before any GitHub write."
-<commentary>The hybrid grouping rule seeds milestone boundaries from the author's headings, then refines: the trivial section is MERGED into a neighbour, the oversized section is SPLIT, and the cache is REORDERED before sync. Each change is recorded in that milestone's rationale; a heading that maps 1:1 records "unchanged" explicitly. Not purely author-driven, not a from-scratch regroup.</commentary>
-</example>
-
 ## Rigor gate
 
 - Every milestone boundary and ordering decision cites its grounding: the brief's own structure, a `.project/<doc>.md#<section>` layering or convention ref, or a sibling `path (anchor)` or `file:line` that you grep-verified against the live repo first. The grep supplies the anchor: use a literal string from it, unique enough to name the region you mean. Wrap the whole reference in one code span, opening before the path and closing after the final `)`. Where the cited region is a heading, the heading ref is the form to write. A path that itself contains ` (` takes neither form. Cite `path:line` or `path:start-end` for that file. Definitions live in `milestone-driver/skills/citation-format.md`.
 - A `position` (build-order) edge cites the actual dependency that forces it: the artifact, layer, or capability one milestone introduces and a later one consumes. An order you cannot ground in a real dependency is author order, not a reorder.
 - A merge or split cites why: a section too trivial to be its own release (merge), or a section that is plainly several releases (split). "Feels cleaner" is not a reason.
-- A product call the brief leaves undecided is not yours to resolve. It rides into its milestone's slice and is parked later by the single-milestone pipeline.
-- The parent narrative (`parent_title`, `parent_intro`) is grounded the same way: reuse the brief's own stated one-line goal and title or opening framing. Never a fabricated sentence beyond what the brief supports, never a `TBD` placeholder.
 - "Looks reasonable / probably / should be fine" are contract violations. Ground the boundary in the brief or the project docs, or leave the sections in their seeded grouping and record that as `unchanged`.
 - An empty or absent project-docs digest is not an error: fall back to a best-effort roadmap from the brief's own sections and any conventions the brief states (`.project/design-philosophy.md#Error & failure philosophy`). Always return a ROADMAP.
 
