@@ -596,44 +596,35 @@ for skill_md in sorted((REPO_ROOT / "skills").rglob("SKILL.md")):
 #   - docs/architecture.md, docs/consumer-setup.md, and
 #     docs/never-claims-audit.md carry no skills/ or agents/ reference at all,
 #     so no run loads them.
-# Every value below was measured on the integration branch (issue #394). Two
-# have been tightened since, both when create's Step 3 write-sequence passes
-# a to d moved into the deploy-write-sequence script twins: that change shrank
-# docs/create-deploy-sequence.md, and it re-pinned skills/create/SKILL.md to
-# its formula value (the file grew slightly there; 4650 still sits below the
-# prior 4700, so never-up holds); it has since shrunk, to 4549, and its
-# recorded 4650 stands (the per-entry note below). SPEC.md has since shrunk
-# to 6447 (a tightening pass would record 6800) and its recorded value stands
-# until that pass runs, because the never-up rule permits a descent without
-# compelling one. No other governed file's count moved off its recorded
-# ceiling.
+# Every value below was re-pinned to its governed file's actual
+# `len(text.split())` count as of milestone v0.14.1, by the formula above
+# (that count times 1.05, rounded up to the next 50). Two entries hold their
+# previously recorded value instead, because the formula exceeds it and the
+# never-up rule outranks the formula; each carries a per-entry note.
 FILE_WORD_CEILINGS: dict[str, int] = {
     # 4549 words times 1.05 is 4776.45, which rounds up to 4800. The recorded
     # 4650 stands instead, because the never-up rule outranks the formula.
     "skills/create/SKILL.md": 4650,
     "skills/update/SKILL.md": 6550,
-    "skills/build-roadmap/SKILL.md": 2700,
-    "skills/setup/SKILL.md": 2550,
-    # 9404 words times 1.05 is 9874.2, which rounds up to 9900. The recorded
-    # 9880 stands instead, because the never-up rule outranks the formula.
-    "skills/plan/SKILL.md": 9880,
-    "agents/architect.md": 3500,
-    "agents/issue-author.md": 3200,
-    "agents/roadmap-splitter.md": 2400,
-    "SPEC.md": 6850,
-    # 12625 words times 1.05 is 13256.25, which rounds up to 13300. The
-    # recorded 13250 stands instead, because the never-up rule outranks the
-    # formula.
-    "docs/create-deploy-sequence.md": 13250,
+    "skills/build-roadmap/SKILL.md": 2650,
+    "skills/setup/SKILL.md": 2400,
+    "skills/plan/SKILL.md": 9550,
+    "agents/architect.md": 2950,
+    "agents/issue-author.md": 2900,
+    "agents/roadmap-splitter.md": 1850,
+    "SPEC.md": 6800,
+    "docs/create-deploy-sequence.md": 12100,
     "docs/file-map.md": 1450,
     "docs/implied-surfaces.md": 1250,
-    "docs/one-time-notices.md": 5350,
+    "docs/one-time-notices.md": 2050,
     "docs/plan-file-contract.md": 1600,
     "docs/profile-schema.md": 2400,
     "docs/roadmap-fan-out.md": 2450,
     "docs/roadmap-manifest-format.md": 1050,
     "docs/step-0-grounding.md": 2050,
     "docs/style-contracts.md": 800,
+    # 2450 words times 1.05 is 2572.5, which rounds up to 2600. The recorded
+    # 2450 stands instead, because the never-up rule outranks the formula.
     "docs/update-reconcile-parent.md": 2450,
     "docs/version-ladder.md": 1300,
 }
