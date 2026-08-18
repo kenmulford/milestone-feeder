@@ -23,7 +23,12 @@ The expected candidate set (local tags; exact titles may vary):
 
 | Tag | Candidate | Surface | Touches |
 |---|---|---|---|
-| #A | Add a paginated activity-log list | `logic` | list / pagination (30 rows per page) |
+| #A | Add a paginated activity-log list | `ui` | list / pagination (30 rows per page) |
+
+`uiSurfaceGlobs` is absent here, which removes the path half of `agents/issue-author.md`
+clause 5 and nothing else: the pagination affordance carries the classification, so `ui` is
+the one answer both runs must produce. Surface is context for this prose-style scenario and
+is not scored below.
 
 ---
 

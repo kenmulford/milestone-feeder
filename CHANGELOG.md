@@ -3,6 +3,54 @@
 Release notes for milestone-feeder. Each tagged release is also published on the
 [GitHub Releases page](https://github.com/kenmulford/milestone-feeder/releases).
 
+## v0.14.1: token diet & backlog fixes
+
+**Theme:** The feeder's per-run instruction token load drops: deterministic `gh` mechanics move from in-context prose fences into five bash + PowerShell script twin pairs, instruction prose dedupes to one statement per invariant, bare issue-number provenance refs give way to owning file/section references, and the word-ceiling table re-pins to the shrunken tree. Four backlog fixes ride along. No verb, agent contract, or park boundary changes behavior.
+
+### ✨ Token diet
+
+| Issue | PR | What |
+|---|---|---|
+| #436 Ship the seven one-time notices as script twins | #460 | The one-time notices run as `scripts/emit-notice.{sh,ps1}` with single-source notice text |
+| #437 Trim agents/architect.md | #455 | Example blocks deleted, duplicate invariants collapsed, description trimmed |
+| #438 Trim agents/issue-author.md | #456 | Same trim for the issue-author agent |
+| #439 Trim agents/roadmap-splitter.md | #452 | Same trim for the roadmap-splitter agent |
+| #440 Rewire the notice call sites | #464 | `plan`, `create`, `update`, and `setup` call the emit-notice twins; the notices doc collapses from 5254 to 1944 words |
+| #441 Move the deploy-checkpoint and build-order-line mechanics | #465 | Those mechanics run as the `scripts/roadmap-deploy.{sh,ps1}` twins |
+| #442 Move create's write-sequence passes a-d | #466 | The write sequence runs as the `scripts/deploy-write-sequence.{sh,ps1}` twins, nine separately-invokable entry points |
+| #443 State each invariant once in skills/plan/SKILL.md | #459 | The plan skill states each invariant and the degradation contract once |
+| #444 Trim build-roadmap and setup skills | #458 | One statement per invariant in both skills |
+| #445 Move the md-epic parent-issue pass mechanics | #468 | The parent-issue and sub-issue-linking passes run as the `scripts/md-epic-parent.{sh,ps1}` twins, five entry points; the milestone-number fallback calls `deploy-write-sequence find-milestone` by reference |
+| #446 Compress Step 4's malformed-return retry spec | #462 | The retry spec states its contract once, compressed |
+| #447 Strip provenance refs from the runtime-read docs | #461 | Bare `#<n>` refs in the runtime-read docs replaced with owning file/section references |
+| #448 Move update's parent-reconcile mechanics | #470 | The receipt read, diff-gated body write, and removed-milestone detection run as the `scripts/update-reconcile-parent.{sh,ps1}` twins |
+| #449 Trim skills/create/SKILL.md | #469 | The create skill states each write-path invariant once; description trimmed to triggers plus one behavior sentence |
+| #450 Trim skills/update/SKILL.md | #471 | Same dedupe for the update skill; its bare issue-number refs drop to zero |
+| #451 Re-pin FILE_WORD_CEILINGS | #472 | All 21 ceilings re-pinned to post-trim counts: nine lowered, two held by the never-up rule, largest drop 5350 to 2050 |
+| #342 Site-coverage sub-criterion | #457 | The issue-author's Completeness contract also checks edit-site coverage |
+| #366 Sync the .gitignore self-heal block | #453 | All declaring copies carry the 12-entry committed authority |
+| #428 Retire the blanket classification rule | #463 | The uiSurfaceGlobs-absent blanket ui/logic rule retired per the recorded decision; one rule decides a candidate's label |
+
+### 🔧 Fixes
+
+| Issue | PR | What |
+|---|---|---|
+| #337 PowerShell notice emoji under Windows console encoding | #454 | The notice emitter twins set UTF-8 console encoding so the leading emoji renders on a default Windows console |
+
+### Consumer notes (upgrading from v0.14.0)
+
+- The deterministic `gh` mechanics now live in five script twin pairs under `scripts/` (emit-notice, roadmap-deploy, deploy-write-sequence, md-epic-parent, update-reconcile-parent); `create` and `update` make the same GitHub calls as before, byte-identical.
+- On PowerShell, a twin entry point whose output is captured or redirected runs as a child process (`pwsh -NoProfile -File ...`); each doc's Invocation block carries the rule.
+- **No schema changes** to `.milestone-config/feeder.json`.
+
+### ⚖️ Post-run audit trail
+
+Judgment-call PRs: #454, #464, #466, #468, #469, #470.
+
+- Follow-ups are consolidated in #467, still open: the remaining bare provenance refs in `docs/update-reconcile-parent.md`, its stale "mirrors" claim about the trimmed Non-negotiables line, and two convention candidates (the twin dispatch-table exemplar row; the dedupe-to-Non-negotiables rule).
+- #337 still owes a one-time manual render check on a real Windows console; the shipped gate does not verify the rendered glyph.
+- `docs/update-reconcile-parent.md` sits at 2450/2450 words: the next edit there trims as it adds, per the ratchet.
+
 ## v0.14.0: post-trim accuracy
 
 **Theme:** The v0.13.2 prose trim dropped three load-bearing clauses and mutated two contract strings other files assert byte-exact. This release restores what was lost, removes the em dash from every governed surface, and puts the result behind three CI gates: a vocabulary gate that fails on U+2014, the contract-strings gate re-pinned to the hyphen form, and a size ratchet over 21 governed prose files whose ceilings only descend. It also adds the cross-candidate invariants thread, so a directive resolved once for a plan reaches every issue it binds carrying the same value.

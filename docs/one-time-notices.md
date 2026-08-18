@@ -1,6 +1,6 @@
 # One-time notices: shared reference
 
-This file is the single source of truth for seven one-time Step-0 units (a
+This file is the authoritative reference for seven one-time Step-0 units (a
 self-heal and six printed notices) shared across `plan`, `create`, and
 `update`. Each one either announces a self-heal `plan` just performed, flags a
 repo-state problem for you to fix by hand, points you at a new or optional
@@ -11,10 +11,10 @@ every later run. The self-heal in the first section is the one exception: it
 is gated on file-absence, not a marker, so it re-checks every run and acts
 only when the file it writes is missing.
 
-Both the notice text and its emitter twins exist in exactly this one file:
-`plan`, `create`, and `update` each iterate this file (see "How each skill
-runs this file" below) rather than restating any notice's text or gating
-logic inline.
+No skill restates a notice's text or gating logic inline: `plan`, `create`,
+`update`, and `setup` each run the `scripts/emit-notice` twin pair (see "How
+each skill runs this file" below), which prints from
+`scripts/emit-notice.json`.
 
 ## Section fields
 
@@ -32,25 +32,32 @@ Each `##` section below is one notice:
   entirely on the current path (`none` for all seven sections below).
 - **Writes**: what the unit writes when it fires.
 - **Safety**: its failure/abort behavior.
-- **Text** and both **emitter twins** (a `bash` form and a PowerShell 7+
-  form), fenced below the bullets, byte-for-byte.
+- **Text**: the notice's printed lines, fenced below the bullets. The copy
+  that actually prints is that unit's `text` array in
+  `scripts/emit-notice.json`.
 
 ## How each skill runs this file
 
-Immediately after its own Step-0 config read, each of `plan`, `create`, and
-`update` iterates the sections below **in file order** and, for each section
-whose `Skills` field includes its own name, runs that section's recorded
-**deterministic emitter twin** (the `bash` form or the PowerShell 7+ form)
-**verbatim**: that emitter's `printf` / `Write-Host` args **are** the
-canonical notice text, so the emitted text is **byte-identical by
-construction**: never re-type a notice as free-form agent text. The emitter
-performs the trigger check, the text print (when triggered), and the marker
-write, all in one step. A section whose `Skills` field does **not** include
-the running skill is **never evaluated** by that skill. A malformed or
-unusable section is **skipped for that entry only**: never a crash, never a
-partial print, never an aborted run. Every unit is **best-effort**, and
-read-only except for the `.runtime/` dir + marker (and the self-heal, which
-writes the nested `.gitignore`).
+Nothing reads this file at run time. Immediately after its own Step-0 config
+read, each of `plan`, `create`, `update`, and `setup` runs the emitter twin
+pair once: `scripts/emit-notice.sh` on a host with bash,
+`scripts/emit-notice.ps1` on a Windows host without one. The script walks
+`scripts/emit-notice.json`, the runtime source of every unit's printed lines
+and the self-heal's file body, **in file order**, and for each selected unit
+performs the marker gate, the trigger check, the print, and the marker write
+in one step. Never re-type a notice as free-form agent text. `plan`,
+`create`, and `update` pass their own name and select the units whose
+`skills` list holds it; `setup` is none of those three, so it selects by
+section id (`--section <id>`). A unit a call site does not select is **never
+evaluated** there. A malformed unit is **skipped for that entry only**: never
+a crash, never a partial print, never an aborted run. Every unit is
+**best-effort**, and read-only except for the `.runtime/` dir + marker (and
+the self-heal, which writes the nested `.gitignore`). A bash host without
+`jq` emits nothing, under that same best-effort contract.
+
+This file stays the human-readable reference for what each unit says, when it
+fires, and why. `scripts/emit-notice.json` is what prints. Keep the two in
+step.
 
 **Contents**
 
@@ -70,7 +77,7 @@ writes the nested `.gitignore`).
 - **Legacy-fallback:** none.
 - **Writes:** the nested `.milestone-config/.gitignore`.
 - **Safety:** best-effort; never clobbers a user-edited file; a failed self-heal never aborts the run.
-- **Sync:** this block is a strict SUBSET of this repo's committed `.milestone-config/.gitignore`, which is the authority for the entry set; #366 closes the gap. Keep it byte-exact with feeder `setup`'s self-heal twin (`skills/setup/SKILL.md` Phase 3, which emits it verbatim from here). The driver's `tests-green` twin (`milestone-driver/hooks/tests-green.sh` / `tests-green.ps1`) currently **DIVERGES on the first comment line only**, which still carries the em-dash form this repo has purged; the driver plugin owns that purge in its own repo, so do not edit it from here.
+- **Sync:** the authority for the entry set is this repo's committed `.milestone-config/.gitignore`. This block carries all 12 of its entries, byte-exact, in its order. Keep it byte-exact with this unit's `writes.lines` array in `scripts/emit-notice.json`, which is what the self-heal actually writes; `plan` Step 0 and feeder `setup` Phase 3 both run that one unit, so the two call sites cannot drift. The driver's `tests-green` twins (`milestone-driver/hooks/tests-green.sh` / `tests-green.ps1`) **DIVERGE**: 6 entries, and a first comment line still carrying the em-dash form this repo has purged. Both live in the `milestone-driver` repo, so do not edit them from here.
 
 ```gitignore
 # milestone-driver / milestone-feeder per-clone scratch, git-invisible by default.
@@ -79,44 +86,16 @@ writes the nested `.gitignore`).
 # (driver.json, feeder.json) is intentionally NOT listed, so it stays tracked.
 preflight-notice
 trello-notice
+visualcapture-notice
+parallel-default-notice
+code-review-gate-notice
+aiprefilter-notice
+cost-record-notice
+uisurfaceglobs-notice
 triage-cache.json
 tests-stamp
 .runtime/
 worktrees/
-```
-
-```bash
-# bash: create-only self-heal; never clobbers a user-edited file, never aborts plan.
-mkdir -p .milestone-config 2>/dev/null || true
-ignore_path=".milestone-config/.gitignore"
-if [ ! -f "$ignore_path" ]; then
-  printf '%s\n' \
-    '# milestone-driver / milestone-feeder per-clone scratch, git-invisible by default.' \
-    '# Committed so per-run scratch stays out of `git status` with zero user setup.' \
-    '# Patterns are relative to this .milestone-config/ directory. Tracked config' \
-    '# (driver.json, feeder.json) is intentionally NOT listed, so it stays tracked.' \
-    'preflight-notice' 'trello-notice' 'triage-cache.json' 'tests-stamp' \
-    '.runtime/' 'worktrees/' > "$ignore_path" 2>/dev/null || true
-fi
-```
-
-```powershell
-# PowerShell 7+: same create-only self-heal; no-BOM UTF-8; never clobbers, never aborts.
-try {
-  New-Item -ItemType Directory -Force -Path '.milestone-config' | Out-Null
-  $ignorePath = Join-Path '.milestone-config' '.gitignore'
-  if (-not (Test-Path $ignorePath)) {
-    $ignoreBody = @(
-      '# milestone-driver / milestone-feeder per-clone scratch, git-invisible by default.'
-      '# Committed so per-run scratch stays out of `git status` with zero user setup.'
-      '# Patterns are relative to this .milestone-config/ directory. Tracked config'
-      '# (driver.json, feeder.json) is intentionally NOT listed, so it stays tracked.'
-      'preflight-notice'; 'trello-notice'; 'triage-cache.json'; 'tests-stamp'
-      '.runtime/'; 'worktrees/'
-    ) -join "`n"
-    [System.IO.File]::WriteAllText($ignorePath, $ignoreBody + "`n", [System.Text.UTF8Encoding]::new($false))
-  }
-} catch {}
 ```
 
 ## Legacy-blanket root .gitignore notice
@@ -144,67 +123,6 @@ try {
 | Note | This notice shows at most once per clone.
 ```
 
-```bash
-# bash: read-only detect + one-time notice; NEVER writes the root .gitignore; never aborts plan.
-# printf '%s\n' (NOT a heredoc): the same indent-safe construct the setup site uses, so both sites
-# emit one consistent form. The notice text is the quoted args, so it prints flush-left,
-# byte-identical to the setup site.
-marker=".milestone-config/.runtime/legacy-blanket-notice"
-if [ ! -f "$marker" ] && [ -f ".gitignore" ] \
-   && grep -Eq '^[[:space:]]*/?\.milestone-config(/\*?)?[[:space:]]*$' .gitignore \
-   && ! grep -Eq '^[[:space:]]*!/?\.milestone-config(/\*?)?[[:space:]]*$' .gitignore; then
-  printf '%s\n' \
-    '🔴 Legacy blanket detected in your root .gitignore' \
-    '' \
-    '| What | Your root .gitignore ignores the whole .milestone-config/ directory' \
-    '|      | (a line like `.milestone-config/`, `.milestone-config/*`, or' \
-    '|      | `.milestone-config`). That hides this suite'"'"'s TRACKED config' \
-    '|      | (feeder.json, driver.json, and the nested .milestone-config/.gitignore)' \
-    '|      | from git, so your config is silently dropped from version control.' \
-    '| Fix  | Edit your root .gitignore BY HAND and delete the `.milestone-config`' \
-    '|      | blanket line. The nested .milestone-config/.gitignore (already' \
-    '|      | written) then keeps per-run scratch invisible while feeder.json /' \
-    '|      | driver.json / the nested .gitignore stay tracked. We never edit your' \
-    '|      | root .gitignore for you: it is yours and may hold unrelated rules.' \
-    '| Note | This notice shows at most once per clone.'
-  mkdir -p .milestone-config/.runtime 2>/dev/null && : > "$marker" 2>/dev/null || true
-fi
-```
-
-```powershell
-# PowerShell 7+: same read-only detect + one-time notice; NEVER writes the root .gitignore; never aborts plan.
-try {
-  $marker = Join-Path '.milestone-config' (Join-Path '.runtime' 'legacy-blanket-notice')
-  if ((-not (Test-Path $marker)) -and (Test-Path '.gitignore')) {
-    $lines = Get-Content -LiteralPath '.gitignore'
-    $blanket   = $lines | Where-Object { $_ -match '^\s*/?\.milestone-config(/\*?)?\s*$' }
-    $unignored = $lines | Where-Object { $_ -match '^\s*!/?\.milestone-config(/\*?)?\s*$' }
-    if ($blanket -and -not $unignored) {
-      # Indent-safe array-join (the #120/#121 self-heal construct), NOT a here-string: an
-      # @'…'@ closing terminator must sit at column 0, which breaks when nested under indented
-      # markdown. The text below is byte-identical to the bash printf args and the setup site.
-      Write-Host (@(
-        '🔴 Legacy blanket detected in your root .gitignore'
-        ''
-        '| What | Your root .gitignore ignores the whole .milestone-config/ directory'
-        '|      | (a line like `.milestone-config/`, `.milestone-config/*`, or'
-        '|      | `.milestone-config`). That hides this suite''s TRACKED config'
-        '|      | (feeder.json, driver.json, and the nested .milestone-config/.gitignore)'
-        '|      | from git, so your config is silently dropped from version control.'
-        '| Fix  | Edit your root .gitignore BY HAND and delete the `.milestone-config`'
-        '|      | blanket line. The nested .milestone-config/.gitignore (already'
-        '|      | written) then keeps per-run scratch invisible while feeder.json /'
-        '|      | driver.json / the nested .gitignore stay tracked. We never edit your'
-        '|      | root .gitignore for you: it is yours and may hold unrelated rules.'
-        '| Note | This notice shows at most once per clone.'
-      ) -join "`n")
-      New-Item -ItemType Directory -Force -Path (Join-Path '.milestone-config' '.runtime') | Out-Null
-      New-Item -ItemType File -Force -Path $marker | Out-Null
-    }
-  }
-} catch {}
-```
-
 ## Bootstrap-nudge notice
 
 - **Marker:** `.milestone-config/.runtime/bootstrap-nudge-notice`.
@@ -227,76 +145,6 @@ try {
 |      | for you and we won't block: config is optional and plan will
 |      | continue with best-effort grounding.
 | Note | This notice shows at most once per clone.
-```
-
-```bash
-# bash: read-only detect + one-time notice; NEVER writes projectDocs/.project/ or driver.json, NEVER runs the bootstrapper; never aborts plan.
-# printf '%s\n' (NOT a heredoc): the same indent-safe construct the sibling legacy-blanket block uses, so both
-# sites emit one consistent form. The notice text is the quoted args, so it prints flush-left.
-# Resolve projectDocs in-block (the key-extraction table below has not run yet) with the SAME default the table uses,
-# so the two reads can't diverge; a non-string projectDocs (number/array), missing file / malformed JSON / missing jq
-# all fall back to .project/. Strip ALL trailing slashes for the detect operand; an empty result (e.g. "/") falls back
-# to .project so bash and PowerShell agree; the notice re-adds a single "/" so the printed path always ends in "/".
-pd="$(jq -r 'if (.projectDocs | type) == "string" then .projectDocs else ".project/" end' .milestone-config/feeder.json 2>/dev/null || echo ".project/")"
-[ -z "$pd" ] && pd=".project/"
-while [ "$pd" != "${pd%/}" ]; do pd="${pd%/}"; done
-[ -z "$pd" ] && pd=".project"
-marker=".milestone-config/.runtime/bootstrap-nudge-notice"
-if [ ! -f "$marker" ] \
-   && { [ -z "$(find -L "$pd" -type f 2>/dev/null | head -1)" ] || [ ! -f ".milestone-config/driver.json" ]; }; then
-  printf '%s\n' \
-    '🟡 This repo isn'"'"'t bootstrapped: your plan'"'"'s grounding will be weak' \
-    '' \
-    "| What | This repo has no ${pd}/ standing docs and/or no" \
-    '|      | .milestone-config/driver.json. Without them, plan has no project' \
-    '|      | constitution to ground issue design on and no driver profile to' \
-    '|      | resolve shared keys from, so it falls back to thin inferred' \
-    '|      | conventions and the issues it writes are weaker.' \
-    '| Fix  | Run milestone-bootstrapper first to scaffold your .project/ docs and' \
-    '|      | driver profile, then re-run /milestone-feeder:plan. We won'"'"'t do this' \
-    '|      | for you and we won'"'"'t block: config is optional and plan will' \
-    '|      | continue with best-effort grounding.' \
-    '| Note | This notice shows at most once per clone.'
-  mkdir -p .milestone-config/.runtime 2>/dev/null && : > "$marker" 2>/dev/null || true
-fi
-```
-
-```powershell
-# PowerShell 7+: same read-only detect + one-time notice; NEVER writes projectDocs/.project/ or driver.json, NEVER runs the bootstrapper; never aborts plan.
-try {
-  # Resolve projectDocs in-block (the key-extraction table below has not run yet) with the SAME default the table uses,
-  # so the two reads can't diverge; a non-string projectDocs (number/array), missing file / malformed JSON all fall
-  # back to .project/. Strip ALL trailing slashes for the detect operand; an empty result (e.g. "/") falls back to
-  # .project so PowerShell and bash agree; the notice re-adds a single "/" so the printed path always ends in "/".
-  $pd = '.project/'
-  try { $pdRaw = (Get-Content -Raw -LiteralPath (Join-Path '.milestone-config' 'feeder.json') -ErrorAction Stop | ConvertFrom-Json).projectDocs; if ($pdRaw -is [string]) { $pd = $pdRaw } } catch {}
-  $pd = $pd -replace '/+$',''
-  if (-not $pd) { $pd = '.project' }
-  $marker = Join-Path '.milestone-config' (Join-Path '.runtime' 'bootstrap-nudge-notice')
-  $projectEmpty = -not (Test-Path $pd) -or -not (Get-ChildItem -LiteralPath $pd -File -Recurse -Force -ErrorAction SilentlyContinue | Select-Object -First 1)
-  $driverMissing = -not (Test-Path (Join-Path '.milestone-config' 'driver.json'))
-  if ((-not (Test-Path $marker)) -and ($projectEmpty -or $driverMissing)) {
-    # Indent-safe array-join (the #120/#121 self-heal construct), NOT a here-string: an
-    # @'…'@ closing terminator must sit at column 0, which breaks when nested under indented
-    # markdown. The text below is byte-identical to the bash printf args (same resolved $pd).
-    Write-Host (@(
-      '🟡 This repo isn''t bootstrapped: your plan''s grounding will be weak'
-      ''
-      "| What | This repo has no ${pd}/ standing docs and/or no"
-      '|      | .milestone-config/driver.json. Without them, plan has no project'
-      '|      | constitution to ground issue design on and no driver profile to'
-      '|      | resolve shared keys from, so it falls back to thin inferred'
-      '|      | conventions and the issues it writes are weaker.'
-      '| Fix  | Run milestone-bootstrapper first to scaffold your .project/ docs and'
-      '|      | driver profile, then re-run /milestone-feeder:plan. We won''t do this'
-      '|      | for you and we won''t block: config is optional and plan will'
-      '|      | continue with best-effort grounding.'
-      '| Note | This notice shows at most once per clone.'
-    ) -join "`n")
-    New-Item -ItemType Directory -Force -Path (Join-Path '.milestone-config' '.runtime') | Out-Null
-    New-Item -ItemType File -Force -Path $marker | Out-Null
-  }
-} catch {}
 ```
 
 ## Roadmap-routing notice
@@ -322,54 +170,6 @@ try {
 | Note | This notice shows at most once per clone.
 ```
 
-```bash
-# bash: one-time roadmap-routing discovery notice; read-only; marker-gated; never aborts plan.
-# printf '%s\n' (NOT a heredoc): the same indent-safe construct the sibling Step-0 notices use,
-# so all three sites emit one consistent form. The notice text is the quoted args (prints flush-left).
-marker=".milestone-config/.runtime/roadmap-routing-notice"
-if [ ! -f "$marker" ]; then
-  printf '%s\n' \
-    '🟡 New: an oversized brief now routes into a roadmap flow' \
-    '' \
-    '| What | When you give plan a whole-app brief that spans several' \
-    '|      | releases, plan now hands it to a roadmap step first: it' \
-    '|      | proposes a sequenced set of milestones and asks you to' \
-    '|      | confirm, merge, split, reorder, or reject the split before' \
-    '|      | it plans any single milestone.' \
-    '| When | Only when the brief reads as several milestones. A normal,' \
-    '|      | single-release brief is unchanged: no roadmap step, no' \
-    '|      | extra prompt.' \
-    '| Note | This notice shows at most once per clone.'
-  mkdir -p .milestone-config/.runtime 2>/dev/null && : > "$marker" 2>/dev/null || true
-fi
-```
-
-```powershell
-# PowerShell 7+: same one-time roadmap-routing discovery notice; read-only; marker-gated; never aborts plan.
-try {
-  $marker = Join-Path '.milestone-config' (Join-Path '.runtime' 'roadmap-routing-notice')
-  if (-not (Test-Path $marker)) {
-    # Indent-safe array-join (the #120/#121 self-heal construct), NOT a here-string; byte-identical
-    # to the bash printf args and the text template above.
-    Write-Host (@(
-      '🟡 New: an oversized brief now routes into a roadmap flow'
-      ''
-      '| What | When you give plan a whole-app brief that spans several'
-      '|      | releases, plan now hands it to a roadmap step first: it'
-      '|      | proposes a sequenced set of milestones and asks you to'
-      '|      | confirm, merge, split, reorder, or reject the split before'
-      '|      | it plans any single milestone.'
-      '| When | Only when the brief reads as several milestones. A normal,'
-      '|      | single-release brief is unchanged: no roadmap step, no'
-      '|      | extra prompt.'
-      '| Note | This notice shows at most once per clone.'
-    ) -join "`n")
-    New-Item -ItemType Directory -Force -Path (Join-Path '.milestone-config' '.runtime') | Out-Null
-    New-Item -ItemType File -Force -Path $marker | Out-Null
-  }
-} catch {}
-```
-
 ## Implied-surfaces notice
 
 - **Marker:** `.milestone-config/.runtime/implied-surfaces-notice`, shared verbatim text and shared marker across both skills below, so the notice shows at most once per clone across both.
@@ -378,7 +178,6 @@ try {
 - **Legacy-fallback:** none.
 - **Writes:** the `.runtime/` directory and the marker. Read-only: it never writes the overlay.
 - **Safety:** best-effort; a failed detect, notice, or marker write never aborts the run.
-- **Note:** the recorded emitter twins' lead comments read `never aborts plan`, a naming leftover from before this notice was shared with `update`. It's harmless: the printed **Text** and the best-effort never-abort guarantee below apply identically when `update` runs this section; the comment wording is the only per-skill difference and is not part of the printed notice.
 
 ```text
 🟡 Optional: add project-specific implied surfaces
@@ -397,67 +196,6 @@ try {
 |      | same shape as the bundled reference. Leave it out and the bundled
 |      | reference is used as-is; an absent overlay is never an error.
 | Note | This notice shows at most once per clone.
-```
-
-```bash
-# bash: read-only detect + one-time notice; NEVER writes the overlay; never aborts plan.
-# printf '%s\n' (NOT a heredoc): indent-safe under this list item. A heredoc terminator must sit
-# at column 0, but this block is nested, so an indented EOF would be a syntax error. Mirrors the
-# plan Step-0 bootstrap-nudge form. The notice text is the quoted args, so it prints flush-left.
-marker=".milestone-config/.runtime/implied-surfaces-notice"
-if [ ! -f "$marker" ] && [ ! -f ".milestone-config/implied-surfaces.md" ]; then
-  printf '%s\n' \
-    '🟡 Optional: add project-specific implied surfaces' \
-    '' \
-    '| What | You can add an optional overlay file at' \
-    '|      | .milestone-config/implied-surfaces.md. The architect reads it' \
-    '|      | alongside the plugin'"'"'s bundled implied-surfaces reference when it' \
-    '|      | breaks your brief into issues.' \
-    '| Why  | The bundled reference is universal, so it can'"'"'t carry capability' \
-    '|      | clusters specific to your domain (a church app'"'"'s "giving", say).' \
-    '|      | Your overlay merges in additively: it can add a new capability' \
-    '|      | and extend an existing one, but never removes a surface the' \
-    '|      | bundled reference already defines.' \
-    '| How  | Create .milestone-config/implied-surfaces.md and write one' \
-    '|      | capability per ## heading with its implied surfaces beneath, the' \
-    '|      | same shape as the bundled reference. Leave it out and the bundled' \
-    '|      | reference is used as-is; an absent overlay is never an error.' \
-    '| Note | This notice shows at most once per clone.'
-  mkdir -p .milestone-config/.runtime 2>/dev/null && : > "$marker" 2>/dev/null || true
-fi
-```
-
-```powershell
-# PowerShell 7+: same read-only detect + one-time notice; NEVER writes the overlay; never aborts plan.
-try {
-  $marker = Join-Path '.milestone-config' (Join-Path '.runtime' 'implied-surfaces-notice')
-  $overlay = Join-Path '.milestone-config' 'implied-surfaces.md'
-  if ((-not (Test-Path $marker)) -and (-not (Test-Path $overlay))) {
-    # Indent-safe array-join (the #120/#121 self-heal construct), NOT a here-string: an
-    # @'…'@ closing terminator must sit at column 0, which breaks when nested under this
-    # indented markdown list item. The text below is byte-identical to the bash printf args.
-    Write-Host (@(
-      '🟡 Optional: add project-specific implied surfaces'
-      ''
-      '| What | You can add an optional overlay file at'
-      '|      | .milestone-config/implied-surfaces.md. The architect reads it'
-      '|      | alongside the plugin''s bundled implied-surfaces reference when it'
-      '|      | breaks your brief into issues.'
-      '| Why  | The bundled reference is universal, so it can''t carry capability'
-      '|      | clusters specific to your domain (a church app''s "giving", say).'
-      '|      | Your overlay merges in additively: it can add a new capability'
-      '|      | and extend an existing one, but never removes a surface the'
-      '|      | bundled reference already defines.'
-      '| How  | Create .milestone-config/implied-surfaces.md and write one'
-      '|      | capability per ## heading with its implied surfaces beneath, the'
-      '|      | same shape as the bundled reference. Leave it out and the bundled'
-      '|      | reference is used as-is; an absent overlay is never an error.'
-      '| Note | This notice shows at most once per clone.'
-    ) -join "`n")
-    New-Item -ItemType Directory -Force -Path (Join-Path '.milestone-config' '.runtime') | Out-Null
-    New-Item -ItemType File -Force -Path $marker | Out-Null
-  }
-} catch {}
 ```
 
 ## md-epic parent notice
@@ -479,51 +217,6 @@ try {
 | When | Only when the roadmap deploys N>1 milestones. A single-milestone
 |      | plan/create is unchanged. No parent issue, nothing new to look at.
 | Note | This notice shows at most once per clone.
-```
-
-```bash
-# bash: one-time md-epic-parent discovery notice; read-only; marker-gated; never aborts create/update.
-# printf '%s\n' (NOT a heredoc): the same indent-safe construct the sibling Step-0 notices use,
-# so all sites emit one consistent form. The notice text is the quoted args, so it prints flush-left.
-marker=".milestone-config/.runtime/md-epic-parent-notice"
-if [ ! -f "$marker" ]; then
-  printf '%s\n' \
-    '🟡 New: a roadmap deploy now also creates a driver parent issue' \
-    '' \
-    '| What | When your roadmap deploys more than one milestone, create (and' \
-    '|      | update, on a re-plan) now also creates one md-epic-labeled parent' \
-    '|      | issue whose body lists the milestones in build order. The driver' \
-    '|      | reads this parent to drive the milestones in sequence for you.' \
-    '| When | Only when the roadmap deploys N>1 milestones. A single-milestone' \
-    '|      | plan/create is unchanged. No parent issue, nothing new to look at.' \
-    '| Note | This notice shows at most once per clone.'
-  mkdir -p .milestone-config/.runtime 2>/dev/null && : > "$marker" 2>/dev/null || true
-fi
-```
-
-```powershell
-# PowerShell 7+: same one-time md-epic-parent discovery notice; read-only; marker-gated; never aborts create/update.
-try {
-  $marker = Join-Path '.milestone-config' (Join-Path '.runtime' 'md-epic-parent-notice')
-  if (-not (Test-Path $marker)) {
-    # Indent-safe array-join (the #120/#121 self-heal construct), NOT a here-string: an
-    # @'...'@ closing terminator must sit at column 0, which breaks when nested under indented
-    # markdown. The text below is byte-identical to the bash printf args.
-    Write-Host (@(
-      '🟡 New: a roadmap deploy now also creates a driver parent issue'
-      ''
-      '| What | When your roadmap deploys more than one milestone, create (and'
-      '|      | update, on a re-plan) now also creates one md-epic-labeled parent'
-      '|      | issue whose body lists the milestones in build order. The driver'
-      '|      | reads this parent to drive the milestones in sequence for you.'
-      '| When | Only when the roadmap deploys N>1 milestones. A single-milestone'
-      '|      | plan/create is unchanged. No parent issue, nothing new to look at.'
-      '| Note | This notice shows at most once per clone.'
-    ) -join "`n")
-    New-Item -ItemType Directory -Force -Path (Join-Path '.milestone-config' '.runtime') | Out-Null
-    New-Item -ItemType File -Force -Path $marker | Out-Null
-  }
-} catch {}
 ```
 
 ## Consumer issue-template notice
@@ -550,58 +243,4 @@ try {
 |      | boundary.
 | Note | This notice shows once per clone, and again after an upgrade
 |      | that revises it.
-```
-
-```bash
-# bash: one-time consumer-issue-template discovery notice; read-only; marker-gated; never aborts plan.
-# printf '%s\n' (NOT a heredoc): the same indent-safe construct the sibling Step-0 notices use,
-# so all sites emit one consistent form. The notice text is the quoted args (prints flush-left).
-marker=".milestone-config/.runtime/issue-template-notice-v2"
-if [ ! -f "$marker" ]; then
-  printf '%s\n' \
-    '🟡 New: plan now adopts your repo'"'"'s issue template' \
-    '' \
-    '| What | plan now authors each issue to your repo'"'"'s own issue template' \
-    '|      | instead of its own built-in structure. It uses the template your' \
-    '|      | driver config records as agentIssueTemplate; with no such key, the' \
-    '|      | single template under .github/ISSUE_TEMPLATE/ (the reserved' \
-    '|      | config.yml is not counted, so bug.yml + config.yml counts as one).' \
-    '|      | No key and no single template keeps the built-in structure.' \
-    '| When | Every plan run. The built-in structure authors four sections:' \
-    '|      | Summary, Acceptance criteria, Design (recorded, consistent),' \
-    '|      | and Dependencies, plus Non-goals when the issue records a scope' \
-    '|      | boundary.' \
-    '| Note | This notice shows once per clone, and again after an upgrade' \
-    '|      | that revises it.'
-  mkdir -p .milestone-config/.runtime 2>/dev/null && : > "$marker" 2>/dev/null || true
-fi
-```
-
-```powershell
-# PowerShell 7+: same one-time consumer-issue-template discovery notice; read-only; marker-gated; never aborts plan.
-try {
-  $marker = Join-Path '.milestone-config' (Join-Path '.runtime' 'issue-template-notice-v2')
-  if (-not (Test-Path $marker)) {
-    # Indent-safe array-join (the #120/#121 self-heal construct), NOT a here-string; byte-identical
-    # to the bash printf args and the text template above.
-    Write-Host (@(
-      '🟡 New: plan now adopts your repo''s issue template'
-      ''
-      '| What | plan now authors each issue to your repo''s own issue template'
-      '|      | instead of its own built-in structure. It uses the template your'
-      '|      | driver config records as agentIssueTemplate; with no such key, the'
-      '|      | single template under .github/ISSUE_TEMPLATE/ (the reserved'
-      '|      | config.yml is not counted, so bug.yml + config.yml counts as one).'
-      '|      | No key and no single template keeps the built-in structure.'
-      '| When | Every plan run. The built-in structure authors four sections:'
-      '|      | Summary, Acceptance criteria, Design (recorded, consistent),'
-      '|      | and Dependencies, plus Non-goals when the issue records a scope'
-      '|      | boundary.'
-      '| Note | This notice shows once per clone, and again after an upgrade'
-      '|      | that revises it.'
-    ) -join "`n")
-    New-Item -ItemType Directory -Force -Path (Join-Path '.milestone-config' '.runtime') | Out-Null
-    New-Item -ItemType File -Force -Path $marker | Out-Null
-  }
-} catch {}
 ```
