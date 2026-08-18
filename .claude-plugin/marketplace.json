@@ -12,7 +12,7 @@
     {
       "name": "milestone-feeder",
       "source": "./",
-      "description": "Plan a feature brief into a GitHub milestone of small, well-formed issues that pass milestone-driver's triage clean. Review the plan, then create it; update keeps a changed plan in sync. Authors no code.",
+      "description": "Plan a feature brief into a GitHub milestone of small, well-formed issues that pass milestone-driver's triage clean. Review the plan, then create it; update keeps a changed plan in sync. When triage blocks an issue, remediate turns that comment into a corrected issue body, editing the named text in place. Authors no code.",
       "category": "development",
       "tags": ["github", "milestones", "issues", "planning", "triage", "automation"]
     }

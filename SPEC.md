@@ -1,10 +1,8 @@
 # milestone-feeder: as-built spec
 
-A Claude Code plugin that turns a feature brief into a **GitHub milestone + small, well-formed issues** that `milestone-driver` can build with no human clarification. The direct predecessor of the driver.
+A Claude Code plugin that turns a feature brief into a **GitHub milestone + small, well-formed issues** that `milestone-driver` can build with no human clarification.
 
-Sibling of `milestone-driver`, same design DNA (see the suite plan: [`../dev-tools/SUITE-PLAN.md`](../dev-tools/SUITE-PLAN.md) §1). Separate plugin, separate config. Status: **as-built spec**. The live surface is verbs `plan` / `create` / `update` / `setup`, no flags, plan-file-as-contract, with **user-owned, versioned milestone identity** (the semver lives in the milestone title), **`update` retargeting by deploy receipt + bounded rename-in-place**, and the **whole-app roadmap**: an oversized brief is carved into a confirmed, sequenced set of milestones, planned and deployed in build order, with the v0.3.1 multi-milestone advisory now its **trigger** (§3.1). `.claude-plugin/plugin.json` is the single source of truth for the plugin version.
-
-Decisions already locked: name `milestone-feeder`; config at `.milestone-config/feeder.json`; separate plugin in its own repo (suite/marketplace linkage deferred). Decisions taken as sensible defaults below are marked **Decision (default)**; veto any.
+The live surface is verbs `plan` / `create` / `update` / `remediate` / `setup`, no flags, plan-file-as-contract, with **user-owned, versioned milestone identity** (the semver lives in the milestone title), **`update` retargeting by deploy receipt + bounded rename-in-place**, and the **whole-app roadmap**: an oversized brief is carved into a confirmed, sequenced set of milestones, planned and deployed in build order (§3.1). Config lives at `.milestone-config/feeder.json`; `.claude-plugin/plugin.json` is the single source of truth for the plugin version.
 
 ---
 
@@ -14,7 +12,7 @@ One job: **turn a brief into a milestone of small, well-formed issues.** Input a
 
 Refuses, on purpose: writing code, opening PRs, touching branches, and **inventing product decisions** (what to build / user-facing behavior with no conventional default). It will make *implementation and design* decisions when the project docs or a repo convention supplies the answer; it will not make *product* calls: a decision with no conventional default it **flags for your decision**, never guesses.
 
-Success criterion is testable: everything it emits is drafted to pass the same triage that gates the driver. The feeder targets the driver's triage bar as its quality bar (§5), so its quality bar *is* the driver's entry gate, no second, drifting definition of "well-formed", but it does not run that gate itself; the driver's triage is where it is enforced.
+Everything it emits is drafted to pass the same triage that gates the driver. It does not run that triage itself (§5).
 
 ---
 
@@ -42,16 +40,18 @@ The grounding line: `plan` reads the project's standing docs under `projectDocs`
 | `plan` skill | `skills/plan/SKILL.md` | `/milestone-feeder:plan <brief>` | Compiles a reviewable **plan file**: brief → milestone + small, well-formed candidate issues, drafted to pass the driver's triage clean. **Read-only on GitHub** (writes only local scratch). |
 | `create` skill | `skills/create/SKILL.md` | `/milestone-feeder:create <brief>` | Deploys the approved plan file to GitHub: labels + milestone + issues + build order. Read-the-plan, **faithful** (trusts the recorded plan; regenerates/re-checks nothing). |
 | `update` skill | `skills/update/SKILL.md` | `/milestone-feeder:update <brief>` | Reconciles a refreshed plan onto an existing milestone: safe, **never-close**, idempotent. |
+| `remediate` skill | `skills/remediate/SKILL.md` | `/milestone-feeder:remediate <issue-number>` | Turns a driver `🔴 Triage` Blocker comment into a corrected issue body: edits the text each finding names **in place**, never appending a correction section, and verifies the superseded text is gone before the one body write. Parks a finding needing a product or architecture call; idempotent (nothing to apply → no-op). |
 | `setup` skill | `skills/setup/SKILL.md` | `/milestone-feeder:setup` (or auto by `plan`) | Bootstraps `.milestone-config/feeder.json`; aligns the issue-label taxonomy with the driver's. Mirrors `milestone-driver:setup`. |
 | `build-roadmap` skill | `skills/build-roadmap/SKILL.md` | **internal**, invoked by `plan` (Step 3.6) on an oversized whole-app brief; never a user command | Turns one oversized brief into a confirmed, sequenced roadmap of milestones: dispatches `roadmap-splitter` once, surfaces the split for the user to confirm / merge / split / reorder / reject, and on confirmation writes a roadmap manifest to `.milestone-feeder/roadmap-<slug>.md`. **Read-only on GitHub** (writes one local scratch manifest). See §3.1. |
 | `architect` agent | `agents/architect.md` (id `milestone-feeder:architect`) | dispatched by `plan`, **once** per run | The architect lens: brief + project docs + repo → candidate issues + dependency graph + build order (Wave order), one heavy reasoning step. Raises `SCOPE_SPANS_MULTIPLE_MILESTONES` (triggers the roadmap route); consults the implied-surfaces reference for `disposition: implied` candidates; when the project states a layering convention, assigns each candidate's architectural `layer`; and resolves each directive that binds two or more candidates once, as an `INVARIANTS` entry the issue-authors transcribe rather than re-derive (§3.1). |
 | `issue-author` agent | `agents/issue-author.md` (id `milestone-feeder:issue-author`) | dispatched by `plan`, once **per candidate** | Per-issue spec authoring to the §4 output contract. Keeps each authoring ask small, the breakdown-for-quality principle applied to writing, not just building. |
+| `remediator` agent | `agents/remediator.md` (id `milestone-feeder:remediator`) | dispatched by `remediate`, **once** per run | The correction lens: one issue body + the driver's recorded triage findings → that body with each correction applied **in place**, plus a superseded-span ledger the skill verifies mechanically. Read-only; returns text, never edits the issue itself. A finding needing a product or architecture decision returns `NEEDS_HUMAN`, never a guess. |
 | `roadmap-splitter` agent | `agents/roadmap-splitter.md` (id `milestone-feeder:roadmap-splitter`) | dispatched by `build-roadmap`, **once** per run | The roadmap lens: an oversized whole-app brief + project docs → a strict, build-ordered partition into named milestones (the `ROADMAP` block). Read-only; supersedes the architect's passive multi-milestone advisory with a real, ordered split. |
 | `implied-surfaces` reference | `docs/implied-surfaces.md` | consulted by `architect` during breakdown | The stack-agnostic implied-surfaces **reasoning reference**: standard companion surfaces a capability or new entity implies, framed as a reviewable **floor**, never a scope-emitting catalog. Defines the optional project-local overlay (`.milestone-config/implied-surfaces.md`, additive-merge). PR-able. See §3.1. |
 | Manifest + registration | `.claude-plugin/plugin.json`, `hooks/hooks.json` | n/a | Plugin metadata + hook registration. |
 | Hook: `no-source-edit` | `hooks/` | PreToolUse (`Write`/`Edit`/`MultiEdit`/`NotebookEdit`) | Deny edits to `sourceGlobs`. The feeder reads code, never writes it. The only mechanical gate it needs (it authors no code and opens no PRs, so the driver's other gates don't apply). |
 
-**Targets the driver's triage, does not run it.** The feeder authors every issue to the same five criteria `milestone-driver`'s `triage-reviewer` / `design-reviewer` check (§4), so its quality bar *is* the driver's entry gate: one shared definition of "well-formed." The feeder runs **no** reviewer of its own: the driver's triage is the single automated gate, run once after `create`, and the human reviews the plan file before `create` (§5).
+Every issue is authored to the five criteria `milestone-driver`'s `triage-reviewer` / `design-reviewer` check (§4). The feeder runs no reviewer of its own (§5).
 
 ---
 
@@ -87,11 +87,11 @@ The plan file MUST carry, unambiguously, every field below:
 
 Issue numbers don't exist until creation, so the plan file carries **local slugs** (`#A`/`#B`) throughout; the two-pass slug→`#n` rewrite happens when `create` / `update` write to GitHub, once the issues exist. `plan` itself does no rewrite. Issue bodies, labels, and waves are read from the plan file, not regenerated.
 
-### v0.3.1: user-owned versioned identity, `update` retargeting, the multi-milestone guardrail
+### Versioned identity, `update` retargeting, the multi-milestone guardrail
 
-v0.3.1 is additive: no command or config breaks, the new plan-file fields degrade gracefully (a v0.3.0 plan file lacking them still parses), and the change is in where a milestone's identity comes from, not in the `plan → create → update` pipeline. Three behaviors:
+A plan file lacking these fields still parses. Three behaviors:
 
-> **Discovery / migration-path principle (normative).** Every new feature, config key, or behavior change ships an existing-user **discovery / migration path** (a one-time notice, a setup re-run prompt, or a documented upgrade note) so an existing user *finds out* about it, not only that their old config keeps working. Non-breaking is not sufficient: additive / degrades-gracefully keeps old config *working*; this principle makes sure the user *discovers* the change. Canonical implementation: the driver's one-time-notice pattern (`milestone-driver/skills/solve-milestone/SKILL.md` steps 1.2/2.1); the feeder applies it in `plan` Step 0 (the legacy-blanket notice and the un-bootstrapped grounding-is-weak nudge). The principle is **normative** here and a §4 issue-authoring quality bar (the Completeness criterion) the feeder drafts every issue to satisfy. Enforcement is the driver's triage (§5), which needs a companion `triage-reviewer` criterion; that cross-repo change is out of scope here (milestone-driver issue #224).
+> **Discovery / migration-path principle (normative).** Every new feature, config key, or behavior change ships an existing-user **discovery / migration path**: a one-time notice, a setup re-run prompt, or a documented upgrade note. Non-breaking is necessary and not sufficient. Canonical implementation: the driver's one-time-notice pattern (`milestone-driver/skills/solve-milestone/SKILL.md` steps 1.2/2.1); the feeder applies it in `plan` Step 0. It is also a §4 issue-authoring quality bar (the Completeness criterion) every issue is drafted to satisfy.
 
 - **User-owned, versioned milestone identity.** The milestone title is a user-owned field carrying the semver (e.g. `myapp v1.2.0`); there is no separate version field, the driver parses it from the title. The user can state the title up front (inline, or as a `Milestone: <name> vX.Y.Z` line in the brief); otherwise `plan` resolves a default by a layered ladder: the project's `versioning` declaration (§7), then inference from the highest semver among existing milestone titles or the latest `vX.Y.Z` git tag, then a one-time prompt only when nothing is inferable. The resolved title and its version provenance are surfaced in the plan file for confirm/override before `create`. A `"none"` declaration means no version and no prompt.
 - **`update` retargeting + bounded rename-in-place.** Because identity is now the explicit title, `update` resolves the source plan by the brief slug but the target milestone by the identity, so a revised plan in a new brief file reconciles onto its existing milestone. To survive a title change, `create` writes the GitHub milestone number back into the plan file as a deploy receipt (`Milestone number (GitHub): <n>`); `update` resolves by that number first, falling back to title-match when absent, and when it resolved by number and the plan's title differs, it PATCHes the new title, the single bounded way `update` mutates a milestone's identity. `plan` carries the receipt forward on re-plan so the handle isn't stranded.
@@ -99,7 +99,7 @@ v0.3.1 is additive: no command or config breaks, the new plan-file fields degrad
 
 ### The roadmap: an oversized brief → a confirmed, sequenced set of milestones
 
-The feeder is no longer one brief → one milestone for an oversized whole-app brief. The single-milestone pipeline (Steps 1–7, §6) is a named, callable inner routine that `plan` wraps in a conditional outer loop: the default single-brief path invokes it exactly once, and an oversized brief routes through `build-roadmap` and invokes it once per milestone the roadmap names, in build order. Milestone identity, the version ladder, and the plan file stay the routine's; only run count and brief slice change.
+The single-milestone pipeline (Steps 1–7, §6) is a named, callable inner routine that `plan` wraps in a conditional outer loop: the default single-brief path invokes it exactly once, and an oversized brief routes through `build-roadmap` and invokes it once per milestone the roadmap names, in build order. Milestone identity, the version ladder, and the plan file stay the routine's; only run count and brief slice change.
 
 The architect's `SCOPE_SPANS_MULTIPLE_MILESTONES` signal is the sole arbiter of "oversized": signal `none` runs the single-milestone routine once; signal raised routes the brief into `build-roadmap` instead of passively flagging it.
 
@@ -115,18 +115,18 @@ Each milestone's version and exact title resolve once, on the main thread, befor
 
 ### Implied companion surfaces: capability-aware completeness
 
-A brief names a capability ("add email", "user management", "sync") or introduces a new entity, and that name quietly commits to a standard set of companion surfaces (screens, endpoints, jobs, settings) the brief never spells out. Left unaddressed, those companions surface one-at-a-time mid-build as unplanned rework. So during breakdown the `architect` consults a curated, stack-agnostic implied-surfaces reference (`docs/implied-surfaces.md`), a reasoning prompt / floor, not a scope-emitting catalog, and for each named capability or new entity the brief invokes, considers the companions it implies, sorting each with the same grounded-vs-product-gap judgment it already applies (`agents/architect.md` clause 8; the rigor gate's recognized dispositions):
+During breakdown the `architect` consults the stack-agnostic implied-surfaces reference (`docs/implied-surfaces.md`), a reviewable floor rather than a scope-emitting catalog, and for each capability or new entity the brief names, considers the companion surfaces it implies (screens, endpoints, jobs, settings), sorting each by the same grounded-vs-product-gap judgment it already applies (`agents/architect.md` clause 8):
 
-- **Conventional companion** (a standard surface with a conventional default, e.g. email → a delivery-failure log, a Users entity → reset-password) → proposed as a default-in candidate for review, riding `CANDIDATES` with the architect's optional `disposition: implied` field. It is proposed for review, never committed scope: it lands in a plan the human approves before any issue exists, fully reversible.
-- **Genuine product-call** (no conventional default, e.g. a suppression / unsubscribe policy) → parked via `PRODUCT_GAPS`, never silently pre-included. The never-invent floor (§2, the park boundary) holds for implied surfaces too: a companion that can be neither grounded in a default nor tied to a real product decision is never emitted as `implied`.
+- **Conventional companion** (a standard surface with a conventional default, e.g. email → a delivery-failure log, a Users entity → reset-password) → proposed as a default-in candidate, riding `CANDIDATES` with the architect's optional `disposition: implied` field. Proposed for review, never committed scope: it lands in a plan the human approves before any issue exists.
+- **Genuine product-call** (no conventional default, e.g. a suppression / unsubscribe policy) → parked via `PRODUCT_GAPS`. A companion that can be neither grounded in a default nor tied to a real product decision is never emitted as `implied` (§2, the park boundary).
 
 The reference's three triggers: the new-entity baseline (list / detail / create / edit / delete / states / permissions / audit) is considered per entity; named capabilities are concept-matched, not keyword-matched ("let admins message members" is the email capability without the word "email"); cross-cutting concerns (search / filter / sort, background jobs) are considered once at the app level. States (empty / loading / error / unauthorized) land as acceptance criteria inside their own screen issue (`agents/issue-author.md` Completeness), never as standalone issues. Fanned-out surfaces reuse the architect's existing ~1-PR sizing.
 
 **The disposition threads architect → plan → issue-author → plan file.** `plan` captures the optional `disposition` (`grounded | implied`, default/omitted = `grounded`) verbatim alongside each candidate (Step 3), threads it into the issue-author brief (Step 4), and at Step 7 renders each `implied` candidate distinctly, carrying the `[implied - review / trim / augment]` marker on its issue heading. Only when the plan carries at least one implied candidate, `plan` fires a structural anti-fixation prompt at the same confirm/override moment the user already sees the milestone identity, the verbatim `this is a starting set for YOUR app - what's missing?`, advisory and non-blocking, so the user reviews / trims / augments before `create`. When no candidate is `implied`, nothing here surfaces. The field is additive: every downstream consumer reads `tag` / `title` / `surface` / `risk` / `sketch` and is unaffected by its presence.
 
-**The project-local overlay (additive).** The bundled reference is universal, so a project extends it with an optional overlay at the fixed path `.milestone-config/implied-surfaces.md`, discovered by that path, not a `feeder.json` key (`docs/profile-schema.md`). `plan` Step 0 resolves and merges it into the bundled reference additively: an overlay can add a capability and extend an existing one, but never remove a surface the global reference defines (per-run trimming is the plan review's job). An absent overlay (the common case) uses the bundled reference unchanged, no error; a malformed overlay is skipped best-effort and never breaks a run.
+**The project-local overlay (additive).** A project extends the bundled reference with an optional overlay at the fixed path `.milestone-config/implied-surfaces.md`, discovered by that path, not a `feeder.json` key (`docs/profile-schema.md`). `plan` Step 0 merges it additively: an overlay can add a capability and extend an existing one, never remove a surface the global reference defines (per-run trimming is the plan review's job). An absent overlay uses the bundled reference unchanged; a malformed overlay is skipped best-effort and never breaks a run.
 
-**Discovery path (§3.1 principle).** `setup` Phase 2 mentions the overlay informationally (discovered by a fixed path, not a key), and `plan` / `update` Step 0 print a shared one-time, per-clone notice naming it and explaining its additive merge. No schema change: the overlay is a fixed-path file, not a key. A brief invoking no capability and introducing no new entity breaks down exactly as before; the reference is a floor, not a completeness guarantee, so the anti-fixation prompt still asks for what a curated list can't know.
+**Discovery path (§3.1 principle).** `setup` Phase 2 mentions the overlay informationally, and `plan` / `update` Step 0 print a shared one-time, per-clone notice naming it and its additive merge. No schema change: the overlay is a fixed-path file, not a key.
 
 ### Layer-aware breakdown: architecture-keyed ordering
 
@@ -137,7 +137,7 @@ When the project's standing docs state a stack + layering convention, the `archi
 - **Grounded, never invented.** Each layer assignment and layer edge cites the project's stated architecture (`.project/<doc>#<section>` or a sibling `file:line`), the same rigor gate every design call clears. A layer that cannot be grounded is not assigned.
 - A project whose `.project` states no layering convention (the section absent / `[TBD]`, or an unlayered stack) produces the dependency-only breakdown it does today: no `layer` field, no layer edge. No error, no fabricated layering (`.project/design-philosophy.md#Error & failure philosophy`).
 
-**The layer threads architect → plan → issue-author → issue.** `plan` captures the optional `layer` verbatim alongside each candidate (Step 3), threads it into the issue-author brief (Step 4), and the issue-author records it as a `Layer:` line in the issue's existing `## Design` block (§4), so the driver sees which layer the work sits in. A candidate with no assigned layer carries no `layer` field and no `Layer:` line. No new config key: the layer pass reuses the existing `projectDocs` grounding, so nothing in `feeder.json` / `setup` changes; the discovery path is this spec plus the architect / plan / issue-author contracts.
+**The layer threads architect → plan → issue-author → issue.** `plan` captures the optional `layer` verbatim alongside each candidate (Step 3), threads it into the issue-author brief (Step 4), and the issue-author records it as a `Layer:` line in the issue's `## Design` block (§4). A candidate with no assigned layer carries no `layer` field and no `Layer:` line. No new config key: the layer pass reuses the existing `projectDocs` grounding.
 
 ### Cross-candidate invariants: resolve once, transcribe verbatim
 
@@ -149,19 +149,25 @@ A directive that must hold across two or more candidates (a page size, a sort or
 - **Still recorded per candidate.** Every tag in `applies_to` still records the directive in its own sketch, and the entry pins the one resolution they share. The issue-author records it once, in the `value`'s wording.
 - **`none` is a value, not an omission.** A breakdown in which no directive binds two or more candidates returns the literal `none`. `INVARIANTS:` is one of the return block's always-required top-level keys (`agents/architect.md` → "Structured return block"); the roadmap path's per-dispatch verify enumerates it among the keys it checks (`docs/roadmap-fan-out.md` §3.7.e).
 
-**The invariants thread architect → plan → issue-author → issue.** `plan` captures each entry's `key` / `value` / `citation` / `applies_to` verbatim (Step 3), inventing none and rewording none, and at Step 4 hands each candidate the entries whose `applies_to` names its tag, on the same brief list that already carries `disposition` and `layer`. The hand-in is explicitly empty rather than absent: a candidate no entry names, and every candidate when `INVARIANTS` is `none`, is handed an empty list and transcribes nothing. The issue-author transcribes each handed-in `value` into the issue body verbatim, carrying its `citation` as the grounding ref and never re-deriving or overriding it; `applies_to` is scoping context only and never becomes a `Depends on` line. A `STATUS: AUTHORED` return that dropped or reworded a handed-in `value`, so that it no longer appears in the `ISSUE_BODY` as a literal substring, is malformed, caught by `plan`'s existing per-dispatch verify pass, whose one bounded retry feeds back every failing entry's `key` and its exact `value`. A second miss takes the park path any other malformed return takes: the candidate and every candidate transitively depending on it leave the milestone at the Step 5 drop pass. No new config key: the invariants pass reuses the brief and `projectDocs` grounding the architect already reads. The discovery path is this spec plus the architect / plan / issue-author contracts.
+**The invariants thread architect → plan → issue-author → issue.** `plan` captures each entry's `key` / `value` / `citation` / `applies_to` verbatim (Step 3), and at Step 4 hands each candidate the entries whose `applies_to` names its tag, on the same brief list that already carries `disposition` and `layer`. The hand-in is explicitly empty rather than absent: a candidate no entry names, and every candidate when `INVARIANTS` is `none`, is handed an empty list and transcribes nothing. The issue-author transcribes each handed-in `value` into the issue body verbatim, carrying its `citation` as the grounding ref; `applies_to` is scoping context only and never becomes a `Depends on` line. A `STATUS: AUTHORED` return whose `ISSUE_BODY` no longer carries a handed-in `value` as a literal substring is malformed, caught by `plan`'s per-dispatch verify pass, whose one bounded retry feeds back every failing entry's `key` and exact `value`. A second miss parks: the candidate and every candidate transitively depending on it leave the milestone at the Step 5 drop pass. No new config key: the invariants pass reuses the brief and `projectDocs` grounding.
 
 ### The `create` → driver handoff (build kickoff)
 
-When `create` finishes building a milestone and its issues, it can hand the milestone straight to `milestone-driver` to start building, closing the feeder→driver seam, instead of ending the run and leaving the user to invoke the driver. It is build-kickoff only: it invokes `/milestone-driver:solve-milestone "<exact milestone title>"` (the title `create` deployed, carrying the user-owned semver), and never authors code, merges, or crosses the release boundary itself. Governed by the own-key `autoHandoff` (§7): `"prompt"` (default, ask), `"auto"` (kick off immediately), or `"off"` (never); an unrecognized value is treated as `"prompt"`.
+When `create` finishes building a milestone and its issues, it can hand the milestone straight to `milestone-driver`. Build-kickoff only: it invokes `/milestone-driver:solve-milestone "<exact milestone title>"` (the title `create` deployed, carrying the user-owned semver), and never authors code, merges, or crosses the release boundary itself. Governed by the own-key `autoHandoff` (§7): `"prompt"` (default, ask), `"auto"` (kick off immediately), or `"off"` (never); an unrecognized value is treated as `"prompt"`.
 
 **Three gates, all must hold to offer the handoff:**
 
-1. **Clean run only, no gaps/parks.** The run produced no product gap and parked / dropped nothing (the plan file's `## Needs human input` pointer is "none", the same signal `create` pass (e) reads). A gapped run surfaces its gaps as today and offers no handoff; the human stays in the loop on any run with known gaps.
-2. **Driver installed, else silent skip.** `create` detects whether `/milestone-driver:solve-milestone` resolves in this session; if not, it silently skips, no prompt, no error, exactly as the optional `milestone-driver` soft-dependency degrades silently elsewhere (`docs/consumer-setup.md` §1).
-3. **Never crosses `develop → main`.** `solve-milestone` merges only to the integration branch; release (`develop → main`), closing the milestone object, and deploy stay manual and human-only (`milestone-driver/skills/solve-milestone/SKILL.md` "Bounded blast radius"). The handoff never auto-merges to a protected branch and never removes the release gate, preserving the autonomy boundary (`.project/design-philosophy.md#One-way doors`).
+1. **Clean run only, no gaps/parks.** The run produced no product gap and parked / dropped nothing (the plan file's `## Needs human input` pointer is "none", the same signal `create` pass (e) reads). A gapped run offers no handoff.
+2. **Driver installed, else silent skip.** `create` detects whether `/milestone-driver:solve-milestone` resolves in this session; if not, it skips silently, no prompt, no error (`docs/consumer-setup.md` §1).
+3. **Never crosses `develop → main`.** `solve-milestone` merges only to the integration branch; release (`develop → main`), closing the milestone object, and deploy stay human-only (`milestone-driver/skills/solve-milestone/SKILL.md` "Bounded blast radius", `.project/design-philosophy.md#One-way doors`).
 
 **Discovery path (§3.1 principle).** `autoHandoff`'s default (`"prompt"`) is new behavior for existing users, so `setup` Phase 2 presents it (plain-language label + skip-consequence) and `docs/profile-schema.md` documents the key (table row + per-key note), with the default visible. A user who wants today's no-handoff behavior sets `"off"`.
+
+### The remediation path: a triage Blocker back to a corrected body
+
+The driver's triage posts a `🔴 Triage` comment and changes neither the issue body nor its labels, so its findings had no consumer that turns them back into a buildable body. `remediate` is that consumer: it edits the text each finding names **in place**, refusing the correction-section failure mode that leaves two live statements for one decision. String search verifies the superseded text is gone before the single body write. A finding needing a product or architecture call returns `NEEDS_HUMAN` and stays parked; one an earlier run already fixed returns `ALREADY_APPLIED`, which makes a re-run a no-op.
+
+**Discovery path (§3.1 principle).** The verb is new, so `plan` and `update` Step 0 print a shared one-time, per-clone, marker-gated notice naming it: existing users meet it at the verbs they already run. No new config key: `remediate` reuses the existing `projectDocs` grounding, and the agent it dispatches carries no override key (§7's consumer-driven rule). An issue the driver never blocked is untouched.
 
 ---
 
@@ -236,7 +242,7 @@ Human-readable, and the exact ordering source `solve-milestone` and triage consu
 
 ## 5. The quality bar: the driver's triage (targeted, not run)
 
-The feeder's quality bar *is* the driver's entry gate: every issue it drafts is authored to pass the driver's `triage-reviewer` (and `design-reviewer` for UI issues) clean (`GAPS: none`), one shared definition of "well-formed," never a second drifting copy. The feeder runs no reviewer gate of its own: it drafts issues that target that bar, and the driver's own triage is the single automated entry gate, run once after `create` when the driver picks the milestone up. Between them stands the human: `plan` writes a reviewable plan file, and the human reviews it before `create` deploys.
+Every issue is authored to pass the driver's `triage-reviewer` (and `design-reviewer` for UI issues) clean (`GAPS: none`). The feeder runs no reviewer gate of its own: the driver's triage is the single automated entry gate, run once after `create`. Between them stands the human, who reviews the plan file before `create` deploys.
 
 | Concern in the issue | How the feeder targets the bar |
 |---|---|
@@ -244,7 +250,7 @@ The feeder's quality bar *is* the driver's entry gate: every issue it drafts is 
 | Genuine **product** gap (no conventional default) | Flagged for your decision in the "needs product input" report; never invented (§2 park boundary). |
 | UI issue | Carries the states, affordances, accessibility, and existing pattern to mirror that the driver's `design-reviewer` checks. |
 
-The `reviewer` own-key and its `"milestone-driver" | "internal" | false` backends are retired: the feeder no longer selects or runs a reviewer backend, so there is no in-feeder gate to configure. An existing profile that still carries a `reviewer` key is ignored gracefully (unknown key → no error).
+There is no in-feeder gate to configure. A profile carrying the retired `reviewer` key is ignored gracefully (unknown key, no error).
 
 ---
 
@@ -267,8 +273,6 @@ The `reviewer` own-key and its `"milestone-driver" | "internal" | false` backend
 **Then `create` deploys the plan file** (faithful): ensure labels → create-or-adopt the milestone by exact title → create the surviving issues + build the slug→`#n` map → second-pass slug→`#n` rewrite (issue bodies + the milestone description) → file the needs-input report (epic comment when the brief was an epic; else local file). After the milestone is resolved, `create` writes the deploy receipt (`Milestone number (GitHub): <n>`) back into the plan file, the stable handle `update` later resolves by (a back-write failure is a reported notice, never a blocked deploy). On a roadmap run (`create` Step 1R) it loops this same per-plan deploy over the manifest's milestones in build order, recording each one's `build order: milestone X of N` line; the single-plan path is the unchanged N=1 case.
 
 **And `update` reconciles it** onto an existing milestone (create-or-patch / add-edge-and-re-render / flag-never-close / no-op): it resolves the milestone by the deploy-receipt number first (falling back to exact-title when absent) and, when resolved by number with a changed plan title, renames the milestone in place (a single bounded title PATCH); then creates any plan issue missing on GitHub, patches any drifted body (showing the diff first), adds any new dependency edge and re-renders the build order, and flags, never closes, any live issue the plan no longer carries. A wholesale new brief with a new title and no receipt → no title match → error-and-stop directing you to `create`, with the one-line `gh` rename command for the rare true-rename case. A fully-synced milestone is a true no-op.
-
-There are no flags anywhere: `plan` previews (writes the plan file), `create` / `update` write, each *is* its own verb.
 
 ---
 
@@ -298,13 +302,14 @@ Adopting `.milestone-config/` suite-wide means the driver resolves its profile f
 
 ## 8. Modes & autonomy
 
-Three intent-named verbs, **zero flags**. Each verb *is* the explanation of what it does.
+Four intent-named verbs, **zero flags**. Each verb *is* the explanation of what it does.
 
 | Verb | Trigger | Behavior |
 |---|---|---|
 | `plan` | `/milestone-feeder:plan <brief>` | Full procedure, stops at a reviewable plan file (read-only on GitHub). |
 | `create` | `/milestone-feeder:create <brief>` | Deploys the approved plan file: labels + milestone + issues + build order. Faithful: trusts the recorded plan (regenerates/re-checks nothing); runs `plan` first if no plan file exists for the brief. |
 | `update` | `/milestone-feeder:update <brief>` | Reconciles a refreshed plan onto the existing milestone. Never closes/deletes; idempotent; shows the diff before patching. |
+| `remediate` | `/milestone-feeder:remediate <issue-number>` | Corrects one issue body against the driver's recorded `🔴 Triage` findings, editing the named text in place. Never appends a correction section; parks a finding needing a product or architecture call; touches no labels; idempotent; shows the diff before patching. |
 
 Authoring autonomy boundary: makes design/implementation calls grounded in the project docs; flags product calls (no conventional default) for your decision in the "needs product input" report. Authors no code, opens no PRs, never touches branches.
 
@@ -312,23 +317,11 @@ Authoring autonomy boundary: makes design/implementation calls grounded in the p
 
 ## 9. Build order (dogfood it)
 
-Build the feeder as its own milestone the driver can run, the as-built sequence:
-
-1. **Agent + config rename**: `architect` agent; keys `projectDocs` / `issueSize` / `architectAgent`; `setup` updated (the spine, no behavior change).
-2. **`plan` skill**: the plan file becomes the formalized contract (§3.1); drop the apply path.
-3. **`create` skill**: read-the-plan deploy + run-`plan`-first fallback; inherits the §6 apply write sequence.
-4. **`update` skill**: plan-driven reconcile; never-close, idempotent.
-5. README / docs / metadata re-vocab to the new surface.
-6. Harness migrate + re-run (the credibility scenarios, on the new verbs/keys).
-7. Verify the old vocabulary is gone; bump to v0.3.0.
-
-Steps 1–2 are the spine with no irreversible GitHub side effects, the safe first build target.
+The feeder is built as its own milestone the driver runs. The v0.3.0 build sequence shipped; see `CHANGELOG.md`.
 
 ---
 
-## 10. Resolved during build (was: open questions)
-
-These were settled by the as-built skills:
+## 10. Settled decisions
 
 - **Brief format.** Accepted freeform and normalized internally first into `{ goal, in-scope, out-of-scope, surfaces, epicIssueNumber? }` before anything downstream consumes it (`skills/plan/SKILL.md` Step 1).
 - **Milestone ownership.** Create-or-adopt by exact title: `create` creates the milestone if no title match, adopts (and reopens if closed) an existing one, never deletes (`skills/create/SKILL.md` pass b). `update` adopts read-only and errors-and-stops if no milestone exists.

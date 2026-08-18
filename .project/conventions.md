@@ -10,7 +10,7 @@ are citation anchors.
 
 ## Naming
 Files, types, functions, tests, branches.
-Skills live at `skills/<verb>/SKILL.md` (verbs: `plan`, `create`, `update`, `setup`); agents at `agents/<name>.md` (ids `milestone-feeder:architect`, `milestone-feeder:issue-author`); hooks at `hooks/` (`hooks.json`, `run-hook.cmd`, `<name>.sh`, `<name>.ps1`). Issue labels: `ui`/`logic` + `risk:light`/`risk:heavy` (the feeder's taxonomy, aligned to the driver's). Plan files: `.milestone-feeder/plan-<slug>.md` where `<slug>` is the lowercased milestone goal with non-alphanumeric runs collapsed to single hyphens, trimmed. Branches: `develop` (integration) / `main` (protected). (Grounded in `docs/architecture.md` Plugin contents, The plan file as build artifact; `SPEC.md` §3, §3.1.)
+Skills live at `skills/<verb>/SKILL.md` (verbs: `plan`, `create`, `update`, `remediate`, `setup`, plus the internal `build-roadmap`); agents at `agents/<name>.md` (ids `milestone-feeder:architect`, `milestone-feeder:issue-author`, `milestone-feeder:roadmap-splitter`, `milestone-feeder:remediator`); hooks at `hooks/` (`hooks.json`, `run-hook.cmd`, `<name>.sh`, `<name>.ps1`). Issue labels: `ui`/`logic` + `risk:light`/`risk:heavy` (the feeder's taxonomy, aligned to the driver's). Plan files: `.milestone-feeder/plan-<slug>.md` where `<slug>` is the lowercased milestone goal with non-alphanumeric runs collapsed to single hyphens, trimmed. Branches: `develop` (integration) / `main` (protected). (Grounded in `docs/architecture.md` Plugin contents, The plan file as build artifact; `SPEC.md` §3, §3.1.)
 
 ## File & folder layout
 Where things go, and the shape of a feature.

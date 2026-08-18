@@ -3,21 +3,23 @@
 # emit-notice.sh: the one-time-notice emitter (bash twin of emit-notice.ps1).
 #
 # What this does, in plain terms:
-#   docs/one-time-notices.md defines seven Step-0 units shared across `plan`,
-#   `create`, and `update`: one self-heal that writes a file, and six notices
-#   that print at most once per clone. This script runs them. It holds none of
+#   docs/one-time-notices.md defines eight Step-0 units shared across `plan`,
+#   `create`, `update`, and `remediate`: one self-heal that writes a file, and
+#   seven notices that print at most once per clone. This script runs them. It holds none of
 #   their text. Every unit's printed lines and the self-heal's file body live
 #   in scripts/emit-notice.json, once, so this script and its PowerShell twin
 #   cannot drift from each other or from the doc.
 #
 # Invocation (one form, identical on both twins, so a caller documents one):
-#   scripts/emit-notice.sh <plan|create|update>
+#   scripts/emit-notice.sh <plan|create|update|remediate>
 #     Caller mode. Walks the units in file order, keeps every unit whose
-#     `skills` list contains the caller's own name, and runs each one.
+#     `skills` list contains the caller's own name, and runs each one. No unit
+#     names `remediate` today: that verb's discovery notice rides `plan` and
+#     `update`, so the call selects nothing until a later unit names it.
 #   scripts/emit-notice.sh --section <section-id>
 #     Explicit-section mode. Runs exactly the one unit whose `id` matches,
 #     WHATEVER its `skills` list says. This is the mode for a caller that is
-#     not one of the three verbs (`setup`, which runs the self-heal and the
+#     not one of the four verbs (`setup`, which runs the self-heal and the
 #     legacy-blanket notice). Only the skills filter is bypassed: the unit's
 #     marker gate and its trigger still decide whether it fires.
 #
@@ -85,14 +87,14 @@ case "${1:-}" in
     mode="section"
     sel="${2:-}"
     ;;
-  plan|create|update)
+  plan|create|update|remediate)
     mode="caller"
     sel="$1"
     ;;
 esac
 
 if [ -z "$mode" ] || [ -z "$sel" ]; then
-  echo "usage: emit-notice.sh <plan|create|update> | emit-notice.sh --section <section-id>" >&2
+  echo "usage: emit-notice.sh <plan|create|update|remediate> | emit-notice.sh --section <section-id>" >&2
   exit 0
 fi
 
