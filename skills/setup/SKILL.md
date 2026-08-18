@@ -1,13 +1,13 @@
 ---
 name: setup
-description: This skill should be used when "milestone-feeder:setup" is invoked directly, OR auto-invoked by `plan` when `.milestone-config/feeder.json` is absent. Guides an interactive first-run bootstrap that infers every profile key from repo signals, presents detected defaults with plain-language descriptions, lets the user accept/edit/skip optional keys (stating each skip-consequence), writes `.milestone-config/feeder.json`, aligns the issue-label taxonomy with the driver's, and returns control so the original task continues. Mirrors milestone-driver:setup.
+description: This skill should be used when "milestone-feeder:setup" is invoked directly, OR auto-invoked by `plan` when `.milestone-config/feeder.json` is absent. Guides an interactive first-run bootstrap that infers every profile key from repo signals, writes `.milestone-config/feeder.json`, aligns the issue-label taxonomy with the driver's, and returns control so the original task continues.
 ---
 
 # setup: first-run profile bootstrap
 
-Generate or repair the feeder profile through a guided, inference-first flow. Every key is presented with a plain-language description and a detected default. Optional keys state their skip-consequence. No blank prompts: if a default cannot be inferred, an example is shown.
+Generate or repair the feeder profile through a guided, inference-first flow. Optional keys state their skip-consequence.
 
-The canonical profile location is `<repo-root>/.milestone-config/feeder.json`, the suite-wide `.milestone-config/` directory the sibling `milestone-driver` plugin also reads from (it stores `driver.json` alongside). **Unlike the driver, the feeder has no required hard-stop key:** the feeder writes no branches and no key hard-stops the write, so an empty `{}` profile is valid: nearly every key falls back to a bundled default (the exception is `versioning`, which has no default: skipping it means infer-or-ask, not a default value). Setup still writes the file (even when every key is left at its default or skipped), so config-presence detection (`plan`'s Step 0 → auto-invoke setup when the file is absent) is unambiguous.
+The canonical profile location is `<repo-root>/.milestone-config/feeder.json`, the suite-wide `.milestone-config/` directory the sibling `milestone-driver` plugin also reads from (it stores `driver.json` alongside).
 
 **After writing the file, return control to the caller** (`plan`) so the original task continues immediately. The user does not need to re-run the command.
 
@@ -35,9 +35,9 @@ Present keys in these tiers: **Core → Agents → Sizing**, plus the self-prote
 - State the plain-language label.
 - Show the detected default (or an illustrative example if none was detected).
 - For optional keys: state the skip-consequence on the same line.
-- Accept, edit, or skip. Never leave a field blank without an explicit skip choice.
+- Accept, edit, or skip.
 
-Every tier below is optional and one-keystroke accept-or-skip: there is **no hard-stop key** (the overview and Non-negotiables cover why), so an empty `{}` is a valid result. `versioning` (Sizing tier) alone has **no default**: skipping it means infer-or-ask, not a default value.
+Every tier below is optional and one-keystroke accept-or-skip. `versioning` (Sizing tier) alone has **no default**: skipping it means infer-or-ask, not a default value.
 
 **Tier: Core** (optional; show the detected default, accept with one keystroke)
 
@@ -84,7 +84,7 @@ The canonical profile location is `<repo-root>/.milestone-config/feeder.json`.
 - **Detect a legacy-blanket root `.gitignore` and print a one-time by-hand-fix notice (read-only; NEVER auto-edit the root).** The self-heal above writes the *nested* `.milestone-config/.gitignore`, but it cannot help a consumer whose **root** `.gitignore` carries a legacy blanket for the config dir: `.milestone-config/`, `.milestone-config/*`, or bare `.milestone-config` (with or without a leading `/`). A root blanket hides everything under `.milestone-config/` from git (`feeder.json`, `driver.json`, and the nested `.gitignore` we just wrote), so the tracked config is silently dropped from version control and the self-heal is void for exactly those repos. **Detection is read-only: it writes NOTHING to the root `.gitignore` under any condition; the root file is the consumer's and may hold unrelated rules, so the fix is the user's to apply.** Gate: print the 🔴 notice **verbatim** ONLY when a root blanket is detected **AND** the per-clone marker `.milestone-config/.runtime/legacy-blanket-notice` is **absent**; on print, drop that marker (it lives under `.runtime/`, already ignored by the nested `.gitignore` written above: no new gitignore line). Stay **silent** when the marker exists OR no blanket is detected. **Blanket-clearing rule:** a blanket counts as present UNLESS paired with a **broad** un-ignore that re-exposes tracked config (`!.milestone-config`, `!.milestone-config/`, or `!.milestone-config/*`); a lone single-file un-ignore (`!.milestone-config/driver.json`) does **NOT** clear it. Best-effort: a failed detect/marker is swallowed and setup continues. It never aborts and never writes the root `.gitignore`. Emit the 🔴 notice text and both detect twins (bash + PowerShell 7+) **verbatim** from the canonical source `docs/one-time-notices.md` → "Legacy-blanket root .gitignore notice" (kept byte-exact with the plan Step-0 twin, `skills/plan/SKILL.md`).
 
 - Assemble the profile object from the keys the user accepted or edited. **Omit any key left at its bundled default** (absent-means-default, `docs/profile-schema.md`): writing the default explicitly adds noise and drifts when the default changes. `versioning` has **no** default, so a skipped `versioning` is likewise **omitted**, never written as a placeholder; its absent state means `plan` infers-or-asks. A minimal feeder-own-repo profile carries only the self-protection `sourceGlobs`; an empty `{}` is valid.
-- Write the assembled object to `.milestone-config/feeder.json`. **Always write the file**, even when the result is `{}`: config-presence is the signal `plan`'s Step 0 reads to decide whether to auto-invoke setup, so an absent file and an empty file are deliberately distinct.
+- Write the assembled object to `.milestone-config/feeder.json`, including when the result is `{}` (`## Non-negotiables`, the "Always write the file" bullet).
 - Print the final file contents so the user can verify.
 
 Writing the file is sufficient for `plan` to read it immediately this session: no commit is required for it to function.
