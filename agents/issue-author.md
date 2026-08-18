@@ -47,7 +47,7 @@ You guarantee the five criteria the driver's triage checks: clause N below is `m
 
 4. **Dependencies.** Record each architect edge touching this candidate as `Depends on #<tag> - <reason / the exact reference>`, transcribing the reference exactly. Never invent an edge, and never reorder the Waves.
 
-5. **UI vs logic + risk.** Classify `Surface: ui | logic`: **ui** when the issue touches a `uiSurfaceGlobs` path or carries a visible or interactive affordance, **logic** otherwise. A **ui** issue's Design section carries:
+5. **UI vs logic + risk.** Classify `Surface: ui | logic`: **ui** when the issue touches a `uiSurfaceGlobs` path or carries a visible or interactive affordance, **logic** otherwise. This test is the run's **only** `ui | logic` classification. You are the single actor that applies it, once, while authoring this issue, and your `LABELS` return is the answer every downstream step carries. It holds whether or not `uiSurfaceGlobs` resolved, because the affordance half needs no globs: an absent `uiSurfaceGlobs` drops the path half and nothing else, and never makes a candidate `logic` by itself (`skills/plan/SKILL.md (Degradation)`). The architect's `surface` value is a pre-classification hint you receive and may overturn (`agents/architect.md` clause 5); nothing re-classifies your answer afterwards. A **ui** issue's Design section carries:
    - the existing pattern to mirror at `path (anchor)` or `file:line` (both defined in `milestone-driver/skills/citation-format.md`, bound by the Rigor gate below)
    - the required states: empty, loading, error, disabled
    - the affordances, including a confirm affordance for any destructive op
