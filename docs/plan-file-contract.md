@@ -63,7 +63,7 @@ Milestone number (GitHub): <n>   # OPTIONAL sibling header line: carried forward
 
 ### … (one block per surviving candidate, in Wave order; only surviving (non-parked, non-dropped) issues carry a full body; a `disposition: implied` candidate additionally carries the `[implied - review / trim / augment]` marker on its heading, as #F above)
 
-## Multi-milestone advisory   <!-- OPTIONAL section, written ONLY on the retained path: the architect raised SCOPE_SPANS_MULTIPLE_MILESTONES (Step 3) AND the front-door did NOT route into build-roadmap (Step 3.6, roadmapRouteTaken false). OMITTED ENTIRELY when the signal is `none` (file byte-for-byte the pre-#61 shape) OR when the front-door took the route (roadmapRouteTaken true: superseded by the confirmed roadmap). Advisory only: does not change what gets deployed; the plan stays a deployable single-milestone plan. -->
+## Multi-milestone advisory   <!-- OPTIONAL section, written ONLY on the retained path: the architect raised SCOPE_SPANS_MULTIPLE_MILESTONES (Step 3) AND the front-door did NOT route into build-roadmap (Step 3.6, roadmapRouteTaken false). OMITTED ENTIRELY when the signal is `none` OR when the front-door took the route (roadmapRouteTaken true: superseded by the confirmed roadmap). Advisory only: does not change what gets deployed; the plan stays a deployable single-milestone plan. -->
 🔴 This brief looks like ~<N> milestones. Deploy the one big milestone below, or split the brief and re-run. Proposed split (carried verbatim from the architect):
 - <proposed milestone 1 name>: #A, #C
 - <proposed milestone 2 name>: #B
