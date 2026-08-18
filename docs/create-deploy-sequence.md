@@ -60,134 +60,41 @@ Before resolving a plan file, check whether `plan`'s roadmap flow left a **roadm
 **Upsert-by-position helper (never grows a duplicate entry): bash + PowerShell 7+ twins.** Mirrors this file's own idempotent-write idioms: the plan-file receipt's read-modify-write (below, "Write the deploy receipt") and the manifest's per-entry field overwrite keyed by a stable position (`skills/plan/SKILL.md` line ~266). Call this at each pass-start/pass-end site above, with `$pass`/`$status` set to that site's values. `$X` is this milestone's `Build-order position`; `$planfile` is its `Plan file:` path, Row 0 resolves it first (below) and every later row reuses that same value, never re-reading it; `$number` is this milestone's resolved GitHub milestone number (the same VALUE the outer loop's later passes track under their own local name `n`, above, "Gather every deployed milestone's number"; this new mechanism uses its own name, `number`, in its own scope, not a shared variable), empty until pass (b) resolves it:
 
 ```bash
-# bash. Upsert this milestone's checkpoint entry by position; fail-open (no jq, or any
-# write error, emits a notice and returns WITHOUT aborting the deploy in progress). A
-# 0-byte/absent state file is (re)seeded fresh (`-s`, not `-f`: treats empty the same as
-# absent, so a corrupted-to-empty file is never silently accepted as valid content); a
-# post-filter `-s "$tmp"` check guards against ever overwriting the real file with an
-# unexpectedly empty filter result (jq exits 0 on empty input with zero output records).
-state=".milestone-feeder/deploy-state-<slug>.json"
-if command -v jq >/dev/null 2>&1; then
-  [ -s "$state" ] || printf '{"slug": "<slug>", "milestones": []}' > "$state" 2>/dev/null
-  n_json="${number:-null}"
-  tmp="$(mktemp 2>/dev/null)"
-  if [ -n "$tmp" ] && jq --argjson x "$X" --arg pf "$planfile" --argjson n "$n_json" --arg p "$pass" --arg st "$status" \
-       '.milestones = ((.milestones // []) | map(select(.position != $x))) + [{position: $x, planFile: $pf, milestoneNumber: $n, pass: $p, status: $st}]' \
-       "$state" > "$tmp" 2>/dev/null && [ -s "$tmp" ]; then
-    mv "$tmp" "$state" 2>/dev/null || echo "create: could not persist the deploy checkpoint for milestone $X (pass $pass, $status), continuing without it"
-  else
-    rm -f "$tmp" 2>/dev/null
-    echo "create: could not persist the deploy checkpoint for milestone $X (pass $pass, $status), continuing without it"
-  fi
-fi
+# bash. Fail-open. No jq: silent no-op; a write error emits the notice below.
+# Either way this returns WITHOUT aborting the deploy in progress.
+"${CLAUDE_PLUGIN_ROOT}/scripts/roadmap-deploy.sh" checkpoint-upsert "<slug>" "$X" "$planfile" "$number" "$pass" "$status"
 ```
 
 ```powershell
-# PowerShell 7+. Same upsert-by-position; native ConvertFrom-Json/ConvertTo-Json, no jq
-# dependency (mirrors hooks/no-source-edit.ps1's convention vs the bash twin). Fail-open:
-# any error emits a notice and returns WITHOUT aborting the deploy in progress. $number is
-# $null until pass (b) resolves it. A 0-byte/absent state file is (re)seeded fresh (mirrors
-# the bash twin's `-s`, not `-f`, guard). position/milestoneNumber are cast to [int]
-# explicitly so ConvertTo-Json always emits a JSON number, never a string a regex capture
-# upstream could have left un-typed: a string-typed position would never match the bash
-# reader's `--argjson x` numeric comparison, permanently defeating the short-circuit.
-$state = ".milestone-feeder/deploy-state-<slug>.json"
-try {
-  $stateHasContent = (Test-Path $state) -and ((Get-Item $state).Length -gt 0)
-  $checkpoint = if ($stateHasContent) { Get-Content -LiteralPath $state -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop } else { [pscustomobject]@{ slug = "<slug>"; milestones = @() } }
-  $rest = @($checkpoint.milestones | Where-Object { $_.position -ne [int]$X })
-  $numberJson = if ($number) { [int]$number } else { $null }
-  $rest += [pscustomobject]@{
-    position        = [int]$X
-    planFile        = $planfile
-    milestoneNumber = $numberJson
-    pass            = $pass
-    status          = $status
-  }
-  $checkpoint.milestones = $rest
-  $checkpoint | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $state -Encoding utf8NoBOM -ErrorAction Stop
-} catch {
-  Write-Output "create: could not persist the deploy checkpoint for milestone $X (pass $pass, $status), continuing without it"
-}
+# PowerShell 7+. Same upsert-by-position, same fail-open contract; native
+# ConvertFrom-Json/ConvertTo-Json, no jq dependency.
+& "$env:CLAUDE_PLUGIN_ROOT/scripts/roadmap-deploy.ps1" checkpoint-upsert "<slug>" $X $planfile $number $pass $status
 ```
+
+The script holds the mechanics, once, for both twins: the fresh (re)seed of a 0-byte or absent state file (`-s`, not `-f`, so a corrupted-to-empty file is never silently accepted as valid content), the post-filter guard against overwriting the real file with an unexpectedly empty filter result, the `[int]` casts that keep `position`/`milestoneNumber` JSON numbers on the PowerShell path (a string-typed position would never match the bash reader's `--argjson x` numeric comparison, permanently defeating the short-circuit), and the one notice text, `create: could not persist the deploy checkpoint for milestone $X (pass $pass, $status), continuing without it`. An empty `$number` is recorded as JSON `null`. Exit status is 0 in every case.
 
 **Row 0, the read + short-circuit check (Correction 3's exact shape): bash + PowerShell 7+ twins.** Runs BEFORE row i, for each milestone in build order, and resolves `$planfile` itself as its very first action, by reading this milestone's `Plan file:` line at `position` `$X` straight from the roadmap manifest (row i, row ii, and pass (e) then all reuse this SAME already-resolved value: it is read only once per milestone, never re-read). Once `$planfile` is in hand, read this milestone's checkpoint entry by `position` (`$X`); when it reports `pass == "d" && status == "complete"`, run ONE `gh api` GET against the live milestone and compare it to (a) the plan file's `Milestone title (exact):` line (exact string equality) and (b) `.state == "open"`: a 404/`gh` error, a title mismatch, or `state != "open"` are ALL "does not match" and fall through, consistent with pass (b)'s own title-compare precedent (below). The `gh` call captures **stdout only**: it never merges stderr into the stream being parsed as JSON, so an incidental stderr line on an otherwise-successful call can never masquerade as unparsable JSON and force a false negative. The checkpoint-recorded values read back for the trust test are named `cp_pass`/`cp_status`/`cp_number` (bash) / `$cpPass`/`$cpStatus`/`$cpNumber` (pwsh), deliberately NOT `pass`/`status`/`number`, so they never collide with the upsert helper's caller-supplied parameters of those same names:
 
 ```bash
-# bash. Row 0: resolve $planfile, consult the checkpoint, then the one cheap existence
-# check (Correction 3). cp_pass/cp_status/cp_number are the CHECKPOINT-RECORDED values
-# (never the upsert helper's own pass/status/number parameter names, no collision).
-short_circuit=0
-manifest=".milestone-feeder/roadmap-<slug>.md"
-state=".milestone-feeder/deploy-state-<slug>.json"
-planfile="$(awk -v x="$X" '
-  $0 ~ ("^### " x "\\. ") { infile=1; next }
-  /^### / { infile=0 }
-  infile && /^- Plan file:/ { sub(/^- Plan file: */, ""); print; exit }
-' "$manifest")"
-if command -v jq >/dev/null 2>&1 && [ -s "$state" ]; then
-  entry="$(jq -c --argjson x "$X" '(.milestones // [])[] | select(.position == $x)' "$state" 2>/dev/null)"
-  if [ -n "$entry" ]; then
-    cp_pass="$(printf '%s' "$entry" | jq -r '.pass // empty' 2>/dev/null)"
-    cp_status="$(printf '%s' "$entry" | jq -r '.status // empty' 2>/dev/null)"
-    cp_number="$(printf '%s' "$entry" | jq -r '.milestoneNumber // empty' 2>/dev/null)"
-    if [ "$cp_pass" = "d" ] && [ "$cp_status" = "complete" ] && [ -n "$cp_number" ]; then
-      title="$(grep -m1 '^Milestone title (exact):' "$planfile" | sed -E 's/^Milestone title \(exact\): *//')"
-      # stdout only (2>/dev/null): never merge gh's stderr into the JSON we parse below.
-      if live="$(gh api "repos/{owner}/{repo}/milestones/$cp_number" --jq '{title, state}' 2>/dev/null)"; then
-        live_title="$(printf '%s' "$live" | jq -r '.title' 2>/dev/null)"
-        live_state="$(printf '%s' "$live" | jq -r '.state' 2>/dev/null)"
-        if [ "$live_title" = "$title" ] && [ "$live_state" = "open" ]; then
-          short_circuit=1
-          number="$cp_number"
-        fi
-      fi
-    fi
-  fi
-fi
+# bash. Row 0: resolve $planfile, consult the checkpoint, then the one cheap
+# existence check (Correction 3).
+"${CLAUDE_PLUGIN_ROOT}/scripts/roadmap-deploy.sh" checkpoint-read "<slug>" "$X"
 ```
 
 ```powershell
-# PowerShell 7+. Same resolve-then-check; native JSON, no jq dependency. $cpPass/$cpStatus/
-# $cpNumber are the CHECKPOINT-RECORDED values (never the upsert helper's own $pass/$status/
-# $number parameter names, no collision).
-$shortCircuit = $false
-$manifest = ".milestone-feeder/roadmap-<slug>.md"
-$state = ".milestone-feeder/deploy-state-<slug>.json"
-$planfile = $null
-$inBlock = $false
-foreach ($line in (Get-Content -LiteralPath $manifest)) {
-  if ($line -match "^### $X\. ") { $inBlock = $true; continue }
-  if ($line -match '^### ') { $inBlock = $false }
-  if ($inBlock -and $line -match '^- Plan file: *(.+)') { $planfile = $Matches[1]; break }
-}
-$stateHasContent = (Test-Path $state) -and ((Get-Item $state).Length -gt 0)
-if ($stateHasContent) {
-  try {
-    $checkpoint = Get-Content -LiteralPath $state -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop
-    $entry = $checkpoint.milestones | Where-Object { $_.position -eq [int]$X } | Select-Object -First 1
-    if ($entry) {
-      $cpPass = $entry.pass
-      $cpStatus = $entry.status
-      $cpNumber = $entry.milestoneNumber
-      if ($cpPass -eq 'd' -and $cpStatus -eq 'complete' -and $cpNumber) {
-        $titleLine = Get-Content -LiteralPath $planfile | Where-Object { $_ -match '^Milestone title \(exact\): *(.+)' } | Select-Object -First 1
-        $null = $titleLine -match '^Milestone title \(exact\): *(.+)'
-        $title = $Matches[1]
-        # stdout only (2>$null): never merge gh's stderr into the JSON we parse below.
-        $live = gh api "repos/{owner}/{repo}/milestones/$cpNumber" --jq '{title, state}' 2>$null
-        if ($LASTEXITCODE -eq 0) {
-          $liveObj = $live | ConvertFrom-Json
-          if ($liveObj.title -eq $title -and $liveObj.state -eq 'open') {
-            $shortCircuit = $true
-            $number = $cpNumber
-          }
-        }
-      }
-    }
-  } catch { }
-}
+# PowerShell 7+. Same resolve-then-check; native JSON, no jq dependency.
+& "$env:CLAUDE_PLUGIN_ROOT/scripts/roadmap-deploy.ps1" checkpoint-read "<slug>" $X
 ```
+
+Both twins print exactly three `key=value` lines, in this fixed order, and exit 0 in every case (a read that finds nothing is never an abort):
+
+```
+planfile=<this milestone's Plan file: path>
+short_circuit=<0|1>
+number=<the confirmed milestone number, empty whenever short_circuit is 0>
+```
+
+Read `planfile` into the caller's `$planfile`, `short_circuit` into `short_circuit` (bash) / `$shortCircuit` (pwsh), and, when it is 1, `number` into `number` (bash) / `$number` (pwsh). The script holds the mechanics, once, for both twins: the manifest scan for this position's `Plan file:` line, the `command -v jq` plus `-s "$state"` (bash) and file-length (pwsh) guards, the `cp_pass`/`cp_status`/`cp_number` trust test, and the `gh` GET captured as stdout only.
 
 **On a match:** this milestone is confirmed fully deployed for Step 3 passes (a)-(d): skip those four passes (and row iv, the build-order line pass (d) produces) for this milestone, print a one-line notice (`create: milestone <X>, checkpoint confirms #<number> already deployed; skipping passes a-d`), then STILL run row ii (Step 2, read the plan-file contract) and pass (e) (the needs-input report routing) exactly as a full deploy would, before continuing the outer loop at position `X+1`. Row ii and pass (e) are cheap and local (no `gh`-heavy re-derivation), so running them for every milestone (checkpoint-confirmed or not) does not reintroduce the O(N) cost this checkpoint eliminates; it only preserves pass (e)'s own retry-on-resume guarantee, which a permanent skip would otherwise silently lose. **On no match** (any of: file/entry/`jq` absent or unreadable, `pass`/`status` not `"d"`/`"complete"`, the `gh` GET erroring, a title mismatch, or `state != "open"`): the checkpoint's claim for THIS milestone only is untrustworthy: discard it and fall through to the existing, unchanged full per-milestone deploy (rows i-iv in full) for this milestone. No other milestone's entry is touched or affected by one milestone's stale/absent entry.
 
@@ -223,24 +130,19 @@ build order: milestone X of N
 **Idempotency is INHERITED from pass (d), not re-implemented.** Pass (d) PATCHes the description with the **REPLACE form** (`gh api --method PATCH .../milestones/<number> -f description=...`, Step 3 pass d): it replaces the whole description every run. The build-order line rides **inside that one REPLACE payload**, so a re-run over an already-deployed manifest **overwrites** the line in place; the line count never grows (the same overwrite guarantee pass (d) already makes for the Wave order). **No new read-modify-write of the description is added**: only pass (d)'s payload gains the one canonical line. Assemble the augmented description (bash + PowerShell 7+ twins), then PATCH it with pass (d)'s existing REPLACE-form command:
 
 ```bash
-# bash. Assemble milestone X's description: goal + the ONE canonical build-order line + the
-# slug-rewritten Waves block, then PATCH via pass (d)'s REPLACE form. X = Build-order position; N = count.
-# $goal and $waves are the two halves of the description pass (d) already builds (slugs rewritten to #n).
-desc="$(printf '%s\n\nbuild order: milestone %s of %s\n\n%s\n' "$goal" "$X" "$N" "$waves")"
-gh api --method PATCH "repos/{owner}/{repo}/milestones/<number>" -f "description=$desc"
+# bash. Assemble milestone X's description (goal + the ONE canonical build-order
+# line + the slug-rewritten Waves block), then apply pass (d)'s REPLACE-form
+# PATCH. X = Build-order position; N = count. $goal and $waves are the two halves
+# of the description pass (d) already builds (slugs rewritten to #n).
+"${CLAUDE_PLUGIN_ROOT}/scripts/roadmap-deploy.sh" build-order-line "$X" "$N" "<number>" "$goal" "$waves"
 ```
 
 ```powershell
-# PowerShell 7+. Same assembly + pass (d)'s REPLACE-form PATCH; the ONE canonical line.
-$desc = @"
-$goal
-
-build order: milestone $X of $N
-
-$waves
-"@
-gh api --method PATCH "repos/{owner}/{repo}/milestones/<number>" -f "description=$desc"
+# PowerShell 7+. Same assembly, same REPLACE-form PATCH; the ONE canonical line.
+& "$env:CLAUDE_PLUGIN_ROOT/scripts/roadmap-deploy.ps1" build-order-line $X $N "<number>" $goal $waves
 ```
+
+This operation is the one that is NOT best-effort: it is pass (d)'s load-bearing description write, so it exits with `gh`'s own status and a non-zero takes the mid-loop failure path above.
 
 Re-PATCHing on a re-run overwrites the line, idempotent by construction, so the `build order: milestone X of N` count stays exactly one per milestone, never growing.
 
