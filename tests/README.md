@@ -113,9 +113,10 @@ loaded as plugin skills.
 - **Brief**: "Build these ~10 pages, each listing <entities> in a table". It **does not
   restate** the table directive. The feeder must pull it from the project docs, apply it to
   every page-issue, and cite it.
-- **Config**: `uiSurfaceGlobs` **must be set** so the page-issues classify as UI and carry the
-  design spec (states / affordances / pattern) the driver's design lens checks (absent →
-  everything is logic and the design spec is never authored).
+- **Config**: `uiSurfaceGlobs` is **set**, mirroring the driver's own config, so the glob half
+  of the classification engages alongside the affordance half and the page-issues carry the
+  design spec (states / affordances / pattern) the driver's design lens checks (absent → no
+  glob-based UI match; the affordance test still classifies these pages `ui`).
 - **Expected** (grader): every page-issue carries the full directive (sortable + filterable
   except actions + pagination 30/page) in its acceptance criteria, verbatim-equivalent (no
   drift, no silent weakening of "30/page"), and cites the convention. Every issue is drafted

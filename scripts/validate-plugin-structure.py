@@ -596,14 +596,17 @@ for skill_md in sorted((REPO_ROOT / "skills").rglob("SKILL.md")):
 #   - docs/architecture.md, docs/consumer-setup.md, and
 #     docs/never-claims-audit.md carry no skills/ or agents/ reference at all,
 #     so no run loads them.
-# Every value below was measured on the integration branch (issue #394). #424
-# has since shrunk two governed files under their recorded ceilings:
-# skills/create/SKILL.md now measures 4357 (a tightening pass would record
-# 4600) and SPEC.md 6447 (6800). Both values below stand until that pass runs,
-# because the never-up rule permits a descent without compelling one. No other
-# governed file's count moved off its recorded ceiling.
+# Every value below was measured on the integration branch (issue #394). Two
+# have been tightened since, both when create's Step 3 write-sequence passes
+# a to d moved into the deploy-write-sequence script twins: that change shrank
+# docs/create-deploy-sequence.md, and it re-pinned skills/create/SKILL.md to
+# its formula value (the file grew slightly there; 4650 still sits below the
+# prior 4700, so never-up holds). SPEC.md has since shrunk to 6447 (a tightening pass would
+# record 6800) and its recorded value stands until that pass runs, because the
+# never-up rule permits a descent without compelling one. No other governed
+# file's count moved off its recorded ceiling.
 FILE_WORD_CEILINGS: dict[str, int] = {
-    "skills/create/SKILL.md": 4700,
+    "skills/create/SKILL.md": 4650,
     "skills/update/SKILL.md": 6550,
     "skills/build-roadmap/SKILL.md": 2700,
     "skills/setup/SKILL.md": 2550,
@@ -614,7 +617,10 @@ FILE_WORD_CEILINGS: dict[str, int] = {
     "agents/issue-author.md": 3200,
     "agents/roadmap-splitter.md": 2400,
     "SPEC.md": 6850,
-    "docs/create-deploy-sequence.md": 13350,
+    # 12625 words times 1.05 is 13256.25, which rounds up to 13300. The
+    # recorded 13250 stands instead, because the never-up rule outranks the
+    # formula.
+    "docs/create-deploy-sequence.md": 13250,
     "docs/file-map.md": 1450,
     "docs/implied-surfaces.md": 1250,
     "docs/one-time-notices.md": 5350,
