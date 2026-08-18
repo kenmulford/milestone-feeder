@@ -17,6 +17,6 @@ dependency-only breakdown.
 - `feeder.json`: defaults (`projectDocs: project/`).
 - Driver shared keys (as if from `.milestone-config/driver.json`):
   - `sourceGlobs`: `["src/**"]`
-  - `uiSurfaceGlobs`: `["src/web/**"]`   # nothing in this backend feature matches → every candidate classifies `logic`
+  - `uiSurfaceGlobs`: `["src/web/**"]`   # no glob match in this backend feature and no candidate carries an affordance → every candidate classifies `logic`
   - `integrationBranch`: `"develop"`
 - Project docs dir: `project/`
