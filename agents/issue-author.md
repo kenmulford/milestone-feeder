@@ -43,6 +43,8 @@ You guarantee the five criteria the driver's triage checks: clause N below is `m
 
 3. **Completeness.** The acceptance criteria enumerate the happy path, the empty state, the error/failure path, and the disabled/edge state.
 
+   **Site coverage.** A candidate that makes an existing unconditional behavior conditional, renames a symbol, or changes a contract also records in its Design section every site the change must touch. Establish that list by running a search, never from recollection of the files you already read. Search the resolved `sourceGlobs`, and every sibling reference file in the folder of each hit, because a rule restated for readability across a skill folder's sibling files is what an unsearched list misses. Record the search itself as a `Sites searched:` line (_Output format_ below) carrying the pattern and the scope, so triage re-runs it. A search you cannot make exhaustive says so on that line and names what is unresolved, so triage escalates instead of accepting a confident count.
+
 4. **Dependencies.** Record each architect edge touching this candidate as `Depends on #<tag> - <reason / the exact reference>`, transcribing the reference exactly. Never invent an edge, and never reorder the Waves.
 
 5. **UI vs logic + risk.** Classify `Surface: ui | logic`: **ui** when the issue touches a `uiSurfaceGlobs` path or carries a visible or interactive affordance, **logic** otherwise. A **ui** issue's Design section carries:
@@ -83,6 +85,7 @@ reference and never both, and use the heading ref where the cited region is a he
 - Convention followed: <conventions.md ref, or the path (anchor) / file:line of the sibling pattern>
 - Layer: <the architectural layer the architect assigned, citing the stated architecture that places it (.project/<doc>#<section>, or a sibling ref). OPTIONAL: omit when the candidate carried no `layer` field>
 - Config pointers: <the `.project` config the driver reads at BUILD time, keyed to what the issue touches: styling → `.project/tokens.json` + `.project/design-system.md#<section>`; deployment/env → `.project/environment.md`. PATH only, never resolved values (no hex, no parsed tokens, no pre-solved render). OPTIONAL: omit when the issue touches none or the doc is absent>
+- Sites searched: <the search that established the site list: the pattern and the scope searched, in a form a reviewer re-runs. State on this line when the list may be partial and what is unresolved. OPTIONAL: omit when the issue makes no existing behavior conditional, renames no symbol, and changes no contract>
 
 ## Dependencies
 
@@ -115,7 +118,7 @@ PRODUCT_GAP (only when STATUS: PRODUCT_GAP): { what: <the product decision with 
 
 **Content never disappears.** A consumer template that lacks a section the built-in default has must not drop that content. Overflow lands in the nearest matching section: a template with no `## Non-goals` carries the scope boundary inside whichever section covers scope.
 
-**The Rigor gate is not weakened.** A consumer template changes the section headers, not the grounding bar. Every citation is still verified (`grep before you cite`, Rigor gate below), and the five contract criteria bind whatever structure you author to, including Completeness, whichever sections hold the four states.
+**The Rigor gate is not weakened.** A consumer template changes the section headers, not the grounding bar. Every citation is still verified (`grep before you cite`, Rigor gate below), and the five contract criteria bind whatever structure you author to, including Completeness, whichever sections hold the four states and the site list.
 
 **`## Prose style` binds every line** of the authored body, whatever produced the headers.
 
@@ -133,7 +136,7 @@ PRODUCT_GAP (only when STATUS: PRODUCT_GAP): { what: <the product decision with 
 - Writing the issue to GitHub or opening it. Return the wrapper to the `plan` skill, which owns every GitHub write.
 - Inventing PRODUCT scope. A decision with no conventional default returns `STATUS: PRODUCT_GAP`.
 - Reordering Waves or inventing dependency edges. Record the edges the architect gave you, verbatim.
-- A happy-path-only acceptance-criteria set, or an ungrounded `Convention followed:` line.
+- A happy-path-only acceptance-criteria set, a site list assembled from recollection rather than a search, or an ungrounded `Convention followed:` line.
 
 ## Prose style
 
