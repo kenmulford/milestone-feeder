@@ -2,7 +2,7 @@
 
 This is the `update`-scoped reference holding the full mechanics of `update`'s Step 1R, the pass that keeps the roadmap's `md-epic` parent issue in sync on a re-plan (issue #247). `skills/update/SKILL.md` keeps a lean orchestration skeleton for this pass and points here on demand, the same progressive-disclosure split `create` already uses for its own heavy steps (`docs/create-deploy-sequence.md`). The numbered steps below (1 through 7) match `skills/update/SKILL.md` Step 1R's own numbered list one for one.
 
-This pass reuses five of `create`'s already-built mechanics **by reference, unchanged**, each an entry point of the `md-epic-parent` twin pair (`scripts/md-epic-parent.sh` / `.ps1`): the number gather, the body render, the parent resolve-or-create, and the manifest-receipt write (`docs/create-deploy-sequence.md` "Step 1R" -> "The md-epic parent-issue pass"), plus the whole sub-issue-linking pass (same file, "The sub-issue-linking pass"). None of those five mechanics is re-authored here; each step below either points at one of them or documents the genuinely new logic this issue adds: the roadmap-manifest gate, the diff-gated body PATCH, and the removed-milestone detection.
+This pass reuses five of `create`'s already-built mechanics **by reference, unchanged**, each an entry point of the `md-epic-parent` twin pair (`scripts/md-epic-parent.sh` / `.ps1`): the number gather, the body render, the parent resolve-or-create, and the manifest-receipt write (`docs/create-deploy-sequence.md` "Step 1R" -> "The md-epic parent-issue pass"), plus the whole sub-issue-linking pass (same file, "The sub-issue-linking pass"). None of those five mechanics is re-authored here. The three this pass owns (the preliminary receipt read, the diff-gated body PATCH, and the removed-milestone detection) are entry points of its OWN twin pair, `scripts/update-reconcile-parent.sh` / `.ps1`. What stays in this file is the judgment: the roadmap-manifest gate, which branch a run takes, the failure semantics, and the report formats.
 
 ## The gate
 
@@ -13,26 +13,35 @@ Derive `<slug>` exactly as `update`'s Step 1 does (`skills/update/SKILL.md` Step
 | **Absent** | Single-plan path, UNCHANGED. Fall through to `update`'s Step 1 and run Steps 1 through 5 exactly as documented, byte-unchanged from today. Nothing below this table runs. |
 | **Found** | This run reconciles the parent. Read the manifest (never regenerate it). Run steps 1 through 7 below, then report. |
 
+## Invocation
+
+One separately invokable entry point per owned mechanic, each with its exit statuses recorded in the twin's header. Resolve either twin pair at the plugin root, this repo's convention for bundled assets (`docs/step-0-grounding.md` "the plugin-root convention this repo uses for bundled assets"; `hooks/hooks.json`):
+
+```
+# bash
+"${CLAUDE_PLUGIN_ROOT}/scripts/update-reconcile-parent.sh" <entry-point> [args]
+# PowerShell 7+, when nothing is captured or redirected (see the note below)
+& "$env:CLAUDE_PLUGIN_ROOT/scripts/update-reconcile-parent.ps1" <entry-point> [args]
+```
+
+**On PowerShell, an entry point whose output you CAPTURE or REDIRECT runs as a CHILD PROCESS, not through the call operator.** The twin writes its rows through `[Console]::Out`, which an in-session `&` call sends to the console, so the capture returns nothing: `read-receipt` would read empty and this pass would treat an already-deployed parent as brand new, skipping the diff-gate that keeps a re-run at zero writes. Same rule, same reason, as the sibling twin's (`docs/create-deploy-sequence.md` "Step 1R" -> "The md-epic parent-issue pass", its Invocation block):
+
+```
+# PowerShell 7+, whenever the output is captured or redirected
+$parentBefore = pwsh -NoProfile -File "$env:CLAUDE_PLUGIN_ROOT/scripts/update-reconcile-parent.ps1" read-receipt "<manifest>"
+```
+
+| Step | Entry point | Arguments | Capture |
+|---|---|---|---|
+| **Preliminary** | `read-receipt` | `<manifest>` | the parent's prior number; NOTHING when the manifest carries no well-formed receipt |
+| **4** | `diff-gate` | `<parent> <body-file> <live-body-file>` | `compare`TAB`same`\|`differ`, then `patch`TAB`skipped`\|`patched` |
+| **5** | `detect-removed` | `<live-body-file> <number> [<number> ...]` | one `dropped`TAB`<number>` row per milestone the re-plan dropped; nothing when none was |
+
 ## Preliminary: read the manifest's own prior receipt (new twin)
 
-Before step 1 begins, read whatever the manifest already carries at its `Parent issue (GitHub): #<n>` header line (`docs/roadmap-manifest-format.md`). This is a plain, side-effect-free read, used only by step 4's diff-gate and step 5's removed-milestone detection below to decide whether a live parent body already exists to compare against. The actual resolve-or-create in step 3 independently re-examines this same line as its own first branch (#245's mechanic, reused whole in step 3), so this preliminary read never substitutes for that resolution; it only gates whether steps 4 and 5 apply.
+Before step 1 begins, read whatever the manifest already carries at its `Parent issue (GitHub): #<n>` header line (`docs/roadmap-manifest-format.md`): `read-receipt "<manifest>"`, captured as `$parent_before` (bash) / `$parentBefore` (PowerShell). A plain, side-effect-free read, and the sole gate on steps 3, 4, and 5: it says only whether a live parent body already exists to compare against. Step 3's `resolve-or-create` re-examines this same line as its own first branch, so this never substitutes for that resolution.
 
-```bash
-# bash. parent_before is empty when the manifest carries no receipt yet (a brand-new roadmap,
-# or one create hasn't deployed the parent for). #? strips an optional leading "#".
-manifest=".milestone-feeder/roadmap-<slug>.md"
-parent_before="$(grep -m1 '^Parent issue (GitHub):' "$manifest" 2>/dev/null | sed -E 's/^Parent issue \(GitHub\): *#?([0-9]+).*/\1/')"
-```
-
-```powershell
-# PowerShell 7+. Same read; $parent_before is $null/empty when the line is absent.
-$manifest = ".milestone-feeder/roadmap-<slug>.md"
-$parent_before = (Get-Content -LiteralPath $manifest -ErrorAction SilentlyContinue |
-      Select-String -Pattern '^Parent issue \(GitHub\): *#?(\d+)' |
-      Select-Object -First 1).Matches.Groups[1].Value
-```
-
-A malformed or non-numeric value (a hand-edited manifest) simply fails to match, so `$parent_before` comes back empty, the same absent-means-absent guard `update`'s own Step 3.0 milestone-receipt read already uses (`skills/update/SKILL.md` Step 3.0).
+The capture is EMPTY when there is no receipt yet (a brand-new roadmap, or one `create` has not deployed the parent for) and when the value is malformed (a hand-edited manifest), the same absent-means-absent guard `update`'s Step 3.0 milestone-receipt read uses (`skills/update/SKILL.md` Step 3.0).
 
 ## Step 1: gather every milestone's number (reused by reference, unchanged)
 
@@ -54,73 +63,22 @@ Reuse the twin pair's `resolve-or-create` entry point, `create`'s own step 4, "R
 
 ## Step 4: diff-gate the body write (new logic, the fix this issue's advisory called for)
 
-`create`'s own pass (the "re-run rewrite" in #245's step 4) PATCHes the body unconditionally on every adopt, correct for a first-time deploy but wrong for a reconcile: an unconditional PATCH would fire on every single `update` run even when nothing about the roadmap changed, which contradicts the "idempotent re-run performs zero additional parent-reconcile writes" acceptance criterion. `update` therefore wraps the SAME REPLACE-form rewrite in a diff-gate:
+`create`'s own pass PATCHes the body unconditionally on every adopt (`docs/create-deploy-sequence.md` "Step 1R" -> "The md-epic parent-issue pass" step 4), correct for a first-time deploy but wrong for a reconcile: an unconditional PATCH would fire on every single `update` run even when nothing about the roadmap changed, which contradicts the "idempotent re-run performs zero additional parent-reconcile writes" acceptance criterion. `update` therefore wraps the SAME REPLACE-form rewrite in a diff-gate:
 
 | `$parent_before` (preliminary read, above) | Action |
 |---|---|
-| **Present** (the parent already existed before this run) | Fetch its live body, compare to step 2's freshly rendered body. Identical: write nothing, no PATCH, no diff shown, this run performed zero parent-body writes. Differ: PATCH with #245's same REPLACE-form `gh issue edit $parent --body-file $bodyfile` (reused by reference), then report that the body changed. |
+| **Present** (the parent already existed before this run) | Fetch its live body, compare to step 2's freshly rendered body. Identical: write nothing, no PATCH, no diff shown, this run performed zero parent-body writes. Differ: PATCH with that same REPLACE-form `gh issue edit --body-file` rewrite, then report that the body changed. |
 | **Absent** (this run created the parent, or adopted it by title with no prior receipt) | Nothing to diff against; step 3's create/adopt already wrote the correct body. No separate PATCH follows. |
 
-```bash
-# bash. Only runs when $parent_before was present (preliminary read). $bodyfile is step 2's rendered file.
-if [ -n "$parent_before" ]; then
-  live_body="$(gh issue view "$parent" --json body --jq '.body')"
-  rendered_body="$(cat "$bodyfile")"
-  if [ "$live_body" = "$rendered_body" ]; then
-    echo "update: parent #$parent already matches the current roadmap - no PATCH (diff-gated)"
-  else
-    gh issue edit "$parent" --body-file "$bodyfile"
-    echo "update: parent #$parent's body PATCHed to the current build order"
-  fi
-fi
-```
+`diff-gate <parent> <body-file> <live-body-file>`, on the Present row ONLY. `<body-file>` is step 2's rendered file; `<live-body-file>` is where the entry point SAVES the fetched live body, so step 5 reads the same bytes and this pass spends exactly one fetch. Its `compare` row prints BEFORE the PATCH is attempted, so a failed write still leaves the report the decision it has to name.
 
-```powershell
-# PowerShell 7+. Same diff-gate.
-if ($parent_before) {
-  $liveBody = (gh issue view $parent --json body --jq '.body') -join "`n"
-  $renderedBody = (Get-Content -LiteralPath $bodyFile -Raw)
-  if ($liveBody.TrimEnd() -eq $renderedBody.TrimEnd()) {
-    Write-Output "update: parent #$parent already matches the current roadmap - no PATCH (diff-gated)"
-  } else {
-    gh issue edit $parent --body-file $bodyFile
-    Write-Output "update: parent #$parent's body PATCHed to the current build order"
-  }
-}
-```
-
-Bash's `$(...)` command substitution already strips trailing newlines from both captures, so the comparison above is not tripped up by a trailing-newline difference between `gh`'s returned body and the locally rendered file; the PowerShell twin normalizes the same way with an explicit `.TrimEnd()` on both sides, since `Get-Content -Raw` preserves them.
+Both sides of the comparison, and the saved live body, have their carriage returns stripped and their trailing newlines removed, so the two twins compare and save identical bytes. A body differing from the render only in line endings therefore counts as unchanged and costs zero writes.
 
 ## Step 5: detect a removed milestone (new logic)
 
-Reuse the SAME `$live_body` / `$liveBody` fetched in step 4 (only meaningful when `$parent_before` was present; a brand-new parent has no prior state, so nothing can have been "removed" from it). Parse its OLD `number: <n>` lines (the block as it stood before this run) and diff them against step 1's freshly gathered `numbers` array.
+Reuse the SAME live body step 4 fetched, through the file it saved (only meaningful when `$parent_before` was present; a brand-new parent has no prior state, so nothing can have been "removed" from it). `detect-removed <live-body-file> <number> [<number> ...]` parses that body's OLD `number: <n>` lines (the block as it stood before this run) and diffs them against step 1's freshly gathered numbers, passed in build order.
 
-```bash
-# bash. old_numbers is this parent's PRIOR md-epic-order block; numbers is step 1's current set.
-if [ -n "$parent_before" ]; then
-  old_numbers=()
-  while IFS= read -r n; do old_numbers+=("$n"); done < <(printf '%s\n' "$live_body" | grep -oE '^number: [0-9]+$' | grep -oE '[0-9]+')
-  for n in "${old_numbers[@]}"; do
-    found=0
-    for m in "${numbers[@]}"; do [ "$n" = "$m" ] && found=1 && break; done
-    if [ "$found" = "0" ]; then
-      echo "update: milestone #$n was removed from the roadmap re-plan - its md-epic-order entry is dropped, its sub-issue links to #$parent are left in place (never unlinked), and it is never closed or deleted; flagged for your decision"
-    fi
-  done
-fi
-```
-
-```powershell
-# PowerShell 7+. Same diff.
-if ($parent_before) {
-  $oldNumbers = [regex]::Matches($liveBody, '(?m)^number: (\d+)$') | ForEach-Object { $_.Groups[1].Value }
-  foreach ($n in $oldNumbers) {
-    if ($numbers -notcontains $n) {
-      Write-Output "update: milestone #$n was removed from the roadmap re-plan - its md-epic-order entry is dropped, its sub-issue links to #$parent are left in place (never unlinked), and it is never closed or deleted; flagged for your decision"
-    }
-  }
-}
-```
+It prints one `dropped`TAB`<n>` row per number the old block carried that the current set no longer does, in the order the old block listed them, and nothing at all when none was dropped. Turning each row into the flagged line the report carries is the Report section below, never the twin's.
 
 A removed milestone needs no other action: its entry is already absent from the freshly rendered block (step 2 renders from the current manifest only), and `update` issues no unlink call, no close call, and no delete call for it or its issues, ever. This mirrors `update`'s existing "On GitHub, NOT in plan" convention for a live object no longer in the plan (`skills/update/SKILL.md` Step 4's reconcile table, and its Non-negotiables' "NEVER closes, NEVER deletes" line): flag it in the report (below) and take no other action.
 
@@ -140,7 +98,7 @@ Route through `update`'s existing Step 5 report mechanism (`skills/update/SKILL.
 
 ## Failure semantics
 
-Inherited unchanged from #245 and #246, no new failure handling is added: a `gh` error in the gather (step 1), the resolve-or-create (step 3), the diff-gated PATCH (step 4), or any per-child link (step 6) stops that step, reports what already completed and what remains, and deletes nothing. A re-run resumes safely: the gather retries receipt-then-title per milestone, the parent resolve retries receipt-then-title-then-create, the diff-gate re-compares fresh, and the linking pass's already-linked check means nothing already linked is re-attempted.
+No new failure handling is added: a `gh` error in the gather (step 1), the resolve-or-create (step 3), or the diff-gate's live-body read or PATCH (step 4) exits non-zero naming that call on stderr, and any per-child link failure (step 6) surfaces as a row; each stops that step, reports what already completed and what remains, and deletes nothing. A re-run resumes safely: the gather retries receipt-then-title per milestone, the parent resolve retries receipt-then-title-then-create, the diff-gate re-reads the receipt and re-compares fresh, and the linking pass's already-linked check means nothing already linked is re-attempted.
 
 ## How each acceptance criterion is met
 
@@ -151,8 +109,8 @@ Inherited unchanged from #245 and #246, no new failure handling is added: a `gh`
 | Removed milestone: entry removed, links left, flagged, never deleted | Step 5 (detection and flag) plus step 2's render (the entry is simply not re-emitted). No unlink/close/delete call exists anywhere in this pass. |
 | Single-milestone update byte-unchanged | "The gate" above: absent manifest, this whole pass never runs. |
 | Idempotent re-run, zero additional parent-reconcile writes | Step 1 is read-only; step 4's diff-gate no-ops when the body matches; step 6's already-linked check no-ops per child; step 7 only fires on a genuinely new parent. |
-| Failure path stops, reports, deletes nothing | "Failure semantics" above, inherited from #245/#246 unchanged. |
-| No second definition | Steps 1, 2, 3, 6, and 7 all point at #245's/#246's existing mechanics by reference; only the gate, the preliminary receipt read, the diff-gate (step 4), and the removed-milestone detection (step 5) are new, and none of them re-authors a block-render, a parent create-or-adopt, or a sub-issue-linking mechanic. |
-| bash + PowerShell 7+ twins | Every new form above (the preliminary read, steps 4 and 5) ships both. |
+| Failure path stops, reports, deletes nothing | "Failure semantics" above: no step adds a new failure handler, and no step deletes. |
+| No second definition | Steps 1, 2, 3, 6, and 7 all point at the `md-epic-parent` twin's existing entry points by reference; only the gate, the preliminary receipt read, the diff-gate (step 4), and the removed-milestone detection (step 5) are new, and none of them re-authors a block-render, a parent create-or-adopt, or a sub-issue-linking mechanic. |
+| bash + PowerShell 7+ twins | Every `gh` form above runs through one of the two twin pairs, each of which ships both. |
 
 **Honest bound.** The removed-milestone detection (step 5) trusts the parent's live body to still carry the `md-epic-order` block this pass itself last wrote. If a human hand-edits the parent issue's body directly on GitHub between runs (deleting a `number:` line by hand, for instance), the next run reads that edited state as "removed" even though the roadmap manifest itself never dropped that milestone, and the diff-gate (step 4) would PATCH over the hand edit on the very next run that changes anything else. This is the same class of stated limitation `update`'s existing stable-title assumption already carries (`skills/update/SKILL.md` "## IDEMPOTENCY" -> "Honest bound"): edit the brief/plan (here, the roadmap), not the GitHub object directly.
