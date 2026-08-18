@@ -43,7 +43,7 @@ While reading, **also assemble the four Step-0 grounding inputs** the inner rout
 | **Project-local overlay** | The optional `.milestone-config/implied-surfaces.md`, **merged ADDITIVELY** into the global reference (global is the floor, never reduced; empty / add-nothing → merged == global), producing the ONE merged reference handed downstream. |
 | **Consumer issue-template** | The consumer repo's `.github/ISSUE_TEMPLATE/` template the issue-author writes to. Selection is a **four-rung** rule (the driver config's `agentIssueTemplate`, else exactly one selectable template, else the built-in default, and absence never blocks) stated authoritatively at `docs/step-0-grounding.md` §5, **not restated here**. Rung 1 rides the same driver-config chain as the shared keys below and is **not** a fourth shared key. |
 
-Step 0 only **produces** these; the Step-3 architect brief and Step-4 issue-author brief that **consume** them are wired at Steps 3 / 4. The candidate-scoped **file-map is NOT a Step-0 input**. It is built per candidate at Step 4 (`docs/file-map.md`). When `uiSurfaceGlobs` degradation applies (below), the digest is unaffected. It carries no UI-surface distinction.
+Step 0 only **produces** these; the Step-3 architect brief and Step-4 issue-author brief that **consume** them are wired at Steps 3 / 4. The candidate-scoped **file-map is NOT a Step-0 input**. It is built per candidate at Step 4 (`docs/file-map.md`). The digest carries no UI-surface distinction and is unaffected by whether `uiSurfaceGlobs` resolves.
 
 Resolve the **shared keys** the architect and issue-author need for grounding, from the driver config (`docs/profile-schema.md` shared-keys chain):
 
@@ -53,7 +53,7 @@ Resolve the **shared keys** the architect and issue-author need for grounding, f
 
 The shared keys are exactly three: `sourceGlobs`, `uiSurfaceGlobs`, `integrationBranch` (the canonical consumer-facing set: `SPEC.md` §7, `docs/profile-schema.md` §2). Each resolves down the chain above. The `agentIssueTemplate` read at `docs/step-0-grounding.md` §5 rung 1 uses this same chain but does **not** join the triple. That set stays three.
 
-**Degradation:** when `uiSurfaceGlobs` is absent (neither driver file carries it), treat every candidate as **logic** (no UI surface can be matched, so no design-lens distinction is drawn) and **state the degradation** in the plan file's grounding section. The pipeline still runs.
+**Degradation:** when `uiSurfaceGlobs` is absent (neither driver file carries it), no candidate can be matched to a UI surface **by glob**. Classification itself is unaffected: the issue-author classifies every candidate at Step 4 under its own affordance test (`agents/issue-author.md` clause 5), which reads the candidate's own facts and needs no globs. Its `LABELS` return is the run's **single authoritative** `ui | logic` answer, glob-present or glob-absent; the architect's `surface` value (`agents/architect.md` clause 5) is a hint `plan` threads through and never a second verdict. **State the degradation** in the plan file's grounding section as the absent key and its effect (no glob-based UI match), **never** as a `logic` verdict: candidates are not flattened to `logic`. The pipeline still runs.
 
 ### The single-milestone inner routine (Steps 1–7): callable contract
 
