@@ -601,11 +601,15 @@ for skill_md in sorted((REPO_ROOT / "skills").rglob("SKILL.md")):
 # a to d moved into the deploy-write-sequence script twins: that change shrank
 # docs/create-deploy-sequence.md, and it re-pinned skills/create/SKILL.md to
 # its formula value (the file grew slightly there; 4650 still sits below the
-# prior 4700, so never-up holds). SPEC.md has since shrunk to 6447 (a tightening pass would
-# record 6800) and its recorded value stands until that pass runs, because the
-# never-up rule permits a descent without compelling one. No other governed
-# file's count moved off its recorded ceiling.
+# prior 4700, so never-up holds); it has since shrunk, to 4549, and its
+# recorded 4650 stands (the per-entry note below). SPEC.md has since shrunk
+# to 6447 (a tightening pass would record 6800) and its recorded value stands
+# until that pass runs, because the never-up rule permits a descent without
+# compelling one. No other governed file's count moved off its recorded
+# ceiling.
 FILE_WORD_CEILINGS: dict[str, int] = {
+    # 4549 words times 1.05 is 4776.45, which rounds up to 4800. The recorded
+    # 4650 stands instead, because the never-up rule outranks the formula.
     "skills/create/SKILL.md": 4650,
     "skills/update/SKILL.md": 6550,
     "skills/build-roadmap/SKILL.md": 2700,
