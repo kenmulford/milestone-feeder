@@ -14,7 +14,8 @@ Skills live at `skills/<verb>/SKILL.md` (verbs: `plan`, `create`, `update`, `set
 
 ## File & folder layout
 Where things go, and the shape of a feature.
-`skills/` (one folder per verb, each a `SKILL.md`) · `agents/` (one `.md` per agent) · `hooks/` (the `no-source-edit` gate + polyglot launcher) · `.claude-plugin/` (`plugin.json` + `marketplace.json`) · `docs/` (architecture, profile-schema, consumer-setup, `specs/`) · `tests/scenarios/NN-*/` (end-to-end fixtures) · `scripts/` (the CI gate scripts, plus the one-time-notice emitter twins and the notice-data file they read, and the roadmap-deploy mechanics twins `create`'s Step 1R invokes) · `.milestone-config/` (`feeder.json`, `driver.json`, nested `.gitignore`). SPEC.md + README.md + CHANGELOG.md at the root. (Grounded in repo layout; `docs/architecture.md` Plugin contents table.)
+`skills/` (one folder per verb, each a `SKILL.md`) · `agents/` (one `.md` per agent) · `hooks/` (the `no-source-edit` gate + polyglot launcher) · `.claude-plugin/` (`plugin.json` + `marketplace.json`) · `docs/` (architecture, profile-schema, consumer-setup, `specs/`) · `tests/scenarios/NN-*/` (end-to-end fixtures) · `scripts/` (the CI gate scripts, plus the one-time-notice emitter twins and the notice-data file they read, the roadmap-deploy mechanics twins `create`'s Step 1R invokes, and the deploy-write-sequence twins `create`'s Step 3 invokes) · `.milestone-config/` (`feeder.json`, `driver.json`, nested `.gitignore`). SPEC.md + README.md + CHANGELOG.md at the root. (Grounded in repo layout; `docs/architecture.md` Plugin contents table.)
+
 
 ## Test patterns
 Where tests live, how they're named, fixtures/factories, and what a good test looks like.
