@@ -79,11 +79,12 @@ assertions exist), not executed.
 - After the fan-out, **each manifest entry's `Plan file:` field is populated** with
   that milestone's real path (no longer PENDING): the handle `create`'s deploy-loop
   later resolves each milestone by (never a name-derived slug).
-- **UI classification engages per milestone:** because `uiSurfaceGlobs` is set, the
-  portal / dashboard / revenue-report **page-issues classify `ui`** and their
-  authoring carries the design spec (states + `DataTable` + 30/page directive
-  cited from `project/conventions.md`) the driver's design lens checks; the auth /
-  data-model / API issues classify `logic`.
+- **UI classification runs per milestone:** the portal / dashboard / revenue-report
+  **page-issues classify `ui`** and their authoring carries the design spec (states +
+  `DataTable` + 30/page directive cited from `project/conventions.md`) the driver's
+  design lens checks; the auth / data-model / API issues classify `logic`. Because
+  `uiSurfaceGlobs` is set, the glob half of the test engages here too, agreeing with
+  the affordance half on every candidate.
 
 ## MUST: empty fan-out: single-milestone collapse is a valid outcome, not an error  (✅ preview)
 

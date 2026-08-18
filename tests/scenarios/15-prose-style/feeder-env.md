@@ -23,6 +23,6 @@ plan-side portion of scenarios 11–14.
 - `feeder.json`: defaults (`projectDocs: project/`).
 - Driver shared keys (as if from `.milestone-config/driver.json`):
   - `sourceGlobs`: `["src/**"]`
-  - `uiSurfaceGlobs`: absent   # no UI surface matched → the candidate classifies `logic`
+  - `uiSurfaceGlobs`: absent   # no glob-based UI match; the issue-author classifies #A `ui` on its pagination affordance (`agents/issue-author.md` clause 5)
   - `integrationBranch`: `"develop"`
 - Project docs dir: `project/`
