@@ -70,7 +70,7 @@ writes the nested `.gitignore`).
 - **Legacy-fallback:** none.
 - **Writes:** the nested `.milestone-config/.gitignore`.
 - **Safety:** best-effort; never clobbers a user-edited file; a failed self-heal never aborts the run.
-- **Sync:** this block is a strict SUBSET of this repo's committed `.milestone-config/.gitignore`, which is the authority for the entry set; #366 closes the gap. Keep it byte-exact with feeder `setup`'s self-heal twin (`skills/setup/SKILL.md` Phase 3, which emits it verbatim from here). The driver's `tests-green` twin (`milestone-driver/hooks/tests-green.sh` / `tests-green.ps1`) currently **DIVERGES on the first comment line only**, which still carries the em-dash form this repo has purged; the driver plugin owns that purge in its own repo, so do not edit it from here.
+- **Sync:** the authority for the entry set is this repo's committed `.milestone-config/.gitignore`. This block carries all 12 of its entries, byte-exact, in its order. Keep it byte-exact with feeder `setup`'s self-heal twin (`skills/setup/SKILL.md` Phase 3, which emits it verbatim from here). The driver's `tests-green` twins (`milestone-driver/hooks/tests-green.sh` / `tests-green.ps1`) **DIVERGE**: 6 entries, and a first comment line still carrying the em-dash form this repo has purged. `milestone-driver` #499 owns both, so do not edit them from here.
 
 ```gitignore
 # milestone-driver / milestone-feeder per-clone scratch, git-invisible by default.
@@ -79,6 +79,12 @@ writes the nested `.gitignore`).
 # (driver.json, feeder.json) is intentionally NOT listed, so it stays tracked.
 preflight-notice
 trello-notice
+visualcapture-notice
+parallel-default-notice
+code-review-gate-notice
+aiprefilter-notice
+cost-record-notice
+uisurfaceglobs-notice
 triage-cache.json
 tests-stamp
 .runtime/
@@ -95,7 +101,9 @@ if [ ! -f "$ignore_path" ]; then
     '# Committed so per-run scratch stays out of `git status` with zero user setup.' \
     '# Patterns are relative to this .milestone-config/ directory. Tracked config' \
     '# (driver.json, feeder.json) is intentionally NOT listed, so it stays tracked.' \
-    'preflight-notice' 'trello-notice' 'triage-cache.json' 'tests-stamp' \
+    'preflight-notice' 'trello-notice' 'visualcapture-notice' \
+    'parallel-default-notice' 'code-review-gate-notice' 'aiprefilter-notice' \
+    'cost-record-notice' 'uisurfaceglobs-notice' 'triage-cache.json' 'tests-stamp' \
     '.runtime/' 'worktrees/' > "$ignore_path" 2>/dev/null || true
 fi
 ```
@@ -111,7 +119,9 @@ try {
       '# Committed so per-run scratch stays out of `git status` with zero user setup.'
       '# Patterns are relative to this .milestone-config/ directory. Tracked config'
       '# (driver.json, feeder.json) is intentionally NOT listed, so it stays tracked.'
-      'preflight-notice'; 'trello-notice'; 'triage-cache.json'; 'tests-stamp'
+      'preflight-notice'; 'trello-notice'; 'visualcapture-notice'
+      'parallel-default-notice'; 'code-review-gate-notice'; 'aiprefilter-notice'
+      'cost-record-notice'; 'uisurfaceglobs-notice'; 'triage-cache.json'; 'tests-stamp'
       '.runtime/'; 'worktrees/'
     ) -join "`n"
     [System.IO.File]::WriteAllText($ignorePath, $ignoreBody + "`n", [System.Text.UTF8Encoding]::new($false))
