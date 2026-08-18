@@ -43,9 +43,15 @@ Check for a **roadmap manifest** at `.milestone-feeder/roadmap-<slug>.md` (slug 
 
 Immediately after that receipt write, in the same run, `create` links every deployed milestone's surviving issues to the parent as native GitHub sub-issues, in build order, and re-asserts each freshly linked child's own milestone right after its own fresh link (never for a child already linked). A 100-sub-issue-per-parent cap, a per-milestone nested `md-epic` refusal, and a per-child linked/failed/skipped report all apply; a `gh` failure never fails the deploy, and a re-run of this pass links nothing twice.
 
-Full mechanics (the resolution table, the outer-loop per-milestone steps, and the build-order-line assembly twins) live in **`docs/create-deploy-sequence.md` → "Step 1R: Resolve the deploy target"**.
+Full mechanics (the resolution table, the outer-loop per-milestone steps, and the build-order-line assembly) live in **`docs/create-deploy-sequence.md` → "Step 1R: Resolve the deploy target"**. The three mechanical operations behind them are **not** re-typed inline: run the bundled twin pair `${CLAUDE_PLUGIN_ROOT}/scripts/roadmap-deploy.{sh,ps1}` (the plugin-root convention this repo uses for bundled assets, `hooks/hooks.json`), selecting the `.sh` or the `.ps1` form by the shell this session already runs, exactly as for every other twin:
 
-Mechanics for the new md-epic parent-issue pass live in that same reference, immediately after the build-order-line assembly twins.
+| Operation | Where it runs | Contract |
+|---|---|---|
+| `checkpoint-read <slug> <position>` | Row 0, once per milestone | Prints `planfile=`, `short_circuit=`, `number=`; fail-open, always exits 0. |
+| `checkpoint-upsert <slug> <position> <planfile> <number> <pass> <status>` | Each pass-start and pass-end, passes a-d | Upserts by position, never duplicating; fail-open, a write failure is a notice and the deploy continues. |
+| `build-order-line <position> <total> <milestone-number> <goal> <waves>` | Row iv | Assembles the description and applies pass (d)'s REPLACE-form PATCH; **not** best-effort, it exits with `gh`'s status and a non-zero takes the mid-loop failure path. |
+
+Mechanics for the new md-epic parent-issue pass live in that same reference, immediately after the build-order-line assembly.
 
 Mechanics for the sub-issue-linking pass, the cap, the nested-epic refusal, and the per-child failure/idempotency handling, live in that same reference, immediately after the md-epic parent-issue pass.
 
