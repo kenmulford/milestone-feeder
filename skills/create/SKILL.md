@@ -51,9 +51,9 @@ Full mechanics (the resolution table, the outer-loop per-milestone steps, and th
 | `checkpoint-upsert <slug> <position> <planfile> <number> <pass> <status>` | Each pass-start and pass-end, passes a-d | Upserts by position, never duplicating; fail-open, a write failure is a notice and the deploy continues. |
 | `build-order-line <position> <total> <milestone-number> <goal> <waves>` | Row iv | Assembles the description and applies pass (d)'s REPLACE-form PATCH; **not** best-effort, it exits with `gh`'s status and a non-zero takes the mid-loop failure path. |
 
-Mechanics for the new md-epic parent-issue pass live in that same reference, immediately after the build-order-line assembly.
+Mechanics for the md-epic parent-issue pass live in that same reference, immediately after the build-order-line assembly. Its four steps run through a second bundled twin pair, `${CLAUDE_PLUGIN_ROOT}/scripts/md-epic-parent.{sh,ps1}`, resolved and selected exactly as above: `gather-numbers`, `render-body`, `resolve-or-create` (receipt, then adopt-by-title, then create), `write-receipt` (report-don't-block).
 
-Mechanics for the sub-issue-linking pass, the cap, the nested-epic refusal, and the per-child failure/idempotency handling, live in that same reference, immediately after the md-epic parent-issue pass.
+Mechanics for the sub-issue-linking pass, the cap, the nested-epic refusal, and the per-child failure/idempotency handling, live in that same reference, immediately after the md-epic parent-issue pass. The whole pass is that twin pair's fifth entry point, `link-sub-issues`, which prints one row per outcome and decides nothing: the notices, the warning, and the report stay here, per the row table there.
 
 ### Step 1: Resolve the plan file for the brief
 
