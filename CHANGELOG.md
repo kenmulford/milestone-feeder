@@ -3,6 +3,31 @@
 Release notes for milestone-feeder. Each tagged release is also published on the
 [GitHub Releases page](https://github.com/kenmulford/milestone-feeder/releases).
 
+## v0.15.0: the remediation path
+
+**Theme:** A driver triage Blocker now has a verb that fixes the issue. `/milestone-feeder:remediate <issue-number>` reads the driver's recorded `🔴 Triage` findings and rewrites the issue body, editing the text each finding names in place instead of appending a correction section that leaves two live statements for one decision. Everything else is unchanged: no verb, agent contract, or park boundary shifts behavior.
+
+### ✨ The remediate verb
+
+| Issue | PR | What |
+|---|---|---|
+| #343 No path from a driver triage Blocker back to a corrected issue body | #477 | The `remediate` skill plus the read-only `remediator` agent: in-place correction, a mechanical pre-write check that the superseded text is gone, one diff-gated body write, and a no-op re-run |
+
+### Consumer notes (upgrading from v0.14.1)
+
+- **New verb:** `/milestone-feeder:remediate <issue-number>`. Run it after `milestone-driver`'s triage parks an issue. It edits that issue's body and nothing else: no labels, no comments, no milestone writes, so clearing the park label and re-running triage stay yours.
+- A finding needing a product or architecture decision returns `NEEDS_HUMAN` and stays parked; the verb never guesses one. A finding an earlier run already fixed returns `ALREADY_APPLIED`, so a re-run writes nothing and says so.
+- `plan` and `update` print a one-time, per-clone notice naming the new verb, so an existing install surfaces it at the verbs you already run.
+- **No schema changes** to `.milestone-config/feeder.json`. The verb reuses the existing `projectDocs` grounding and adds no agent-override key.
+
+### ⚖️ Audit trail
+
+- Judgment-call PR for review: **#477** (the implementer declared `DESTRUCTIVE_OPS: yes` for the documented body write; the confirmation flow is specified as an announce-then-write diff plus a pre-write string-search check, so the run proceeded rather than parking).
+- `SPEC.md` lost 737 words of provenance, editing history, and duplicated statements of the quality bar, and its word ceiling ratcheted down from 6800 to 6400.
+- `docs/one-time-notices.md`'s ceiling rose 2050 to 2300, the recorded decision the never-up rule requires: an eighth notice section whose printed text is byte-pinned to `scripts/emit-notice.json` does not fit the remaining headroom.
+- The shipped gate does NOT verify that a corrected body carries exactly one statement per decision by string search; that check is a mechanical proxy (each replacement occurs exactly once) plus the agent's own contract.
+- `SPEC.md` sits at 6059 words against its 6400 ceiling.
+
 ## v0.14.1: token diet & backlog fixes
 
 **Theme:** The feeder's per-run instruction token load drops: deterministic `gh` mechanics move from in-context prose fences into five bash + PowerShell script twin pairs, instruction prose dedupes to one statement per invariant, bare issue-number provenance refs give way to owning file/section references, and the word-ceiling table re-pins to the shrunken tree. Four backlog fixes ride along. No verb, agent contract, or park boundary changes behavior.
