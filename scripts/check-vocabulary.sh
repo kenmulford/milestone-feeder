@@ -33,15 +33,15 @@
 #   header and to .project/conventions.md (## Em-dash ban) together.
 #
 #   This file names the character in prose as "em dash (U+2014)" and never
-#   reproduces the glyph, so it carries no U+2014 byte of its own, whatever the
-#   scripts/ exclusion allows. PATTERN builds the character at run time.
+#   reproduces the glyph, so it carries no U+2014 byte of its own, whatever its
+#   own exclusion allows. PATTERN builds the character at run time.
 #
-#   Excluded pathspecs (five), for two DIFFERENT reasons. Which reason applies
+#   Excluded pathspecs (six), for two DIFFERENT reasons. Which reason applies
 #   decides what the exclusion asks of an author:
-#     The gate cannot scan its own machinery: scripts/, .github/. A gate must
-#     hold the banned strings in order to test for them. Authors stay fully
-#     bound by both categories there. The exclusion is mechanical, never a
-#     licence.
+#     The gate cannot scan its own machinery: this file,
+#     scripts/check-contract-strings.sh, .github/. A gate must hold the banned
+#     strings in order to test for them. Authors stay fully bound by both
+#     categories there. The exclusion is mechanical, never a licence.
 #     Recasting the record is itself the defect: docs/specs/** (frozen specs,
 #     which the migration spec legitimately discusses the purge in),
 #     CHANGELOG.md (the v0.3.0 entry names the renames), and
@@ -51,12 +51,18 @@
 #     the `needs-product-input-observed-*.md` sibling a plain `observed-*.md`
 #     would miss, mirroring scripts/check-contract-strings.sh (Authoritative
 #     definition).
-#   For the first four, the v0.3.0 spec asked for docs/specs/** and
-#   CHANGELOG.md; scripts/ and .github/ are a strict superset that removes
-#   nothing the spec asked to protect.
+#   For the first five, the v0.3.0 spec asked for docs/specs/** and
+#   CHANGELOG.md; the two gate scripts and .github/ are a superset that removes
+#   nothing the spec asked to protect. The two gate scripts are named FILE BY
+#   FILE rather than as a scripts/** blanket, because the rest of scripts/ is
+#   consumer-facing surface: scripts/emit-notice.json holds the lines every
+#   one-time notice prints, and since docs/one-time-notices.md dropped its
+#   emitter twins that JSON is the only copy a consumer ever sees
+#   (docs/one-time-notices.md (How each skill runs this file)). A scripts/**
+#   blanket would leave it permanently unscanned.
 #
-#   Sanctioned quotes are carved out by matched SPAN, not by a sixth pathspec:
-#   see ALLOWLIST_ROWS below.
+#   Sanctioned quotes are carved out by matched SPAN, not by a seventh
+#   pathspec: see ALLOWLIST_ROWS below.
 #
 # Why `git grep`:
 #   The "live surface" is exactly what is committed: what a consumer installs
@@ -115,8 +121,8 @@ PATTERN="${VOCAB_PATTERN}|${EMDASH}"
 #                 follow a recast.
 # Recorded as carve-out 3 at .project/conventions.md (## Em-dash ban).
 #
-# By SPAN, never by line and never by file. A sixth pathspec exclusion would be
-# one line cheaper and would permanently blind docs/create-deploy-sequence.md,
+# By SPAN, never by line and never by file. A seventh pathspec exclusion would
+# be one line cheaper and would permanently blind docs/create-deploy-sequence.md,
 # the repo's largest governed prose file, to this ratchet. Per span, a second
 # banned character anywhere else on an allowlisted line still fails.
 ALLOWLIST_ROWS=(
@@ -214,7 +220,8 @@ fi
 # scripts/check-contract-strings.sh (Authoritative definition) byte for byte.
 set +e
 MATCHES="$(git grep --no-color -EIinH "${PATTERN}" -- \
-  ':!:docs/specs/**' ':!:CHANGELOG.md' ':!:scripts/**' ':!:.github/**' \
+  ':!:docs/specs/**' ':!:CHANGELOG.md' ':!:scripts/check-vocabulary.sh' \
+  ':!:scripts/check-contract-strings.sh' ':!:.github/**' \
   ':!:tests/**/*observed-*.md')"
 status=$?
 set -e
