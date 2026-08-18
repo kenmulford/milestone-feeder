@@ -215,11 +215,18 @@ function Invoke-NoticeUnit {
 #
 # Case-SENSITIVE (-ccontains, -ceq) to match jq's case-sensitive `index` and
 # `==` in the bash twin, the same reason hooks/no-source-edit.ps1 reaches for
-# -cnotcontains and -clike. A `skills` that is not an array matches nothing
-# here, which is what the bash twin's `if type == "array"` test reproduces:
-# jq's `index` would otherwise run as substring matching on a string.
+# -cnotcontains and -clike. The two type guards are what hold the twins in
+# step on a malformed unit, and neither is redundant: `@()` wraps a STRING
+# `skills` of "plan" into a one-element array and matches it, where the bash
+# twin's `if type == "array"` test rejects the whole unit; and `[string]$_.id`
+# stringifies a numeric or boolean `id` into a match, where jq's `==` compares
+# types and rejects it.
 $selected = @($units | Where-Object {
-        if ($mode -eq 'caller') { @($_.skills) -ccontains $sel } else { [string]$_.id -ceq $sel }
+        if ($mode -eq 'caller') {
+            $_.skills -is [array] -and @($_.skills) -ccontains $sel
+        } else {
+            $_.id -is [string] -and $_.id -ceq $sel
+        }
     })
 
 foreach ($unit in $selected) {
