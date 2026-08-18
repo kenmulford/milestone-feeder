@@ -174,6 +174,8 @@ fi
 ```powershell
 # PowerShell 7+: same read-only detect + one-time notice; NEVER writes the root .gitignore; never aborts plan.
 try {
+  # UTF-8 console output so the emoji survives a default Windows codepage; own catch so a throwing setter never skips the notice.
+  try { [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new() } catch {}
   $marker = Join-Path '.milestone-config' (Join-Path '.runtime' 'legacy-blanket-notice')
   if ((-not (Test-Path $marker)) -and (Test-Path '.gitignore')) {
     $lines = Get-Content -LiteralPath '.gitignore'
@@ -264,6 +266,8 @@ fi
 ```powershell
 # PowerShell 7+: same read-only detect + one-time notice; NEVER writes projectDocs/.project/ or driver.json, NEVER runs the bootstrapper; never aborts plan.
 try {
+  # UTF-8 console output so the emoji survives a default Windows codepage; own catch so a throwing setter never skips the notice.
+  try { [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new() } catch {}
   # Resolve projectDocs in-block (the key-extraction table below has not run yet) with the SAME default the table uses,
   # so the two reads can't diverge; a non-string projectDocs (number/array), missing file / malformed JSON all fall
   # back to .project/. Strip ALL trailing slashes for the detect operand; an empty result (e.g. "/") falls back to
@@ -347,6 +351,8 @@ fi
 ```powershell
 # PowerShell 7+: same one-time roadmap-routing discovery notice; read-only; marker-gated; never aborts plan.
 try {
+  # UTF-8 console output so the emoji survives a default Windows codepage; own catch so a throwing setter never skips the notice.
+  try { [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new() } catch {}
   $marker = Join-Path '.milestone-config' (Join-Path '.runtime' 'roadmap-routing-notice')
   if (-not (Test-Path $marker)) {
     # Indent-safe array-join (the #120/#121 self-heal construct), NOT a here-string; byte-identical
@@ -430,6 +436,8 @@ fi
 ```powershell
 # PowerShell 7+: same read-only detect + one-time notice; NEVER writes the overlay; never aborts plan.
 try {
+  # UTF-8 console output so the emoji survives a default Windows codepage; own catch so a throwing setter never skips the notice.
+  try { [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new() } catch {}
   $marker = Join-Path '.milestone-config' (Join-Path '.runtime' 'implied-surfaces-notice')
   $overlay = Join-Path '.milestone-config' 'implied-surfaces.md'
   if ((-not (Test-Path $marker)) -and (-not (Test-Path $overlay))) {
@@ -504,6 +512,8 @@ fi
 ```powershell
 # PowerShell 7+: same one-time md-epic-parent discovery notice; read-only; marker-gated; never aborts create/update.
 try {
+  # UTF-8 console output so the emoji survives a default Windows codepage; own catch so a throwing setter never skips the notice.
+  try { [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new() } catch {}
   $marker = Join-Path '.milestone-config' (Join-Path '.runtime' 'md-epic-parent-notice')
   if (-not (Test-Path $marker)) {
     # Indent-safe array-join (the #120/#121 self-heal construct), NOT a here-string: an
@@ -580,6 +590,8 @@ fi
 ```powershell
 # PowerShell 7+: same one-time consumer-issue-template discovery notice; read-only; marker-gated; never aborts plan.
 try {
+  # UTF-8 console output so the emoji survives a default Windows codepage; own catch so a throwing setter never skips the notice.
+  try { [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new() } catch {}
   $marker = Join-Path '.milestone-config' (Join-Path '.runtime' 'issue-template-notice-v2')
   if (-not (Test-Path $marker)) {
     # Indent-safe array-join (the #120/#121 self-heal construct), NOT a here-string; byte-identical
