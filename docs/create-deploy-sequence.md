@@ -60,134 +60,41 @@ Before resolving a plan file, check whether `plan`'s roadmap flow left a **roadm
 **Upsert-by-position helper (never grows a duplicate entry): bash + PowerShell 7+ twins.** Mirrors this file's own idempotent-write idioms: the plan-file receipt's read-modify-write (below, "Write the deploy receipt") and the manifest's per-entry field overwrite keyed by a stable position (`skills/plan/SKILL.md` line ~266). Call this at each pass-start/pass-end site above, with `$pass`/`$status` set to that site's values. `$X` is this milestone's `Build-order position`; `$planfile` is its `Plan file:` path, Row 0 resolves it first (below) and every later row reuses that same value, never re-reading it; `$number` is this milestone's resolved GitHub milestone number (the same VALUE the outer loop's later passes track under their own local name `n`, above, "Gather every deployed milestone's number"; this new mechanism uses its own name, `number`, in its own scope, not a shared variable), empty until pass (b) resolves it:
 
 ```bash
-# bash. Upsert this milestone's checkpoint entry by position; fail-open (no jq, or any
-# write error, emits a notice and returns WITHOUT aborting the deploy in progress). A
-# 0-byte/absent state file is (re)seeded fresh (`-s`, not `-f`: treats empty the same as
-# absent, so a corrupted-to-empty file is never silently accepted as valid content); a
-# post-filter `-s "$tmp"` check guards against ever overwriting the real file with an
-# unexpectedly empty filter result (jq exits 0 on empty input with zero output records).
-state=".milestone-feeder/deploy-state-<slug>.json"
-if command -v jq >/dev/null 2>&1; then
-  [ -s "$state" ] || printf '{"slug": "<slug>", "milestones": []}' > "$state" 2>/dev/null
-  n_json="${number:-null}"
-  tmp="$(mktemp 2>/dev/null)"
-  if [ -n "$tmp" ] && jq --argjson x "$X" --arg pf "$planfile" --argjson n "$n_json" --arg p "$pass" --arg st "$status" \
-       '.milestones = ((.milestones // []) | map(select(.position != $x))) + [{position: $x, planFile: $pf, milestoneNumber: $n, pass: $p, status: $st}]' \
-       "$state" > "$tmp" 2>/dev/null && [ -s "$tmp" ]; then
-    mv "$tmp" "$state" 2>/dev/null || echo "create: could not persist the deploy checkpoint for milestone $X (pass $pass, $status), continuing without it"
-  else
-    rm -f "$tmp" 2>/dev/null
-    echo "create: could not persist the deploy checkpoint for milestone $X (pass $pass, $status), continuing without it"
-  fi
-fi
+# bash. Fail-open. No jq: silent no-op; a write error emits the notice below.
+# Either way this returns WITHOUT aborting the deploy in progress.
+"${CLAUDE_PLUGIN_ROOT}/scripts/roadmap-deploy.sh" checkpoint-upsert "<slug>" "$X" "$planfile" "$number" "$pass" "$status"
 ```
 
 ```powershell
-# PowerShell 7+. Same upsert-by-position; native ConvertFrom-Json/ConvertTo-Json, no jq
-# dependency (mirrors hooks/no-source-edit.ps1's convention vs the bash twin). Fail-open:
-# any error emits a notice and returns WITHOUT aborting the deploy in progress. $number is
-# $null until pass (b) resolves it. A 0-byte/absent state file is (re)seeded fresh (mirrors
-# the bash twin's `-s`, not `-f`, guard). position/milestoneNumber are cast to [int]
-# explicitly so ConvertTo-Json always emits a JSON number, never a string a regex capture
-# upstream could have left un-typed: a string-typed position would never match the bash
-# reader's `--argjson x` numeric comparison, permanently defeating the short-circuit.
-$state = ".milestone-feeder/deploy-state-<slug>.json"
-try {
-  $stateHasContent = (Test-Path $state) -and ((Get-Item $state).Length -gt 0)
-  $checkpoint = if ($stateHasContent) { Get-Content -LiteralPath $state -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop } else { [pscustomobject]@{ slug = "<slug>"; milestones = @() } }
-  $rest = @($checkpoint.milestones | Where-Object { $_.position -ne [int]$X })
-  $numberJson = if ($number) { [int]$number } else { $null }
-  $rest += [pscustomobject]@{
-    position        = [int]$X
-    planFile        = $planfile
-    milestoneNumber = $numberJson
-    pass            = $pass
-    status          = $status
-  }
-  $checkpoint.milestones = $rest
-  $checkpoint | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $state -Encoding utf8NoBOM -ErrorAction Stop
-} catch {
-  Write-Output "create: could not persist the deploy checkpoint for milestone $X (pass $pass, $status), continuing without it"
-}
+# PowerShell 7+. Same upsert-by-position, same fail-open contract; native
+# ConvertFrom-Json/ConvertTo-Json, no jq dependency.
+& "$env:CLAUDE_PLUGIN_ROOT/scripts/roadmap-deploy.ps1" checkpoint-upsert "<slug>" $X $planfile $number $pass $status
 ```
+
+The script holds the mechanics, once, for both twins: the fresh (re)seed of a 0-byte or absent state file (`-s`, not `-f`, so a corrupted-to-empty file is never silently accepted as valid content), the post-filter guard against overwriting the real file with an unexpectedly empty filter result, the `[int]` casts that keep `position`/`milestoneNumber` JSON numbers on the PowerShell path (a string-typed position would never match the bash reader's `--argjson x` numeric comparison, permanently defeating the short-circuit), and the one notice text, `create: could not persist the deploy checkpoint for milestone $X (pass $pass, $status), continuing without it`. An empty `$number` is recorded as JSON `null`. Exit status is 0 in every case.
 
 **Row 0, the read + short-circuit check (Correction 3's exact shape): bash + PowerShell 7+ twins.** Runs BEFORE row i, for each milestone in build order, and resolves `$planfile` itself as its very first action, by reading this milestone's `Plan file:` line at `position` `$X` straight from the roadmap manifest (row i, row ii, and pass (e) then all reuse this SAME already-resolved value: it is read only once per milestone, never re-read). Once `$planfile` is in hand, read this milestone's checkpoint entry by `position` (`$X`); when it reports `pass == "d" && status == "complete"`, run ONE `gh api` GET against the live milestone and compare it to (a) the plan file's `Milestone title (exact):` line (exact string equality) and (b) `.state == "open"`: a 404/`gh` error, a title mismatch, or `state != "open"` are ALL "does not match" and fall through, consistent with pass (b)'s own title-compare precedent (below). The `gh` call captures **stdout only**: it never merges stderr into the stream being parsed as JSON, so an incidental stderr line on an otherwise-successful call can never masquerade as unparsable JSON and force a false negative. The checkpoint-recorded values read back for the trust test are named `cp_pass`/`cp_status`/`cp_number` (bash) / `$cpPass`/`$cpStatus`/`$cpNumber` (pwsh), deliberately NOT `pass`/`status`/`number`, so they never collide with the upsert helper's caller-supplied parameters of those same names:
 
 ```bash
-# bash. Row 0: resolve $planfile, consult the checkpoint, then the one cheap existence
-# check (Correction 3). cp_pass/cp_status/cp_number are the CHECKPOINT-RECORDED values
-# (never the upsert helper's own pass/status/number parameter names, no collision).
-short_circuit=0
-manifest=".milestone-feeder/roadmap-<slug>.md"
-state=".milestone-feeder/deploy-state-<slug>.json"
-planfile="$(awk -v x="$X" '
-  $0 ~ ("^### " x "\\. ") { infile=1; next }
-  /^### / { infile=0 }
-  infile && /^- Plan file:/ { sub(/^- Plan file: */, ""); print; exit }
-' "$manifest")"
-if command -v jq >/dev/null 2>&1 && [ -s "$state" ]; then
-  entry="$(jq -c --argjson x "$X" '(.milestones // [])[] | select(.position == $x)' "$state" 2>/dev/null)"
-  if [ -n "$entry" ]; then
-    cp_pass="$(printf '%s' "$entry" | jq -r '.pass // empty' 2>/dev/null)"
-    cp_status="$(printf '%s' "$entry" | jq -r '.status // empty' 2>/dev/null)"
-    cp_number="$(printf '%s' "$entry" | jq -r '.milestoneNumber // empty' 2>/dev/null)"
-    if [ "$cp_pass" = "d" ] && [ "$cp_status" = "complete" ] && [ -n "$cp_number" ]; then
-      title="$(grep -m1 '^Milestone title (exact):' "$planfile" | sed -E 's/^Milestone title \(exact\): *//')"
-      # stdout only (2>/dev/null): never merge gh's stderr into the JSON we parse below.
-      if live="$(gh api "repos/{owner}/{repo}/milestones/$cp_number" --jq '{title, state}' 2>/dev/null)"; then
-        live_title="$(printf '%s' "$live" | jq -r '.title' 2>/dev/null)"
-        live_state="$(printf '%s' "$live" | jq -r '.state' 2>/dev/null)"
-        if [ "$live_title" = "$title" ] && [ "$live_state" = "open" ]; then
-          short_circuit=1
-          number="$cp_number"
-        fi
-      fi
-    fi
-  fi
-fi
+# bash. Row 0: resolve $planfile, consult the checkpoint, then the one cheap
+# existence check (Correction 3).
+"${CLAUDE_PLUGIN_ROOT}/scripts/roadmap-deploy.sh" checkpoint-read "<slug>" "$X"
 ```
 
 ```powershell
-# PowerShell 7+. Same resolve-then-check; native JSON, no jq dependency. $cpPass/$cpStatus/
-# $cpNumber are the CHECKPOINT-RECORDED values (never the upsert helper's own $pass/$status/
-# $number parameter names, no collision).
-$shortCircuit = $false
-$manifest = ".milestone-feeder/roadmap-<slug>.md"
-$state = ".milestone-feeder/deploy-state-<slug>.json"
-$planfile = $null
-$inBlock = $false
-foreach ($line in (Get-Content -LiteralPath $manifest)) {
-  if ($line -match "^### $X\. ") { $inBlock = $true; continue }
-  if ($line -match '^### ') { $inBlock = $false }
-  if ($inBlock -and $line -match '^- Plan file: *(.+)') { $planfile = $Matches[1]; break }
-}
-$stateHasContent = (Test-Path $state) -and ((Get-Item $state).Length -gt 0)
-if ($stateHasContent) {
-  try {
-    $checkpoint = Get-Content -LiteralPath $state -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop
-    $entry = $checkpoint.milestones | Where-Object { $_.position -eq [int]$X } | Select-Object -First 1
-    if ($entry) {
-      $cpPass = $entry.pass
-      $cpStatus = $entry.status
-      $cpNumber = $entry.milestoneNumber
-      if ($cpPass -eq 'd' -and $cpStatus -eq 'complete' -and $cpNumber) {
-        $titleLine = Get-Content -LiteralPath $planfile | Where-Object { $_ -match '^Milestone title \(exact\): *(.+)' } | Select-Object -First 1
-        $null = $titleLine -match '^Milestone title \(exact\): *(.+)'
-        $title = $Matches[1]
-        # stdout only (2>$null): never merge gh's stderr into the JSON we parse below.
-        $live = gh api "repos/{owner}/{repo}/milestones/$cpNumber" --jq '{title, state}' 2>$null
-        if ($LASTEXITCODE -eq 0) {
-          $liveObj = $live | ConvertFrom-Json
-          if ($liveObj.title -eq $title -and $liveObj.state -eq 'open') {
-            $shortCircuit = $true
-            $number = $cpNumber
-          }
-        }
-      }
-    }
-  } catch { }
-}
+# PowerShell 7+. Same resolve-then-check; native JSON, no jq dependency.
+& "$env:CLAUDE_PLUGIN_ROOT/scripts/roadmap-deploy.ps1" checkpoint-read "<slug>" $X
 ```
+
+Both twins print exactly three `key=value` lines, in this fixed order, and exit 0 in every case (a read that finds nothing is never an abort):
+
+```
+planfile=<this milestone's Plan file: path>
+short_circuit=<0|1>
+number=<the confirmed milestone number, empty whenever short_circuit is 0>
+```
+
+Read `planfile` into the caller's `$planfile`, `short_circuit` into `short_circuit` (bash) / `$shortCircuit` (pwsh), and, when it is 1, `number` into `number` (bash) / `$number` (pwsh). The script holds the mechanics, once, for both twins: the manifest scan for this position's `Plan file:` line, the `command -v jq` plus `-s "$state"` (bash) and file-length (pwsh) guards, the `cp_pass`/`cp_status`/`cp_number` trust test, and the `gh` GET captured as stdout only.
 
 **On a match:** this milestone is confirmed fully deployed for Step 3 passes (a)-(d): skip those four passes (and row iv, the build-order line pass (d) produces) for this milestone, print a one-line notice (`create: milestone <X>, checkpoint confirms #<number> already deployed; skipping passes a-d`), then STILL run row ii (Step 2, read the plan-file contract) and pass (e) (the needs-input report routing) exactly as a full deploy would, before continuing the outer loop at position `X+1`. Row ii and pass (e) are cheap and local (no `gh`-heavy re-derivation), so running them for every milestone (checkpoint-confirmed or not) does not reintroduce the O(N) cost this checkpoint eliminates; it only preserves pass (e)'s own retry-on-resume guarantee, which a permanent skip would otherwise silently lose. **On no match** (any of: file/entry/`jq` absent or unreadable, `pass`/`status` not `"d"`/`"complete"`, the `gh` GET erroring, a title mismatch, or `state != "open"`): the checkpoint's claim for THIS milestone only is untrustworthy: discard it and fall through to the existing, unchanged full per-milestone deploy (rows i-iv in full) for this milestone. No other milestone's entry is touched or affected by one milestone's stale/absent entry.
 
@@ -223,24 +130,19 @@ build order: milestone X of N
 **Idempotency is INHERITED from pass (d), not re-implemented.** Pass (d) PATCHes the description with the **REPLACE form** (`gh api --method PATCH .../milestones/<number> -f description=...`, Step 3 pass d): it replaces the whole description every run. The build-order line rides **inside that one REPLACE payload**, so a re-run over an already-deployed manifest **overwrites** the line in place; the line count never grows (the same overwrite guarantee pass (d) already makes for the Wave order). **No new read-modify-write of the description is added**: only pass (d)'s payload gains the one canonical line. Assemble the augmented description (bash + PowerShell 7+ twins), then PATCH it with pass (d)'s existing REPLACE-form command:
 
 ```bash
-# bash. Assemble milestone X's description: goal + the ONE canonical build-order line + the
-# slug-rewritten Waves block, then PATCH via pass (d)'s REPLACE form. X = Build-order position; N = count.
-# $goal and $waves are the two halves of the description pass (d) already builds (slugs rewritten to #n).
-desc="$(printf '%s\n\nbuild order: milestone %s of %s\n\n%s\n' "$goal" "$X" "$N" "$waves")"
-gh api --method PATCH "repos/{owner}/{repo}/milestones/<number>" -f "description=$desc"
+# bash. Assemble milestone X's description (goal + the ONE canonical build-order
+# line + the slug-rewritten Waves block), then apply pass (d)'s REPLACE-form
+# PATCH. X = Build-order position; N = count. $goal and $waves are the two halves
+# of the description pass (d) already builds (slugs rewritten to #n).
+"${CLAUDE_PLUGIN_ROOT}/scripts/roadmap-deploy.sh" build-order-line "$X" "$N" "<number>" "$goal" "$waves"
 ```
 
 ```powershell
-# PowerShell 7+. Same assembly + pass (d)'s REPLACE-form PATCH; the ONE canonical line.
-$desc = @"
-$goal
-
-build order: milestone $X of $N
-
-$waves
-"@
-gh api --method PATCH "repos/{owner}/{repo}/milestones/<number>" -f "description=$desc"
+# PowerShell 7+. Same assembly, same REPLACE-form PATCH; the ONE canonical line.
+& "$env:CLAUDE_PLUGIN_ROOT/scripts/roadmap-deploy.ps1" build-order-line $X $N "<number>" $goal $waves
 ```
+
+This operation is the one that is NOT best-effort: it is pass (d)'s load-bearing description write, so it exits with `gh`'s own status and a non-zero takes the mid-loop failure path above.
 
 Re-PATCHing on a re-run overwrites the line, idempotent by construction, so the `build order: milestone X of N` count stays exactly one per milestone, never growing.
 
@@ -581,34 +483,40 @@ try {
 
 ### Step 3: deploy write-sequence (passes a-d)
 
-The full mechanics of the deploy write-sequence passes **a, b, c, d**: every `gh` form with its bash + PowerShell 7+ twin, the create-or-adopt resolution table, the deploy-receipt back-write, the slug→`#n` map, and the substring-safe rewrite rule. Pass **e** (the needs-input report) stays in `skills/create/SKILL.md` Step 3. (`create`'s Step 3 skeleton names all five passes in fixed order and points here for a–d.)
+The full mechanics of the deploy write-sequence passes **a, b, c, d**: the create-or-adopt resolution table, the deploy-receipt back-write, the slug→`#n` map, and the substring-safe rewrite rule. Every `gh` call these four passes make is performed by the script twin **`scripts/deploy-write-sequence.sh` / `.ps1`**, one separately invokable entry point per step (the invocation table below). What stays here is the JUDGMENT: which row a run takes, what it logs, and what it reports. Pass **e** (the needs-input report) stays in `skills/create/SKILL.md` Step 3. (`create`'s Step 3 skeleton names all five passes in fixed order and points here for a–d.)
 
-This is the v0.2.0 apply write-sequence, moved wholesale into `create` and preserved verbatim. Only the **source** of the issue bodies / labels / waves / milestone title / source-brief reference changes: `create` reads them **from the plan file** (Step 2), it regenerates nothing (`docs/specs/v0.3.0-humanize-the-surface.md` §3: *"What changes is only the source of the issue bodies/labels/waves: read from the plan file, not regenerated"*; §4: the write sequence is *"unchanged"*). All `gh` invocations below are run **by the skill itself**, not by any dispatched agent: the agent-read-only invariant holds. The commands are shell-neutral (`gh` is cross-platform); where a read-modify-write needs a variable, both a bash and a PowerShell 7+ form are given, consistent with the rest of the suite.
+This is the v0.2.0 apply write-sequence, moved wholesale into `create` and preserved verbatim. Only the **source** of the issue bodies / labels / waves / milestone title / source-brief reference changes: `create` reads them **from the plan file** (Step 2), it regenerates nothing (`docs/specs/v0.3.0-humanize-the-surface.md` §3: *"What changes is only the source of the issue bodies/labels/waves: read from the plan file, not regenerated"*; §4: the write sequence is *"unchanged"*). Every `gh` call below is run **by the skill itself**, through the script twin it invokes, never by a dispatched agent: the agent-read-only invariant holds. The twin ships as a bash and a PowerShell 7+ pair with identical behavior and one shared argv (`.project/library-manifest.md#Approved libraries (by purpose)`).
+
+**Invocation.** Resolve the twin at the plugin root, this repo's convention for bundled assets (`docs/step-0-grounding.md` "the plugin-root convention this repo uses for bundled assets"; `hooks/hooks.json`):
+
+```
+# bash
+"${CLAUDE_PLUGIN_ROOT}/scripts/deploy-write-sequence.sh" <entry-point> [args]
+# PowerShell 7+
+& "$env:CLAUDE_PLUGIN_ROOT/scripts/deploy-write-sequence.ps1" <entry-point> [args]
+```
+
+| Pass | Entry point | Arguments | Capture |
+|---|---|---|---|
+| **a** | `labels` | none | nothing |
+| **b** | `find-milestone` | `<title>` | every match, one `<number>`TAB`<state>` row, in API order |
+| **b** | `create-milestone` | `<title> <description-file>` | the new number |
+| **b** | `reopen-milestone` | `<number>` | nothing |
+| **b** | `write-receipt` | `<plan-file> <number>` | the notice line, when it failed |
+| **c** | `create-issues` | `<job-file>` | the slug map, `<slug>`TAB`<n>`TAB`created`\|`reused` per issue |
+| **d** | `rewrite-slugs` | `<map-file> <text-file>` | the rewritten text |
+| **d** | `apply-bodies` | `<job-file> <map-file>` | `<slug>`TAB`<n>`TAB`edited`\|`unchanged` per created issue |
+| **d** | `patch-description` | `<number> <map-file> <description-file>` | nothing |
+
+**The job file** carries what Step 2 already parsed, so the plan-file contract keeps one reader: `milestoneTitle`, `adopt`, and one `issues` entry per **surviving** issue holding its `slug`, `title`, `bodyFile` (the §4 ISSUE_BODY verbatim, slugs intact) and `labels`. Write it and the body files under `.milestone-feeder/`, which already self-ignores. Every entry point's exit statuses and the job-file schema are recorded once, in the twin's header.
 
 #### a. Ensure labels idempotently (BEFORE creating any issue)
 
-Run the four `gh label create … --force` commands **first**, so the labels exist before any `gh issue create --label` references them. `--force` **upserts** (creates if absent, updates color/description if present): re-runs produce no duplicates. These are the canonical four (the same taxonomy `setup` provisions, `skills/setup/SKILL.md`); run them as a **flat list, no shell loop**, so they are portable across bash and PowerShell 7+:
-
-```
-gh label create "ui"          --color 5319E7 --description "UI-surface issue (design review applies)" --force
-gh label create "logic"       --color 0E8A16 --description "Logic / non-UI issue" --force
-gh label create "risk:light"  --color C2E0C6 --description "Reduced-ceremony build profile (driver override)" --force
-gh label create "risk:heavy"  --color B60205 --description "Full-ceremony build profile (driver override)" --force
-```
-
-These four lines are identical on bash and PowerShell 7+.
+Run `labels` **first**, so the labels exist before any `gh issue create --label` references them. It upserts the canonical four (the same taxonomy `setup` provisions, `skills/setup/SKILL.md`) with `gh label create … --force`, which creates a label if absent and updates its color/description if present: re-runs never duplicate. The four names, colors, and descriptions live in the twin, one list per shell, and the bash and PowerShell lists move together or not at all.
 
 #### b. Create-or-adopt the milestone (by EXACT title)
 
-Resolve the milestone by the **exact** `Milestone title (exact)` line from the plan file (Step 2), against all existing milestones. Pass the title via an **environment variable** `t` that `gh`'s embedded jq reads as `env.t`. **NEVER string-interpolate the title into the jq filter literal**. `gh api` has **no `--arg` flag** (that belongs to standalone `jq`), and a title containing a `"` would break an inlined filter and yield a spurious no-match (→ a duplicate milestone). Reading `env.t` from the process environment is the portable, quote-safe approach:
-
-```
-# bash. Title read from the environment (quote-safe; no --arg, which gh api does not support)
-t="<milestone-title>" gh api "repos/{owner}/{repo}/milestones?state=all&per_page=100" --paginate \
-  --jq '.[] | select(.title==env.t) | {number, state}'
-```
-
-PowerShell 7+ is the same form: set `$env:t = "<milestone-title>"` first, then run `gh api … --jq '.[] | select(.title==env.t) | {number, state}'`. Keep the title in the environment, never inlined into the filter.
+Resolve the milestone by the **exact** `Milestone title (exact)` line from the plan file (Step 2), against all existing milestones: `find-milestone "<milestone-title>"`. It runs the paginated all-state milestones read and passes the title via an **environment variable** `t` that `gh`'s embedded jq reads as `env.t`, and it **NEVER string-interpolates the title into the jq filter literal**. `gh api` has **no `--arg` flag** (that belongs to standalone `jq`), and a title containing a `"` would break an inlined filter and yield a spurious no-match (→ a duplicate milestone). Reading `env.t` from the process environment is the portable, quote-safe approach, and it is identical on both twins. The entry point prints **every** match and picks none; the table below is what decides:
 
 | Result | Action |
 |---|---|
@@ -616,6 +524,8 @@ PowerShell 7+ is the same form: set `$env:t = "<milestone-title>"` first, then r
 | **Exactly one title match, `state: open`** | **Adopt:** record its `.number`. Re-use it; never delete it or its issues. |
 | **Exactly one title match, `state: closed`** | **Adopt + reopen:** `gh api --method PATCH "repos/{owner}/{repo}/milestones/<number>" -f state=open`, then record its `.number`. **Never delete** the milestone or any of its issues. |
 | **Multiple title matches** (GitHub permits same-title milestones) | **Adopt the FIRST returned**, reopen it if closed, and log a notice: `create: multiple milestones titled "<t>", adopted first returned (#<n>)`. Never delete the others. |
+
+Each row's write is one entry point: **Create** is `create-milestone`, the reopen half of **Adopt + reopen** is `reopen-milestone`, and a plain **Adopt** writes nothing (the search already returned the number). The multiple-match notice is the caller's to log.
 
 **Write the deploy receipt (the concluding action of pass b).** As soon as pass (b) has resolved the milestone `.number` (**any** outcome above: created / adopted-open / adopted-reopened / first-of-multiple), write that number back into the **same plan file Step 1 resolved** (`.milestone-feeder/plan-<slug>.md`, `skills/create/SKILL.md` Step 1) as a single labeled receipt field. This is the stable handle `update` will resolve by after a later title change (`docs/specs/v0.3.1-driver-handoff.md` §4 *"The deploy receipt — a stable handle for rename"*; the plan-file additive-fields row, §6: *"`Milestone number (GitHub):` `<n>` — the deploy receipt … `create` writes it post-deploy"*). The receipt is the create-SIDE back-write only: the `update`-side READ is a separate issue and is **not** part of `create`.
 
@@ -626,74 +536,14 @@ PowerShell 7+ is the same form: set `$env:t = "<milestone-title>"` first, then r
   ```
 
 - **Guard: write ONLY when a real number was resolved.** If pass (b) resolved **no** `.number` (it neither created nor adopted a milestone), write **nothing**: no receipt line, no placeholder. Prior absence of the line is normal: a first deploy has none, and a plan file that never receives a receipt stays valid and deployable (the field is additive; `docs/specs/v0.3.1-driver-handoff.md` §6: *"A v0.3.0 plan file lacking them still parses (the consumers degrade gracefully)"*).
-- **Idempotent read-modify-write.** Read the plan file; if a `Milestone number (GitHub):` line **already exists**, **rewrite its number in place**, exactly one such line, **never** a duplicate; if it is **absent**, **insert** one (as a sibling header line). This is a read-modify-write that **converges to exactly one receipt line carrying the current number**, so it is safe to re-run: a second `create` on an already-adopted milestone rewrites the same line to the same number (no duplicate, no second insert). Unlike pass (d)'s no-op idempotency (where re-applying changes nothing), the receipt actively overwrites, but the line count never grows. (Re-running `create` is safe and produces no duplicates, the same guarantee pass (d) makes for issue bodies, `skills/create/SKILL.md` "Partial-failure path".) Both shells below are idempotent by construction: the presence branch rewrites the existing line in place (exactly one), and the absent branch inserts exactly once.
-
-  ```bash
-  # bash. Rewrite the receipt in place if present, else insert it after the header lines.
-  # Uses awk (portable across BSD/macOS and GNU sed/awk); avoids GNU-sed-only `a`,
-  # which exits 1 on BSD/macOS sed. n is the milestone number captured above; plan is
-  # the path Step 1 resolved. On any write error, emit the notice and continue (don't block).
-  plan=".milestone-feeder/plan-<slug>.md"
-  n="<resolved-milestone-number>"
-  notice="create: deployed milestone #$n but could not write the receipt to $plan; re-run to record it"
-  tmp="$(mktemp)" || { echo "$notice"; }
-  if [ -n "$tmp" ]; then
-    if grep -q '^Milestone number (GitHub):' "$plan"; then
-      # present → rewrite the FIRST receipt line in place (exactly one line; never a duplicate)
-      awk -v n="$n" '!done && /^Milestone number \(GitHub\):/ { print "Milestone number (GitHub): " n; done=1; next } { print }' "$plan" > "$tmp" \
-        && mv "$tmp" "$plan" || echo "$notice"
-    elif grep -q '^Source brief:' "$plan"; then
-      # absent, anchor present → insert exactly once after the Source brief header line
-      awk -v n="$n" '{ print } !done && /^Source brief:/ { print "Milestone number (GitHub): " n; done=1 }' "$plan" > "$tmp" \
-        && mv "$tmp" "$plan" || echo "$notice"
-    else
-      # absent AND no anchor (malformed/hand-edited plan) → degrade VISIBLY:
-      # append the receipt at EOF (still exactly one line; the present-branch finds it next run)
-      awk -v n="$n" '{ print } END { print "Milestone number (GitHub): " n }' "$plan" > "$tmp" \
-        && mv "$tmp" "$plan" || echo "$notice"
-    fi
-  fi
-  ```
-
-  ```powershell
-  # PowerShell 7+. Same idempotent rewrite-or-insert; write UTF-8 without a BOM.
-  # On any write error, emit the notice and continue (don't block the deploy).
-  $plan = ".milestone-feeder/plan-<slug>.md"
-  $n    = "<resolved-milestone-number>"
-  $notice = "create: deployed milestone #$n but could not write the receipt to $plan; re-run to record it"
-  try {
-    $lines = Get-Content -LiteralPath $plan
-    if ($lines -match '^Milestone number \(GitHub\):') {
-      # present → rewrite the number in place (exactly one line; never a duplicate)
-      $out = $lines -replace '^Milestone number \(GitHub\):.*', "Milestone number (GitHub): $n"
-    } elseif ($lines -match '^Source brief:') {
-      # absent, anchor present → insert as a sibling after the Source brief header line
-      $out = $lines | ForEach-Object {
-        $_
-        if ($_ -match '^Source brief:') { "Milestone number (GitHub): $n" }
-      }
-    } else {
-      # absent AND no anchor (malformed/hand-edited plan) → degrade VISIBLY:
-      # append the receipt at EOF (still exactly one line; the present branch finds it next run)
-      $out = @($lines) + "Milestone number (GitHub): $n"
-    }
-    Set-Content -LiteralPath $plan -Value $out -Encoding utf8NoBOM -ErrorAction Stop
-  } catch {
-    Write-Output $notice
-  }
-  ```
-
-- **Failure semantics: report, don't block.** A plan-file back-write failure is **REPORTED as a notice but does NOT block**: by this point the GitHub deploy already succeeded (the milestone exists; pass c is about to create the issues), and the plan file is **gitignored per-run scratch** (`docs/specs/v0.3.1-driver-handoff.md` §4: *"The plan file is gitignored per-run scratch, so this back-write is low-stakes"*). The receipt rewrites the **existing** plan file in place, so the scratch dir already self-ignores (`plan` ensured `.milestone-feeder/.gitignore` contains `*` when it first wrote the plan; `skills/plan/SKILL.md` Step 7). The receipt write adds no new visible file. On a write error, emit a notice (`create: deployed milestone #<n> but could not write the receipt to <plan>; re-run to record it`) and continue to pass (c). Never abort the deploy over the receipt.
+- **Idempotent read-modify-write.** Read the plan file; if a `Milestone number (GitHub):` line **already exists**, **rewrite its number in place**, exactly one such line, **never** a duplicate; if it is **absent**, **insert** one (as a sibling header line). This is a read-modify-write that **converges to exactly one receipt line carrying the current number**, so it is safe to re-run: a second `create` on an already-adopted milestone rewrites the same line to the same number (no duplicate, no second insert). Unlike pass (d)'s no-op idempotency (where re-applying changes nothing), the receipt actively overwrites, but the line count never grows. (Re-running `create` is safe and produces no duplicates, the same guarantee pass (d) makes for issue bodies, `skills/create/SKILL.md` "Partial-failure path".) `write-receipt <plan-file> <number>` is idempotent by construction: the presence branch rewrites the existing line in place (exactly one), the anchor branch inserts exactly once after `Source brief:`, and a plan file carrying neither degrades VISIBLY by appending the line at EOF, where the presence branch finds it next run.
+- **Failure semantics: report, don't block.** A plan-file back-write failure is **REPORTED as a notice but does NOT block**: by this point the GitHub deploy already succeeded (the milestone exists; pass c is about to create the issues), and the plan file is **gitignored per-run scratch** (`docs/specs/v0.3.1-driver-handoff.md` §4: *"The plan file is gitignored per-run scratch, so this back-write is low-stakes"*). The receipt rewrites the **existing** plan file in place, so the scratch dir already self-ignores (`plan` ensured `.milestone-feeder/.gitignore` contains `*` when it first wrote the plan; `skills/plan/SKILL.md` Step 7). The receipt write adds no new visible file. On a write error the entry point prints that notice (`create: deployed milestone #<n> but could not write the receipt to <plan>; re-run to record it`) and still exits 0, alone among the entry points here: surface the line and continue to pass (c). Never abort the deploy over the receipt.
 
 #### c. Create each surviving issue; build the slug→`#n` map
 
 Create **only the SURVIVING** issues recorded in the plan file's `## Issues` section, the **non-parked, non-dropped** issues (Step 2). **Parked and dropped issues recorded in the plan file are NEVER created** (the report still routes the parked ones at pass e; dropped dependents are simply omitted).
 
-On **CREATE** (the milestone had no prior issues), create every surviving issue. On **ADOPT** (the milestone already had issues), first list its existing OPEN issues so a re-run does not duplicate them. Match each surviving issue against them **by exact title**:
-
-```
-gh issue list --milestone "<milestone-title>" --state open --json number,title
-```
+`create-issues <job-file>` walks the job file's `issues` in order, which is the plan file's Wave order. On **CREATE** (the milestone had no prior issues; `adopt` false) it creates every surviving issue. On **ADOPT** (`adopt` true) it first lists the milestone's existing OPEN issues, `gh issue list --milestone "<milestone-title>" --state open --json number,title`, so a re-run does not duplicate them, and matches each surviving issue against them **by exact title**. It returns the slug→`#n` map, one row per issue, as each row resolves.
 
 For each surviving issue, **in Wave order** (the plan file's Wave order):
 
@@ -702,7 +552,7 @@ For each surviving issue, **in Wave order** (the plan file's Wave order):
 | **Yes**: an open issue with the same title already exists | **Reuse** its number, do NOT create a duplicate. Map `slug → #<existing-n>`. Its body is **left as-is** (see body policy below). |
 | **No** (or this is the create path) | **Create:** `gh issue create --title "<title>" --body "<the §4 ISSUE_BODY from the plan file, verbatim>" --milestone "<milestone-title>" --label <ui\|logic>`, appending ` --label <risk:light\|risk:heavy>` only when the plan file records a risk label (absent-risk branch below). Capture the returned number. Map `slug → #<new-n>`. |
 
-Apply each issue's **labels exactly as recorded in the plan file** (its `ui`/`logic` label, plus its `risk:*` label when the plan records one, Step 2). Accumulate the full **slug→`#n` map** across every surviving issue (created or reused). The `--body` here still carries the **local slug** references from the plan file; they are rewritten in the second pass (d), once the full map exists.
+Apply each issue's **labels exactly as recorded in the plan file** (its `ui`/`logic` label, plus its `risk:*` label when the plan records one, Step 2). Accumulate the full **slug→`#n` map** across every surviving issue (created or reused). The body here still carries the **local slug** references from the plan file; they are rewritten in the second pass (d), once the full map exists. The twin passes it with `--body-file`, which `gh issue create` accepts alongside `--body`: identical bytes on GitHub, and no shell-quoting path for a multi-line body.
 
 **Absent-risk branch.** The `ui`/`logic` `--label` is always emitted. The second `--label` is emitted **only when the issue's plan-file heading carries a `risk:*` tag** (`docs/plan-file-contract.md` Plan-file output template). A heading with no risk tag deploys with the `ui`/`logic` label alone: never a `--label` with no value, and never a re-guessed `risk:heavy`. The missing tag is the issue-author's deliberate deferral to the driver's own risk rubric (`agents/issue-author.md` The contract, clause 5). Every other deploy site cites this branch rather than restating it.
 
@@ -716,28 +566,12 @@ Two passes are required: issue numbers do not exist until (c) creates them, and 
 
 **Substring-safe rewrite rule (load-bearing).** The architect rolls tags `#A`, `#B`, … `#Z`, then doubles to `#AA`, `#AB`, … past 26 (`agents/architect.md`). A naive string replace of `#A`→`#42` would corrupt `#AB` into `#42B`, and could also hit `#A` inside a word. So **every** slug→`#n` rewrite (issue bodies AND the milestone description) MUST:
   1. **Replace in descending slug-length order** (longest slug first: **all double-letter tags before any single-letter tag**), so a longer tag is consumed before a shorter prefix of it can match.
-  2. **Match each `#<tag>` only at a token boundary**: the tag must be followed by a non-tag character (whitespace, punctuation, end-of-string), not by another tag-letter, and never be a substring inside a longer tag or a word. `#A` therefore never matches inside `#AB`.
+  2. **Match each `#<tag>` only at a token boundary**: the tag must be followed by a non-tag character (whitespace, punctuation, a digit, end-of-string), not by another tag-letter, and never be a substring inside a longer tag or a word. `#A` therefore never matches inside `#AB`, and `#AB2` rewrites to `#<n>2`.
 
-Apply this rule to **every** slug occurrence, wherever it appears (both targets below): it is the mechanic that keeps the rewrite correct.
+Apply this rule to **every** slug occurrence, wherever it appears (both targets below): it is the mechanic that keeps the rewrite correct. Both twins implement it as one left-to-right maximal-munch scan, which satisfies both clauses at once and is order-independent (the twin's header records why). A map the pass-(c) walk left INCOMPLETE is refused by every pass-(d) entry point, so the abort below is mechanical, not a rule the caller has to remember.
 
-1. **Each newly-CREATED issue** (adopted issues are skipped, see the pass-(c) body policy): rewrite **every slug occurrence in the issue's FULL body** to its mapped `#n`: `## Summary`, `## Design` prose, **and** `## Dependencies` (including the reason text after a dependency, e.g. "Depends on #A - references SyncStatusViewModel, introduced by #A" → **both** `#A` rewritten; `agents/issue-author.md`), using the substring-safe rule, then `gh issue edit <n> --body "<rewritten body>"`. (A created issue whose full body contains no slug reference needs no edit.) Rewriting **only** `## Dependencies` would leave sibling-slug references in Summary/Design/reason text dangling: GitHub would auto-link them to whatever real issue happens to hold that number.
-2. **The milestone description:** rewrite **every slug occurrence** in the plan file's Wave-order description from local slugs to real numbers (same substring-safe rule) and PATCH it onto the milestone (REPLACE form, both shells):
-
-```
-# bash
-gh api --method PATCH "repos/{owner}/{repo}/milestones/<number>" \
-  -f description="<Wave description with slugs rewritten to #n>"
-```
-
-```powershell
-# PowerShell 7+. Assign the multi-line description to a variable first, then pass it;
-# avoid the `=@` adjacency so gh's -f reads it as a literal string, not @file.
-# -f/--raw-field always takes the value literally; @file applies only to -F.
-$desc = @"
-<Wave description with slugs rewritten to #n>
-"@
-gh api --method PATCH "repos/{owner}/{repo}/milestones/<number>" -f "description=$desc"
-```
+1. **Each newly-CREATED issue** (adopted issues are skipped, see the pass-(c) body policy): rewrite **every slug occurrence in the issue's FULL body** to its mapped `#n`: `## Summary`, `## Design` prose, **and** `## Dependencies` (including the reason text after a dependency, e.g. "Depends on #A - references SyncStatusViewModel, introduced by #A" → **both** `#A` rewritten; `agents/issue-author.md`), using the substring-safe rule, then `gh issue edit <n>` with the rewritten body. `apply-bodies <job-file> <map-file>` does both halves for every `created` row in the map and skips every `reused` row. (A created issue whose full body contains no slug reference needs no edit, and is reported `unchanged`.) Rewriting **only** `## Dependencies` would leave sibling-slug references in Summary/Design/reason text dangling: GitHub would auto-link them to whatever real issue happens to hold that number.
+2. **The milestone description:** rewrite **every slug occurrence** in the plan file's Wave-order description from local slugs to real numbers (same substring-safe rule) and PATCH it onto the milestone: `patch-description <number> <map-file> <description-file>`, which sends `gh api --method PATCH "repos/{owner}/{repo}/milestones/<number>" -f description=…`, the REPLACE form. The description is passed to `-f`/`--raw-field`, which always takes its value literally, so a multi-line description is sent as text and never read as an `@file` (that applies only to `-F`).
 
 After (d), every `#n` on GitHub is a real issue number and the milestone description encodes the Wave order in real numbers, exactly the ordering source the driver's `solve-milestone` / `triage` read (`SPEC.md` §4).
 

@@ -70,7 +70,7 @@ Milestone number (GitHub): <n>   # OPTIONAL sibling header line: carried forward
 
 ## Project-docs grounding
 - <each design call carried forward>: grounded in <.project/<doc>.md#<section> | sibling path (anchor) | sibling file:line>
-- Degradations: <e.g. "uiSurfaceGlobs absent → all candidates treated as logic"; "none" otherwise>
+- Degradations: <e.g. "uiSurfaceGlobs absent → no glob-based UI match; each candidate classified by the issue-author's affordance test"; "none" otherwise>
 
 ## Needs human input
 <pointer: "see .milestone-feeder/needs-product-input-<slug>.md" when productGaps is non-empty; "none" otherwise>
