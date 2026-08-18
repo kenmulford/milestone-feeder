@@ -148,6 +148,34 @@ Re-PATCHing on a re-run overwrites the line, idempotent by construction, so the 
 
 **The md-epic parent-issue pass (Step 1R, roadmap-only, runs ONCE after the outer loop).** Once the outer loop above has deployed all N milestones (every milestone's own Step 3 passes a through e complete), `create` runs one more pass, exactly once per roadmap deploy, before continuing to Step 4. This pass produces the driver's cross-milestone parent issue: an ordinary GitHub issue, labeled `md-epic`, whose body carries the ordered list of milestone numbers `milestone-driver` v1.15.0 reads to build the roadmap in sequence (`docs/specs/v0.11.0-md-epic-parent-issue.md`, "The read-contract"). A roadmap manifest existing at all already implies N is at least 2 (above: the `Parent title:`/`Parent intro:` fields, and therefore the manifest itself, are written only for a confirmed multi-milestone split); the single-plan path (this section's Absent row) never reaches this pass, so an N=1 deploy stays byte-unchanged.
 
+**Invocation.** Every `gh` call this pass and the sub-issue-linking pass below make, apart from step 1's one-line label ensure (which stays in this file, identical on both shells), is performed by the script twin **`scripts/md-epic-parent.sh` / `.ps1`**, one separately invokable entry point per step. Resolve the twin at the plugin root, this repo's convention for bundled assets (`docs/step-0-grounding.md` "the plugin-root convention this repo uses for bundled assets"; `hooks/hooks.json`):
+
+```
+# bash
+"${CLAUDE_PLUGIN_ROOT}/scripts/md-epic-parent.sh" <entry-point> [args]
+# PowerShell 7+, when nothing is captured or redirected (see the note below)
+& "$env:CLAUDE_PLUGIN_ROOT/scripts/md-epic-parent.ps1" <entry-point> [args]
+```
+
+**On PowerShell, an entry point whose output you CAPTURE or REDIRECT runs as a CHILD PROCESS, not through the call operator.** The twin writes its rows through `[Console]::Out`, which an in-session `&` call sends straight to the console: the redirect then writes a ZERO-BYTE file and a `$(...)` capture returns nothing, which would hand `resolve-or-create` an EMPTY body file and REPLACE-PATCH the parent with it at exit 0. Use the child-process form, the same one the twin itself uses for its sibling call (`scripts/md-epic-parent.ps1`, its "Working directory" header note):
+
+```
+# PowerShell 7+, whenever the output is captured or redirected
+pwsh -NoProfile -File "$env:CLAUDE_PLUGIN_ROOT/scripts/md-epic-parent.ps1" render-body "<intro>" <n> [<n> ...] > $bodyFile
+```
+
+This applies to `gather-numbers`, `render-body`, `resolve-or-create`, and `link-sub-issues`, whose captures the steps below consume; `write-receipt` prints only on failure, so either form shows its notice.
+
+| Step | Entry point | Arguments | Capture |
+|---|---|---|---|
+| **2** | `gather-numbers` | `<manifest>` | one milestone number per line, in build order; NOTHING at all when any one of them could not be resolved |
+| **3** | `render-body` | `<intro> <number> [<number> ...]` | the rendered body (redirect it into a file) |
+| **4** | `resolve-or-create` | `<manifest> <parent-title> <body-file>` | `<number>`TAB`created`\|`adopted` |
+| **5** | `write-receipt` | `<manifest> <number>` | the notice line, when it failed |
+| **linking** | `link-sub-issues` | `<manifest> <parent> <number> [<number> ...]` | one row per outcome (the row table below) |
+
+What stays here is the JUDGMENT: which row a run takes, what it logs, and what it reports. The twin carries no notice text, no warning text, and no report format of its own; each entry point's exit statuses are recorded once, in the twin's header.
+
 Run these steps, in this fixed order:
 
 **1. Ensure the `md-epic` label (mirrors pass a's flat upsert form, below).** Run this line before anything else in this pass touches an issue, so the later `--label "md-epic"` always resolves. `--force` upserts (creates if absent, updates color/description if present); re-runs never duplicate. Color and description are non-functional metadata, same as the four canonical labels; the label NAME is the only load-bearing part of the read-contract, exact and case-sensitive:
@@ -158,328 +186,90 @@ gh label create "md-epic" --color FBCA04 --description "Parent/epic grouping iss
 
 This line is identical on bash and PowerShell 7+ (same as pass a's four lines).
 
-**2. Gather every deployed milestone's number, in build order.** The parent's body needs every milestone's real number before it can be rendered, whether the parent is about to be created or re-PATCHed, so gather them BEFORE touching the parent issue at all: this is what keeps a mid-pass failure from ever half-writing a parent body. For each of the manifest's `## Milestones (in build order)` entries, in the order they appear (position 1..N), read this milestone's number:
+**2. Gather every deployed milestone's number, in build order.** The parent's body needs every milestone's real number before it can be rendered, whether the parent is about to be created or re-PATCHed, so gather them BEFORE touching the parent issue at all: this is what keeps a mid-pass failure from ever half-writing a parent body. `gather-numbers "<manifest>"` walks the manifest's `## Milestones (in build order)` entries in the order they appear (position 1..N) and reads each milestone's number:
 
 | Source | Read |
 |---|---|
-| Primary | This entry's `Plan file:` path (`$planfile` below; the same path the outer loop's step i resolved), then that plan file's own `Milestone number (GitHub): <n>` receipt line (the receipt pass b writes, below). |
-| Fallback (receipt line absent) | Pass b's receipt write is itself best-effort / report-don't-block, so a prior run may have deployed the milestone but failed to write its receipt. Re-resolve the number by an exact-title lookup against that same plan file's `Milestone title (exact):` line, using the identical quote-safe `env.t` form pass b already uses (below). |
+| Primary | This entry's `Plan file:` path (the same path the outer loop's step i resolved), then that plan file's own `Milestone number (GitHub): <n>` receipt line (the receipt pass b writes, below). |
+| Fallback (receipt line absent) | Pass b's receipt write is itself best-effort / report-don't-block, so a prior run may have deployed the milestone but failed to write its receipt. The number is re-resolved by an exact-title lookup against that same plan file's `Milestone title (exact):` line, through pass (b)'s OWN primitive in the write-sequence twin (`deploy-write-sequence.sh find-milestone <title>`), taking the first row's number: one definition of the quote-safe resolve, never two. |
 
-```bash
-# bash. Read this milestone's number: its own receipt, else the exact-title lookup (pass b's form).
-# planfile is this milestone's Plan file: path; append the result to the numbers array, in order.
-n="$(grep -m1 '^Milestone number (GitHub):' "$planfile" 2>/dev/null | sed -E 's/^Milestone number \(GitHub\): *([0-9]+).*/\1/')"
-if [ -z "$n" ]; then
-  title="$(grep -m1 '^Milestone title (exact):' "$planfile" | sed -E 's/^Milestone title \(exact\): *//')"
-  n="$(t="$title" gh api "repos/{owner}/{repo}/milestones?state=all&per_page=100" --paginate \
-        --jq '.[] | select(.title==env.t) | .number' | head -1)"
-fi
-numbers+=("$n")
-```
+If both the receipt and the title lookup fail to resolve a number for some milestone, the entry point prints nothing at all and exits non-zero naming that milestone, so a partial list can never be rendered into a parent body. STOP this pass right here (Failure semantics below): report which milestone could not be resolved, and do not touch the parent issue at all.
 
-```powershell
-# PowerShell 7+. Same two-tier read: this milestone's own receipt, else the exact-title lookup.
-$n = $null
-$recpt = Get-Content -LiteralPath $planfile | Where-Object { $_ -match '^Milestone number \(GitHub\): *(\d+)' } | Select-Object -First 1
-if ($recpt -match '^Milestone number \(GitHub\): *(\d+)') { $n = $Matches[1] }
-if (-not $n) {
-  $titleLine = Get-Content -LiteralPath $planfile | Where-Object { $_ -match '^Milestone title \(exact\): *(.+)' } | Select-Object -First 1
-  $null = $titleLine -match '^Milestone title \(exact\): *(.+)'
-  $env:t = $Matches[1]
-  $n = gh api "repos/{owner}/{repo}/milestones?state=all&per_page=100" --paginate `
-        --jq '.[] | select(.title==env.t) | .number' | Select-Object -First 1
-}
-$numbers += $n
-```
+**3. Render the body.** `render-body "<parent intro>" <n> [<n> ...]`, with the manifest's reviewed `Parent intro:` line and every number step 2 printed, in build order; redirect the output into a temp file (on PowerShell through the child-process form above, or the file lands empty) and hand that path to step 4. The body is the intro verbatim, then the ordered block: an opening fence that is exactly three backticks immediately followed by `md-epic-order` (no leading or trailing space), one `number: <n>` line per milestone gathered in step 2, in build order, never `#<n>` (per the read-contract, `docs/specs/v0.11.0-md-epic-parent-issue.md`), closed by a line that is exactly a closing fence. The assembly lives in the twin, and never in an inline shell string, because a run of three backticks inside a double-quoted string is hazardous in BOTH shells: bash reads backticks as old-style command substitution (an embedded "command" actually runs), and PowerShell reads a backtick as its escape character, which silently eats two of the three (Microsoft Learn `about_Quoting_Rules`). The twin builds every fence line from a single-quoted string, where a backtick is literal in both shells.
 
-If both the receipt and the title lookup fail to resolve a number for some milestone, STOP this pass right here (Failure semantics below): report which milestone could not be resolved, and do not touch the parent issue at all.
-
-**3. Render the body.** Prose first (the manifest's reviewed `Parent intro:` line, verbatim), then the ordered block. Opening fence is exactly ```` ```md-epic-order ```` (three backticks immediately followed by the string, no leading or trailing space), one `number: <n>` line per milestone gathered in step 2, in build order, never `#<n>` (per the read-contract, `docs/specs/v0.11.0-md-epic-parent-issue.md`), closed by a line that is exactly a closing fence. Build the body into a temp file, not an inline shell string, because the literal backticks in the fence are hazardous in BOTH shells when embedded in an expandable (double-quoted) string:
-
-- **Bash hazard.** Backticks inside a double-quoted string trigger old-style command substitution. Live repro of the hazard this pass avoids:
-
-  ```bash
-  x="before `echo INJECTED` after"; echo "$x"
-  # prints: before INJECTED after (the embedded "command" actually ran)
-  ```
-
-- **PowerShell hazard.** A backtick is the escape character inside a double-quoted string or a double-quoted here-string (`@"..."@`); a run of three backticks does not survive one, because backtick-backtick collapses to one literal backtick and the third backtick, followed by a non-escape letter, is dropped (Microsoft Learn `about_Quoting_Rules`; the PowerShell language specification's escaped-character table). Live repro of the hazard this pass avoids:
-
-  `````powershell
-  $test = @"
-  before ```md-epic-order after
-  "@
-  Write-Output $test
-  # prints: before `md-epic-order after (two of the three backticks were silently eaten)
-  `````
-
-Both shells below use single-quoted strings for the fence lines, where a backtick is always literal in both bash and PowerShell:
-
-`````bash
-# bash. Assemble the body into a temp file; single-quoted printf format strings keep every
-# backtick literal (never triggers command substitution). $intro is the manifest's Parent
-# intro: line; numbers is the array gathered in step 2, in build order.
-bodyfile="$(mktemp)"
-{
-  printf '%s\n\n' "$intro"
-  printf '```md-epic-order\n'
-  for n in "${numbers[@]}"; do printf 'number: %s\n' "$n"; done
-  printf '```\n'
-} > "$bodyfile"
-`````
-
-`````powershell
-# PowerShell 7+. Same assembly; single-quoted strings keep every backtick literal.
-# $intro is the manifest's Parent intro: line; $numbers is the array gathered in step 2, in
-# build order.
-$bodyLines = @($intro, '')
-$bodyLines += '```md-epic-order'
-foreach ($n in $numbers) { $bodyLines += "number: $n" }
-$bodyLines += '```'
-$bodyFile = New-TemporaryFile
-Set-Content -LiteralPath $bodyFile -Value $bodyLines -Encoding utf8NoBOM
-`````
-
-**4. Resolve the parent (create-or-adopt), then create it or REPLACE-PATCH it.** Resolve in this order:
+**4. Resolve the parent (create-or-adopt), then create it or REPLACE-PATCH it.** `resolve-or-create "<manifest>" "<parent-title>" "<body-file>"` resolves in this order and captures `<number>`TAB`created`|`adopted`:
 
 | Resolution | Action |
 |---|---|
 | **(a) The manifest already carries `Parent issue (GitHub): #<n>`** | Adopt `<n>` directly, no further lookup. |
-| **(b) Absent, an OPEN issue carrying the `md-epic` label has the exact title of the manifest's `Parent title:`** (mirrors pass c's adopt-by-title de-dup, below) | Adopt that issue's number. This safety net keeps the parent from ever duplicating even when a prior run created it but failed to write the receipt (step 5's write is itself best-effort, the identical risk pass b's receipt write carries). |
-| **(c) No match** | Create it: `gh issue create --title "<parent-title>" --body-file "<body-file-path>" --label "md-epic"`. No `--milestone` flag, no other label. Capture the returned number. |
+| **(b) Absent, an OPEN issue carrying the `md-epic` label has the exact title of the manifest's `Parent title:`** (mirrors pass c's adopt-by-title de-dup, below) | Adopt that issue's number. This search is the parent pass's OWN, against the issues endpoint, quote-safe through the same `env.t` form pass (b) uses for milestones and for the same reason: a title holding a `"` would break an inlined jq filter and yield a spurious no-match. This safety net keeps the parent from ever duplicating even when a prior run created it but failed to write the receipt (step 5's write is itself best-effort, the identical risk pass b's receipt write carries). |
+| **(c) No match** | Create it: `--title "<parent-title>" --body-file "<body-file>" --label "md-epic"`. No `--milestone` flag, no other label. The returned number is captured. |
 
-```bash
-# bash. The (b) adopt-by-title search, quote-safe via env.t (mirrors pass b's title search).
-t="<parent-title>" gh issue list --label "md-epic" --state open --json number,title \
-  --jq '.[] | select(.title==env.t) | .number'
-```
+**On adopt ((a) or (b)), the re-run rewrite (mirrors pass d's REPLACE-form PATCH, below):** the body from step 3 was already recomputed fresh from the current manifest and the current milestone numbers on this same run, so the entry point REPLACES the whole body. This is a full-body replace, never an append, so a re-run never leaves a second `md-epic-order` block. On create ((c) above), the body is already the freshly rendered one from step 3; no separate edit call is made. The captured row is printed BEFORE the replace, so a failed body write still leaves this pass the parent number its report has to name.
 
-```powershell
-# PowerShell 7+. Same adopt-by-title search.
-$env:t = "<parent-title>"
-gh issue list --label "md-epic" --state open --json number,title --jq '.[] | select(.title==env.t) | .number'
-```
-
-**On adopt ((a) or (b)), the re-run rewrite (mirrors pass d's REPLACE-form PATCH, below):** the body from step 3 was already recomputed fresh from the current manifest and the current milestone numbers on this same run, so REPLACE the whole body:
-
-```bash
-gh issue edit "$n" --body-file "$bodyfile"
-```
-
-```powershell
-gh issue edit $n --body-file $bodyFile
-```
-
-This is a full-body replace, never an append, so a re-run never leaves a second `md-epic-order` block. On create ((c) above), the body is already the freshly rendered one from step 3; no separate edit call is needed.
-
-**5. Write the manifest receipt.** `Parent issue (GitHub): #<n>` as a sibling header line on the roadmap manifest, using the same idempotent read-modify-write mechanic pass b already implements (below), extended with a two-tier anchor:
+**5. Write the manifest receipt.** `write-receipt "<manifest>" "<number>"` writes `Parent issue (GitHub): #<n>` as a sibling header line on the roadmap manifest, using the same idempotent read-modify-write mechanic pass b already implements (below), extended with a two-tier anchor:
 
 - **Present** → rewrite the number in place (exactly one line, never a duplicate).
 - **Absent, `Parent intro:` present** → insert immediately after it.
-- **Absent, `Parent intro:` also absent, `Build order:` present** → insert immediately after `Build order:` (a hand-edited or pre-#244 manifest missing `Parent intro:`).
+- **Absent, `Parent intro:` also absent, `Build order:` present** → insert immediately after `Build order:` (a hand-edited manifest, or one written before `docs/roadmap-manifest-format.md` reserved `Parent intro:`).
 - **Absent, neither anchor present** → degrade visibly: append at EOF (the present branch finds it on the next run).
 
-```bash
-# bash. Rewrite the receipt in place if present, else insert after Parent intro:, else after
-# Build order:, else append at EOF. n is the resolved parent number; manifest is the roadmap
-# manifest path Step 1R resolved. On any write error, emit the notice and continue (don't block).
-manifest=".milestone-feeder/roadmap-<slug>.md"
-n="<resolved-parent-issue-number>"
-notice="create: deployed the md-epic parent #$n but could not write the receipt to $manifest; re-run to record it"
-tmp="$(mktemp)" || { echo "$notice"; }
-if [ -n "$tmp" ]; then
-  if grep -q '^Parent issue (GitHub):' "$manifest"; then
-    awk -v n="$n" '!done && /^Parent issue \(GitHub\):/ { print "Parent issue (GitHub): #" n; done=1; next } { print }' "$manifest" > "$tmp" \
-      && mv "$tmp" "$manifest" || echo "$notice"
-  elif grep -q '^Parent intro:' "$manifest"; then
-    awk -v n="$n" '{ print } !done && /^Parent intro:/ { print "Parent issue (GitHub): #" n; done=1 }' "$manifest" > "$tmp" \
-      && mv "$tmp" "$manifest" || echo "$notice"
-  elif grep -q '^Build order:' "$manifest"; then
-    awk -v n="$n" '{ print } !done && /^Build order:/ { print "Parent issue (GitHub): #" n; done=1 }' "$manifest" > "$tmp" \
-      && mv "$tmp" "$manifest" || echo "$notice"
-  else
-    awk -v n="$n" '{ print } END { print "Parent issue (GitHub): #" n }' "$manifest" > "$tmp" \
-      && mv "$tmp" "$manifest" || echo "$notice"
-  fi
-fi
-```
-
-```powershell
-# PowerShell 7+. Same idempotent rewrite-or-insert; write UTF-8 without a BOM.
-$manifest = ".milestone-feeder/roadmap-<slug>.md"
-$n        = "<resolved-parent-issue-number>"
-$notice   = "create: deployed the md-epic parent #$n but could not write the receipt to $manifest; re-run to record it"
-try {
-  $lines = Get-Content -LiteralPath $manifest
-  if ($lines -match '^Parent issue \(GitHub\):') {
-    $out = $lines -replace '^Parent issue \(GitHub\):.*', "Parent issue (GitHub): #$n"
-  } elseif ($lines -match '^Parent intro:') {
-    $out = $lines | ForEach-Object { $_; if ($_ -match '^Parent intro:') { "Parent issue (GitHub): #$n" } }
-  } elseif ($lines -match '^Build order:') {
-    $out = $lines | ForEach-Object { $_; if ($_ -match '^Build order:') { "Parent issue (GitHub): #$n" } }
-  } else {
-    $out = @($lines) + "Parent issue (GitHub): #$n"
-  }
-  Set-Content -LiteralPath $manifest -Value $out -Encoding utf8NoBOM -ErrorAction Stop
-} catch {
-  Write-Output $notice
-}
-```
+Every branch acts on the FIRST match only, so a manifest carrying two receipt lines or two anchors still converges on exactly one receipt line and a re-run never grows the line count. On a write error the entry point prints the notice `create: deployed the md-epic parent #<n> but could not write the receipt to <manifest>; re-run to record it` and still exits 0: report it and continue.
 
 **Failure semantics.** The label ensure, the parent resolve-or-create, and the body PATCH are load-bearing writes, not best-effort: a `gh` error in any of them STOPS this pass immediately. Report which step failed and what already succeeded (the label may already be ensured; the parent may already exist under a captured number), then stop; nothing is deleted. A re-run resumes safely: the label upsert is a no-op if it already ran, parent resolution retries receipt-then-title-match before ever creating a second issue, and the body PATCH is REPLACE-form, safe to reapply. Only the closing manifest-receipt write (step 5) is report-don't-block, mirroring pass b: by the time it runs, the parent issue itself already exists with its correct body, so a receipt-write failure is reported as a notice and the run continues; the next `create` re-derives the same number from the title-match fallback (step 4(b)) and rewrites the receipt.
 
-**The sub-issue-linking pass (Step 1R, roadmap-only, runs ONCE immediately after the md-epic parent-issue pass, same run).** Once the parent issue exists (created or adopted at step 4 above, its number captured as `$parent`), `create` runs one further pass, exactly once per roadmap deploy, before continuing to Step 4: it links every deployed milestone's surviving issues to the parent as native GitHub sub-issues, in build order, then re-asserts each freshly linked child's own milestone. This satisfies the driver's read-contract Precondition, "Each milestone's issues are linked to it as native GitHub sub-issues" (`milestone-driver` design spec, "Precondition"), while keeping every child on its OWN milestone, never the parent's (the parent itself carries no milestone at all). The re-assert step is defense-in-depth, not load-bearing: the live probe run for this feature confirmed linking an already-milestoned child under a milestone-less parent preserves the child's own milestone (issue #246, first comment: "PRESERVED ... this issue's re-assert-after-link step is defense-in-depth, not load-bearing"). See "Re-assert timing" below for exactly when the re-assert call fires.
+**The sub-issue-linking pass (Step 1R, roadmap-only, runs ONCE immediately after the md-epic parent-issue pass, same run).** Once the parent issue exists (created or adopted at step 4 above, its number captured as `$parent`), `create` runs one further pass, exactly once per roadmap deploy, before continuing to Step 4: it links every deployed milestone's surviving issues to the parent as native GitHub sub-issues, in build order, then re-asserts each freshly linked child's own milestone. This satisfies the driver's read-contract Precondition, "Each milestone's issues are linked to it as native GitHub sub-issues" (`milestone-driver` design spec, "Precondition"), while keeping every child on its OWN milestone, never the parent's (the parent itself carries no milestone at all). The re-assert step is defense-in-depth, not load-bearing: the live probe run for this pass confirmed that linking an already-milestoned child under a milestone-less parent PRESERVES the child's own milestone. See "Re-assert timing" below for exactly when the re-assert call fires.
 
 Order: milestone position 1 to N (the manifest's build order, the same `numbers` array the parent-issue pass's step 2 already gathered, reused here, not re-derived), then, within each milestone, its own Wave order (the same ordering pass (c) and pass (d) already used to deploy that milestone's issues).
 
-**1. Fetch the parent's already-linked sub-issues, once for the whole pass.** List `$parent`'s current sub-issues before touching any child, so every later idempotency check (step 4 below) is a cheap in-memory lookup instead of a call per child. Paginate: a parent can carry up to 100 sub-issues (the cap below, GitHub's documented limit) and the endpoint's default page size is 30, so mirror pass (b)'s `per_page=100 --paginate` milestone-list form exactly (confirmed live against `docs.github.com/en/rest/issues/sub-issues`: `per_page`, max 100, default 30):
+**How it runs.** One call, `link-sub-issues "<manifest>" "$parent" <n> [<n> ...]`, passing the SAME numbers step 2 gathered, in build order, one per manifest entry. The entry point fetches the parent's already-linked sub-issues once for the whole pass, walks the milestones in build order and each milestone's children in Wave order, and prints one row per outcome. It decides nothing and prints no notice of its own: this skill turns the rows into the lines below and into the end-of-pass report (step 5).
 
-```bash
-# bash. Once per parent: list its already-linked sub-issue numbers, paginated (mirrors pass
-# (b)'s milestone-list form: per_page=100 plus --paginate, since a parent can carry up to
-# 100 sub-issues and the endpoint's default page is 30).
-already_linked=()
-skip_pass=0
-if already_linked_raw="$(gh api "repos/{owner}/{repo}/issues/$parent/sub_issues?per_page=100" --paginate --jq '.[].number' 2>&1)"; then
-  if [ -n "$already_linked_raw" ]; then
-    while IFS= read -r c; do already_linked+=("$c"); done <<< "$already_linked_raw"
-  fi
-else
-  echo "create: could not list #$parent's existing sub-issues ($already_linked_raw); skipping the sub-issue-linking pass this run. The deploy above already succeeded; re-run create/update to retry."
-  skip_pass=1
-fi
-```
+| Row | When it prints | What `create` prints for it |
+|---|---|---|
+| `skip-pass`TAB`<error>` | The once-per-parent listing failed. No further row follows. | `create: could not list #$parent's existing sub-issues (<error>); skipping the sub-issue-linking pass this run. The deploy above already succeeded; re-run create/update to retry.` |
+| `refused`TAB`<milestone>`TAB`<title>`TAB`<child>` | A child of that milestone already carries `md-epic`. Every child of it follows as `skipped ... nested-epic`. | `create: milestone #<milestone> ("<title>") skipped: sub-issue #<child> already carries md-epic (linking it would create a nested epic); no issue in this milestone was linked` |
+| `linked`TAB`<child>` | Linked on this run, its own milestone re-asserted. | `create: linked #<child> as a sub-issue of #$parent and confirmed its milestone` |
+| `failed`TAB`<child>`TAB`id-resolve`TAB`<error>` | The child's numeric id would not resolve; nothing was linked. | `create: sub-issue link failed for #<child>: could not resolve its numeric id (<error>)` |
+| `failed`TAB`<child>`TAB`link`TAB`<error>` | The link call itself failed. | `create: sub-issue link failed for #<child> (<error>)` |
+| `failed`TAB`<child>`TAB`reassert`TAB`<error>` | Linked, but the milestone re-assert failed. | `create: #<child> linked as a sub-issue of #$parent, but re-asserting its own milestone failed (<error>); check #<child>'s milestone by hand` |
+| `skipped`TAB`<child>`TAB`already-linked` | The idempotency skip (step 4a below). | Nothing per child; it is recorded under "skipped" in step 5's report. |
+| `skipped`TAB`<child>`TAB`cap` | The parent already holds 100 sub-issues (step 4b below). | Nothing per child; the one cap summary line in step 5. |
+| `skipped`TAB`<child>`TAB`nested-epic` | Its milestone was refused above. | Nothing per child; the refusal warning already names the milestone. |
+| `total`TAB`<count>` | Last row of any pass that ran. | Nothing on its own: it is the parent's resulting sub-issue total, which step 5's cap summary line names. |
 
-```powershell
-# PowerShell 7+. Same once-per-parent, paginated fetch.
-$alreadyLinked = @()
-$skipPass = $false
-try {
-  $raw = gh api "repos/{owner}/{repo}/issues/$parent/sub_issues?per_page=100" --paginate --jq '.[].number' 2>&1
-  if ($LASTEXITCODE -ne 0) { throw $raw }
-  if ($raw) { $alreadyLinked = @($raw) }
-} catch {
-  Write-Output "create: could not list #$parent's existing sub-issues ($_); skipping the sub-issue-linking pass this run. The deploy above already succeeded; re-run create/update to retry."
-  $skipPass = $true
-}
-```
+**1. The once-per-parent sub-issue listing (fail-open, report-dont-block).** The parent's current sub-issues are listed before any child is touched, so every later idempotency check is a cheap in-memory lookup instead of a call per child, and the read is paginated: a parent can carry up to 100 sub-issues (the cap below, GitHub's documented limit) and the endpoint's default page size is 30, so it mirrors pass (b)'s `per_page=100 --paginate` milestone-list form exactly (confirmed live against `docs.github.com/en/rest/issues/sub-issues`: `per_page`, max 100, default 30). A failure here means `create` cannot safely tell what is already linked, not that nothing is linked; treating a failed fetch as "zero sub-issues" would risk mis-attempted re-links for children a prior run already linked. So a failure here **skips this whole pass, for this run only** (the `skip-pass` row above), goes straight to the end-of-pass report (step 5) naming every candidate child as "not attempted, listing failed", and **never aborts the already-succeeded deploy** (`.project/design-philosophy.md#Error & failure philosophy`, the same fail-open, non-blocking discipline every other best-effort read in this file already follows). Re-running `create`/`update` retries this listing call fresh.
 
-**Failure handling for this one listing call (fail-open, report-dont-block).** A failure here means `create` cannot safely tell what is already linked, not that nothing is linked; treating a failed fetch as "zero sub-issues" would risk mis-attempted re-links for children a prior run already linked. So a failure here **skips this whole pass, for this run only** (`skip_pass`/`$skipPass` above), goes straight to the end-of-pass report (step 5) naming every candidate child as "not attempted, listing failed", and **never aborts the already-succeeded deploy** (`.project/design-philosophy.md#Error & failure philosophy`, the same fail-open, non-blocking discipline every other best-effort read in this file already follows). Re-running `create`/`update` retries this listing call fresh.
+**2. Per milestone: its title and its Wave-ordered surviving issue numbers.** The per-milestone `number` is the one passed in (the outer loop and the parent-issue pass's step 2 already resolved it; it is not re-derived). The milestone's exact title is not always already in hand and this pass always needs the title text itself for the `--milestone` re-assert flag below, so it is read fresh, once per milestone, from that milestone's plan file by the identical extraction step 2's fallback uses. Then this milestone's LIVE, already pass-(d)-PATCHed description is read (the same `gh api .../milestones/<number> --jq '.description'` read pass (f)'s Conv 6 back-link already uses, above) and every `#<n>` token is pulled out of it, in first-appearance order, deduped. A milestone description carries `#<n>` references only inside its `## Waves` block (the goal paragraph and the `build order: milestone X of N` line carry none), so this is exactly that milestone's surviving-issue list in Wave order, with no separate `## Waves` parsing needed.
 
-**2. Per milestone, resolve its title and its Wave-ordered surviving issue numbers (skip this step entirely when step 1 set `skip_pass`).** Reuse the SAME per-milestone `number` and `planfile` the outer loop and the parent-issue pass's step 2 already resolved for this milestone (do not re-derive them). The milestone's exact title is not always already in hand (the parent-issue pass's step 2 only reads it on its title-lookup fallback branch), and this pass always needs the title text itself for the `--milestone` re-assert flag below, so read it fresh, once per milestone, by the identical extraction the parent-issue pass's step 2 fallback already uses. Then read this milestone's LIVE, already pass-(d)-PATCHed description (the same `gh api .../milestones/<number> --jq '.description'` read pass (f)'s Conv 6 back-link already uses, above) and pull every `#<n>` token out of it, in first-appearance order. A milestone description carries `#<n>` references only inside its `## Waves` block (the goal paragraph and the `build order: milestone X of N` line carry none), so this is exactly that milestone's surviving-issue list in Wave order, with no separate `## Waves` parsing needed:
+**Empty milestone (AC2).** When a milestone's description yields no `#<n>` token at all (every candidate for this milestone parked or dropped, or this milestone's own plan produced no surviving issue), this milestone contributes nothing: it prints no row and the walk moves on to the next milestone. This needs no special-case code; an empty list simply drives zero iterations, and is not an error.
 
-```bash
-# bash. Per milestone: its title (for step 4's re-assert flag) plus its Wave-ordered
-# surviving issues (first-appearance order, deduped). number/planfile are the values the
-# outer loop / parent-issue pass's step 2 already resolved for this milestone.
-title="$(grep -m1 '^Milestone title (exact):' "$planfile" | sed -E 's/^Milestone title \(exact\): *//')"
-desc="$(gh api "repos/{owner}/{repo}/milestones/$number" --jq '.description')"
-children=()
-while IFS= read -r c; do children+=("$c"); done < <(printf '%s\n' "$desc" | grep -oE '#[0-9]+' | tr -d '#' | awk '!seen[$0]++')
-```
+**3. Nested-epic refusal, before linking any of this milestone's issues.** If the parent already holds 100 sub-issues before this milestone starts (a prior milestone in this same pass already filled the cap, step 4 below), this check is skipped entirely and every one of this milestone's children goes straight to `skipped ... cap`; there is no reason to spend a `gh` call checking a label on an issue that will not be linked regardless. Otherwise each of this milestone's children is checked for the `md-epic` label, the same label-check form the driver's own parent-detection unit (U1) uses (`milestone-driver` design spec, "The 5 units" → "(U1) Parent detection": `gh issue view <n> --json labels`, exact match against `.labels[].name`). The FIRST child carrying the label refuses the WHOLE milestone: none of its issues are linked (each is recorded "skipped, nested-epic" in step 5's report), the one warning above names the milestone and the offending issue, and the pass continues with the remaining milestones (`milestone-driver` design spec, "Error handling & edge cases": no cycle detection, this refusal is the flag that spec asks the feeder to resolve). A milestone that clears this check (none of its issues carry `md-epic`) proceeds to step 4.
 
-```powershell
-# PowerShell 7+. Same two reads.
-$titleLine = Get-Content -LiteralPath $planfile | Where-Object { $_ -match '^Milestone title \(exact\): *(.+)' } | Select-Object -First 1
-$null = $titleLine -match '^Milestone title \(exact\): *(.+)'
-$title = $Matches[1]
-$desc = gh api "repos/{owner}/{repo}/milestones/$number" --jq '.description'
-$children = [regex]::Matches($desc, '#(\d+)') | ForEach-Object { $_.Groups[1].Value } | Select-Object -Unique
-```
+**4. Per child (Wave order), for a milestone that passed step 3.** In this fixed order, per child `$n`:
 
-**Empty milestone (AC2).** When `$children` comes back empty (every candidate for this milestone parked or dropped, or this milestone's own plan produced no surviving issue at all), this milestone contributes nothing: move on to the next milestone. This needs no special-case code; an empty list simply drives zero iterations below, and is not an error.
+a. **Already linked?** If `$n` is already among the parent's sub-issues (step 1's fetch, or a number a prior child in this same run added below), it needs nothing further: it is recorded "already linked" in step 5's report and takes no other action, including no re-assert call (see "Re-assert timing" below). This is the pass's re-run no-op: nothing double-links, and an already-correct child is not touched again.
 
-**3. Nested-epic refusal, before linking any of this milestone's issues.** If, before starting this milestone, `already_linked` already holds 100 entries (a prior milestone in this same pass already filled the cap, step 4 below), skip this check entirely and every one of this milestone's children go straight to "skipped, cap" in the report (step 5); there is no reason to spend a `gh` call checking a label on an issue that will not be linked regardless. Otherwise, for each number in `$children`, check whether it already carries the `md-epic` label, the same label-check form the driver's own parent-detection unit (U1) uses (`milestone-driver` design spec, "The 5 units" → "(U1) Parent detection": `gh issue view <n> --json labels`, exact match against `.labels[].name`):
+b. **Cap.** Otherwise, if the parent already holds 100 sub-issues, `$n` is not linked this run: it is recorded "skipped, cap" and the walk moves to the next child. The set only grows on a fresh successful link (step c below), so once it reaches 100 this same check keeps every later child, in every remaining milestone, on this same path with no further `gh` calls, in build order, until the pass ends.
 
-```bash
-# bash. Nested-epic check for one child n of this milestone.
-if gh issue view "$n" --json labels --jq '.labels[].name' | grep -qx 'md-epic'; then
-  echo "create: milestone #$number (\"$title\") skipped: sub-issue #$n already carries md-epic (linking it would create a nested epic); no issue in this milestone was linked"
-  refuse_milestone=1
-fi
-```
+c. **Otherwise, link it.** Three steps, each wrapped so a `gh` failure is caught, reported by this child's number and the error, and never silently marked linked; a failure at any of the three stops for THIS child only, and the pass continues with the next child: resolve the child's numeric id, POST it to the parent's `sub_issues` endpoint, then re-assert the child's own milestone. `-F` sends `sub_issue_id` as an integer (gh CLI's typed-field flag: `gh api --help`, "-F/--field has magic type conversion ... integer numbers get converted to appropriate JSON types"), and the endpoint needs the numeric database id, never the issue number (confirmed against `docs.github.com/en/rest/issues/sub-issues`, and live by this pass's own probe run).
 
-```powershell
-# PowerShell 7+. Same check.
-$labels = gh issue view $n --json labels --jq '.labels[].name'
-if ($labels -contains 'md-epic') {
-  Write-Output "create: milestone #$number (`"$title`") skipped: sub-issue #$n already carries md-epic (linking it would create a nested epic); no issue in this milestone was linked"
-  $refuseMilestone = $true
-}
-```
-
-If any of this milestone's issues carries the label, refuse the WHOLE milestone: none of its issues are linked (each is recorded "skipped, nested-epic" in step 5's report), the one warning above names the milestone and the offending issue, and the pass continues with the remaining milestones (`milestone-driver` design spec, "Error handling & edge cases": no cycle detection, this refusal is the flag that spec asks the feeder to resolve). A milestone that clears this check (none of its issues carry `md-epic`) proceeds to step 4.
-
-**4. Per child in `$children` (Wave order), for a milestone that passed step 3.** In this fixed order, per child `$n`:
-
-a. **Already linked?** If `$n` is already in `already_linked` (step 1's fetch, or a number a prior child in this same run already added below), it needs nothing further: record it "already linked" in step 5's report and take no other action for it, including no re-assert call (see "Re-assert timing" below). This is the pass's re-run no-op: nothing double-links, and an already-correct child is not touched again.
-
-b. **Cap.** Otherwise, if `already_linked` already holds 100 entries, `$n` is not linked this run: record it "skipped, cap" and move to the next child. `already_linked` only grows on a fresh successful link (step c below), so once it reaches 100 this same check keeps every later child, in every remaining milestone, on this same path with no further `gh` calls, in build order, until the pass ends.
-
-c. **Otherwise, link it.** Run the three steps below, each wrapped so a `gh` failure is caught, reported by this child's number and the error, and never silently marked linked; a failure at any of the three stops for THIS child only, and the pass continues with the next child:
-
-```bash
-# bash. Per child n: resolve numeric id, link, re-assert. parent is this pass's resolved
-# parent number; title is this milestone's own (step 2, above). `-F` sends sub_issue_id
-# as an integer (gh CLI's typed-field flag: gh api --help, "-F/--field has magic type
-# conversion ... integer numbers get converted to appropriate JSON types"). The sub_issues
-# endpoint needs the numeric database id, never the issue number (confirmed against
-# docs.github.com/en/rest/issues/sub-issues, and live by the issue #246 probe).
-if ! child_id="$(gh api "repos/{owner}/{repo}/issues/$n" --jq '.id' 2>&1)"; then
-  echo "create: sub-issue link failed for #$n: could not resolve its numeric id ($child_id)"
-elif ! link_err="$(gh api --method POST "repos/{owner}/{repo}/issues/$parent/sub_issues" -F sub_issue_id="$child_id" 2>&1)"; then
-  echo "create: sub-issue link failed for #$n ($link_err)"
-else
-  already_linked+=("$n")
-  if ! reassert_err="$(gh issue edit "$n" --milestone "$title" 2>&1)"; then
-    echo "create: #$n linked as a sub-issue of #$parent, but re-asserting its own milestone failed ($reassert_err); check #$n's milestone by hand"
-  else
-    echo "create: linked #$n as a sub-issue of #$parent and confirmed its milestone"
-  fi
-fi
-```
-
-```powershell
-# PowerShell 7+. Same three steps, same order, same catch-and-continue per child.
-try {
-  $childId = gh api "repos/{owner}/{repo}/issues/$n" --jq '.id'
-  if ($LASTEXITCODE -ne 0) { throw $childId }
-} catch {
-  Write-Output "create: sub-issue link failed for #$n: could not resolve its numeric id ($_)"
-  continue
-}
-try {
-  gh api --method POST "repos/{owner}/{repo}/issues/$parent/sub_issues" -F "sub_issue_id=$childId" | Out-Null
-} catch {
-  Write-Output "create: sub-issue link failed for #$n ($_)"
-  continue
-}
-$alreadyLinked += $n
-try {
-  gh issue edit $n --milestone $title | Out-Null
-  Write-Output "create: linked #$n as a sub-issue of #$parent and confirmed its milestone"
-} catch {
-  Write-Output "create: #$n linked as a sub-issue of #$parent, but re-asserting its own milestone failed ($_); check #$n's milestone by hand"
-}
-```
-
-**Re-assert timing (states the AC-versus-Design ordering plainly, so both agree).** The re-assert call fires in exactly one case: immediately after THIS run's own fresh link succeeds (step 4c above), the Design section's ordering, chosen because it rides the same per-child pass rather than adding a second, separate top-level sweep over every child on every run (the cheaper of the two readings). A child skipped at step 4a's idempotency check (already linked, whether from this run or an earlier one) gets no re-assert call: it is already correct, and the live probe confirmed linking never clears a child's own milestone (issue #246, first comment: "linking an already-milestoned child as a native sub-issue of a milestone-less parent keeps the child on its own milestone"). So each surviving issue ends this run confirmed on its own milestone either because THIS run just linked and re-asserted it, or because an earlier run already did and this run correctly left it alone.
+**Re-assert timing (states the AC-versus-Design ordering plainly, so both agree).** The re-assert call fires in exactly one case: immediately after THIS run's own fresh link succeeds (step 4c above), the Design section's ordering, chosen because it rides the same per-child pass rather than adding a second, separate top-level sweep over every child on every run (the cheaper of the two readings). A child skipped at step 4a's idempotency check (already linked, whether from this run or an earlier one) gets no re-assert call: it is already correct, and the live probe confirmed that linking an already-milestoned child as a native sub-issue of a milestone-less parent keeps the child on its own milestone. So each surviving issue ends this run confirmed on its own milestone either because THIS run just linked and re-asserted it, or because an earlier run already did and this run correctly left it alone.
 
 **A link that succeeds but whose re-assert fails (a named, known edge).** Reported under "failed" in step 5, never folded into "linked": the sub-issue link itself is real and will be found by a later run's step 1 listing, so a later run's step 4a will treat it as already linked and will not attempt the re-assert again automatically. Given the probe's confirmed-preserved finding this is a low-probability, defense-in-depth-only edge; when it happens, the report names the child so a human can re-assert its milestone by hand.
 
-**5. End-of-pass report.** Whether the pass ran to completion, degraded at the cap, was refused for some milestones, or was skipped entirely (step 1's listing failure), report three lists, by child issue number: **linked** (this run: id resolved, link succeeded, re-assert succeeded), **failed** (with the reason: id-resolve error, link error, or link-succeeded-but-reassert-failed), and **skipped** (with the reason: already linked, cap, or nested-epic, naming the milestone for the nested-epic case). When any child was skipped for the cap, print exactly one summary line naming the parent's resulting sub-issue total and the remaining issue numbers that were not linked, for example: `create: sub-issue cap reached on #$parent (100 total); not linked this run: #58, #61, #64`. Nothing is ever silently dropped from this report.
+**5. End-of-pass report.** Whether the pass ran to completion, degraded at the cap, was refused for some milestones, or was skipped entirely (step 1's listing failure), report three lists, by child issue number: **linked** (this run: id resolved, link succeeded, re-assert succeeded), **failed** (with the reason: id-resolve error, link error, or link-succeeded-but-reassert-failed), and **skipped** (with the reason: already linked, cap, or nested-epic, naming the milestone for the nested-epic case). When any child was skipped for the cap, print exactly one summary line naming the parent's resulting sub-issue total (the `total` row) and the remaining issue numbers that were not linked, for example: `create: sub-issue cap reached on #$parent (100 total); not linked this run: #58, #61, #64`. Nothing is ever silently dropped from this report.
 
 **How each acceptance criterion is met.**
 
 | Criterion | Where it is satisfied |
 |---|---|
 | Every surviving issue linked, confirmed on its own milestone | Step 4c: link then re-assert, in build order (milestone position, then Wave order). |
-| Empty milestone contributes nothing | Step 2's empty-`children` case: zero iterations, not an error. |
+| Empty milestone contributes nothing | Step 2's no-token case: zero iterations, no row, not an error. |
 | Re-run is a no-op (no double-link) | Step 1's once-per-parent fetch plus step 4a's idempotency skip; no re-assert on an idempotent skip (see "Re-assert timing"). |
 | Cap warn, never a silent drop | Step 4b's per-child gate plus step 5's single summary line naming the total and the not-linked numbers. |
-| Nested-epic refusal | Step 3: whole-milestone skip on any offending issue, one warning naming the milestone and the issue. |
+| Nested-epic refusal | Step 3: whole-milestone skip on the first offending issue, one warning naming the milestone and the issue. |
 | Per-child failure reported, never silently linked | Step 4c's catch-and-continue per child; step 5's linked/failed/skipped report. |
-| bash + PowerShell 7+ twins | Every `gh` form above ships both. |
+| bash + PowerShell 7+ twins | Every `gh` form above runs through the `md-epic-parent` twin pair, which ships both. |
 
 ### Step 3: deploy write-sequence (passes a-d)
 
