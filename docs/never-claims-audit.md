@@ -6,15 +6,22 @@ intent. The acceptance was a grep audit finding **each instance gate-backed, sce
 or softened**. This file records that classification so the map from claim to backing is
 legible, and so nobody re-raises "N never-claims backed by one gate" without the breakdown.
 
-**Scope.** The five skill procedures: `plan`, `create`, `update`, `build-roadmap`, `setup`.
+**Scope.** The six skill procedures: `plan`, `create`, `update`, `remediate`,
+`build-roadmap`, `setup`.
 Re-run the audit at any time:
 
 ```
 grep -rniE '\bnever\b|\balways\b' skills/*/SKILL.md
 ```
 
-That returns ~191 occurrences across ~113 lines (plan 40, update 32, create 19,
-build-roadmap 12, setup 10 lines carrying "never").
+As re-measured on 2026-08-18, that returns 195 occurrences across 138 lines
+(lines carrying "never": plan 41, update 26, remediate 24, create 17,
+build-roadmap 11, setup 9).
+
+`remediate` arrived with issue #343, after the classification below was made. Its
+claims are recorded in its own `## Non-negotiables` and backed by the Step-4
+string checks; they are in scope for the next re-run of this audit and are not
+individually classified here.
 
 ## Finding
 

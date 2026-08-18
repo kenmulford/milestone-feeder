@@ -193,6 +193,31 @@
         "| Note | This notice shows once per clone, and again after an upgrade",
         "|      | that revises it."
       ]
+    },
+    {
+      "id": "remediate-notice",
+      "section": "Remediate-verb notice",
+      "skills": [
+        "plan",
+        "update"
+      ],
+      "marker": ".milestone-config/.runtime/remediate-notice",
+      "trigger": {
+        "kind": "always"
+      },
+      "text": [
+        "🟡 New: a driver triage Blocker now has a verb that fixes the issue",
+        "",
+        "| What | /milestone-feeder:remediate <issue-number> turns a driver",
+        "|      | 🔴 Triage Blocker comment into a corrected issue body, editing",
+        "|      | the text each finding names IN PLACE. The issue keeps one",
+        "|      | statement per decision, instead of gaining a correction section",
+        "|      | that contradicts the wording it was meant to replace.",
+        "| When | After the driver parks an issue with a 🔴 Triage comment. A",
+        "|      | finding needing a product or architecture call from you stays",
+        "|      | parked: remediate never guesses one, and never touches labels.",
+        "| Note | This notice shows at most once per clone."
+      ]
     }
   ]
 }

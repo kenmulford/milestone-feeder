@@ -43,9 +43,14 @@ flowchart TD
             direction LR
             up1["edit your brief"] --> up2["re-run plan"] --> up3["sync the existing<br/>milestone(s)"]
         end
+        subgraph sgR ["remediate: when the builder blocks an issue"]
+            direction LR
+            r1["driver's triage parks it<br/>with a 🔴 Triage comment"] --> r2["fix the wording each<br/>finding names, in place"] --> r3["anything only you can<br/>decide stays parked"]
+        end
 
         sgP -->|you read the plan, approve| sgC
         sgC -.->|later, if the idea shifts| sgUp
+        sgC -.->|later, if the builder blocks an issue| sgR
     end
 
     cfg ~~~ input
@@ -58,13 +63,14 @@ flowchart TD
     style sgP fill:#FFFFFF,stroke:#3A82B4,stroke-width:2px,color:#3A82B4
     style sgC fill:#FFFFFF,stroke:#5AA6D4,color:#3A82B4
     style sgUp fill:#FFFFFF,stroke:#5AA6D4,color:#3A82B4
+    style sgR fill:#FFFFFF,stroke:#5AA6D4,color:#3A82B4
     classDef action fill:#EDF4FA,stroke:#7FAECE,color:#15212B
-    class p1,p2,p3,p4,c1,c2,c3,up1,up2,up3 action
+    class p1,p2,p3,p4,c1,c2,c3,up1,up2,up3,r1,r2,r3 action
 ```
 
 ## Quick start
 
-The whole tool is three commands: `plan`, then `create`, and `update` when your idea changes later. The loop:
+The whole tool is four commands: `plan`, then `create`, `update` when your idea changes later, and `remediate` when the builder blocks an issue. The loop:
 
 1. **`plan` your idea.** Put your idea in a file (a paragraph is plenty), or paste it inline, or point at a GitHub epic issue (e.g. `#42`):
 
@@ -92,6 +98,14 @@ The whole tool is three commands: `plan`, then `create`, and `update` when your 
 
    It creates any new issue, patches any issue whose spec drifted (showing you the diff first), adds any new dependency to the build order, and **flags** any live issue your plan no longer mentions. It never closes one.
 
+5. **`remediate` an issue the builder blocked.** When `milestone-driver` finds a gap it can't build through, it parks the issue and leaves a `🔴 Triage` comment listing what's wrong. Hand that issue number back:
+
+   ```
+   /milestone-feeder:remediate 27
+   ```
+
+   It fixes the wording each finding points at, **in the issue itself**, so the issue ends up saying one thing per decision instead of carrying a "correction" paragraph that argues with the text above it. You see the diff before it writes. Anything that needs a real decision from you it leaves parked and tells you about, rather than inventing an answer.
+
 The very first time you run `plan` in a repo with no config, it sets up a small profile for you and then carries on: you don't re-run anything.
 
 ## Before you start
@@ -99,22 +113,22 @@ The very first time you run `plan` in a repo with no config, it sets up a small 
 For us to build your milestone and issues, a few things need to be in place. Each one below comes with what breaks if it's missing.
 
 - **`gh` (the GitHub CLI) installed and signed in**, and you're working in a directory connected to a GitHub repository. Otherwise we won't be able to create your milestone or issues.
-- **Claude allowed to run the GitHub write commands** that `create`, `update`, and `setup` use, plus **Read access to your project docs**:
+- **Claude allowed to run the GitHub write commands** that `create`, `update`, `remediate`, and `setup` use, plus **Read access to your project docs**:
   - `gh label create`: to provision the `ui` / `logic` / `risk:*` labels.
   - `gh api .../milestones` (POST and PATCH): to create or adopt the milestone and write the build order into its description.
   - `gh issue create` / `edit` / `list` / `view` / `comment`: to open issues, fix their cross-references, find existing ones on a re-run, read an epic brief, and post a needs-input report.
   - **Read** on your project's standing docs: to ground each issue in your real conventions.
 
-  Without these grants, `create` and `update` can't write to GitHub.
+  Without these grants, `create`, `update`, and `remediate` can't write to GitHub.
 - **git.**
 - **bash with `jq`** (or **PowerShell 7+**): for the small hook that keeps the plugin from editing your source while it works.
 - **`milestone-driver` is optional.** The feeder drafts every issue to pass the driver's triage clean, and on a clean run `create` can hand the milestone straight to the driver to start building. If it isn't installed, the feeder still plans and deploys: you just run the driver later, or not at all.
 
-One thing worth knowing: **`plan` never writes to GitHub.** It only *reads*, and only when you hand it an epic issue as the brief (it runs `gh issue view` on that one issue). Everything `plan` produces is a local file you review. The GitHub writes above are what `create`, `update`, and `setup` need. Not `plan`.
+One thing worth knowing: **`plan` never writes to GitHub.** It only *reads*, and only when you hand it an epic issue as the brief (it runs `gh issue view` on that one issue). Everything `plan` produces is a local file you review. The GitHub writes above are what `create`, `update`, `remediate`, and `setup` need. Not `plan`.
 
 ## How it works
 
-You hand `plan` your idea. It reads your project's standing docs and breaks the idea into small, buildable issues, recording for each one the decisions an engineer would otherwise have to invent, and citing the house rule it followed. Each issue is written to pass the same triage `milestone-driver` runs before it starts a build, so what you approve is ready to build. A decision with no conventional default it never guesses: it flags it for you to make. Then `create` builds exactly what you approved.
+You hand `plan` your idea. It reads your project's standing docs and breaks the idea into small, buildable issues, recording for each one the decisions an engineer would otherwise have to invent, and citing the house rule it followed. Each issue is written to pass the same triage `milestone-driver` runs before it starts a build, so what you approve is ready to build. A decision with no conventional default it never guesses: it flags it for you to make. Then `create` builds exactly what you approved, `update` keeps a changed idea in sync, and `remediate` corrects an issue the builder blocked.
 
 Two things make that work, in plain terms:
 
@@ -128,6 +142,7 @@ A few more things the feeder does for you:
 - **Name your milestone with a version up front.** Add a line like `Milestone: myapp v1.2.0` to your brief (or just say it inline). The feeder reads the version straight from the milestone's name so its sibling, `milestone-driver`, knows exactly what version to build toward. If you don't name one, the feeder proposes a version (pulled from your existing milestones or git tags) and shows it to you to confirm or change before it builds anything. You're never handed a milestone whose name you didn't get to see.
 - **A whole-app brief becomes a sequenced roadmap of milestones.** If your idea really reads as several separate releases, `plan` hands it to a roadmap step first: it carves the brief into a build-ordered set of milestones and shows you the split, so you can confirm it, merge or split a milestone, reorder them, or reject it. All of this happens before it plans anything. Once you confirm, `plan` plans every milestone in the roadmap (in parallel), and `create` deploys them in build order. A normal, single-release brief is unchanged: no roadmap step, no extra prompt. Never a silent giant milestone, and never a hard stop. The call is yours.
 - **That roadmap deploy also creates a parent issue for the build engine.** It ties the milestones together, in build order, so `milestone-driver` builds them in sequence.
+- **It fixes an issue the builder blocked, without arguing with itself.** When `milestone-driver` parks an issue with a `🔴 Triage` comment, `remediate` edits the exact wording each finding points at, in place. The old wording is gone, not restated below a heading that contradicts it, which is what turns one blocked issue into two. A finding only you can settle stays parked and gets listed for you.
 - **It puts your milestone on your Trello board, if you use one.** When your `milestone-driver` is set up with Trello, `create` also drops a card for the new milestone on your board (with its issues as a checklist) so the work shows up where you track it the moment it's created. There's no Trello setting of your own to add: `create` reads the board from your driver config, and if you don't use Trello, nothing changes.
 
 ## Config
