@@ -23,34 +23,35 @@ milestone-feeder is a Claude Code plugin. You hand it a brief: a file, a few lin
 ```
 
 ```mermaid
-%%{init: {"flowchart": {"wrappingWidth": 900}} }%%
+%%{init: {"flowchart": {"wrappingWidth": 280, "nodeSpacing": 30, "rankSpacing": 32, "padding": 8}} }%%
 flowchart TD
-    cfg(["reads your .milestone-config/ profile &amp; .project/ docs, both written by milestone-bootstrapper"])
+    cfg(["reads your .milestone-config/ profile<br/>&amp; .project/ docs, from milestone-bootstrapper"])
 
     input[/"your idea: a file, a few<br/>lines, or an epic issue #"/]
 
     subgraph loop ["idea → build-ready milestone(s)"]
         direction TB
-        subgraph sgP ["plan: idea → reviewable plan file"]
+        subgraph sgP ["plan: idea → plan file"]
             direction LR
-            p1["read your<br/>project docs"] --> p2["split into one or more<br/>milestones of small issues,<br/>in build order"] --> p3["check each issue against<br/>your conventions"] --> p4["write the plan file<br/>(nothing on GitHub yet)"]
+            p1["read your<br/>project docs"] --> p2["milestone(s) of small<br/>issues, in build order"] --> p3["check conventions ·<br/>write the plan file"]
         end
-        subgraph sgC ["create: the plan, verbatim, on GitHub"]
+        subgraph sgC ["create: the plan, on GitHub"]
             direction LR
-            c1["milestone(s) + issues<br/>+ labels"] --> c2["build order in each<br/>milestone description"] --> c3["multiple milestones → linked<br/>under one parent issue<br/>(md-epic + sub-issues)"]
+            c1["milestones, issues,<br/>labels"] --> c2["build order in each<br/>description"] --> c3["multi-milestone →<br/>epic + sub-issues"]
         end
-        subgraph sgUp ["update: when your idea changes"]
+        subgraph sgUp ["update: your idea changed"]
             direction LR
-            up1["edit your brief"] --> up2["re-run plan"] --> up3["sync the existing<br/>milestone(s)"]
+            up1["edit your brief"] --> up2["re-run plan"] --> up3["sync the<br/>milestone(s)"]
         end
-        subgraph sgR ["remediate: when the builder blocks an issue"]
+        subgraph sgR ["remediate: a blocked issue"]
             direction LR
-            r1["driver's triage parks it<br/>with a 🔴 Triage comment"] --> r2["fix the wording each<br/>finding names, in place"] --> r3["anything only you can<br/>decide stays parked"]
+            r1["triage parks it with<br/>a 🔴 comment"] --> r2["fix each finding's<br/>wording, in place"] --> r3["your-call decisions<br/>stay parked"]
         end
 
         sgP -->|you read the plan, approve| sgC
         sgC -.->|later, if the idea shifts| sgUp
-        sgC -.->|later, if the builder blocks an issue| sgR
+        sgC -.->|issue blocked| sgR
+        sgUp ~~~ sgR
     end
 
     cfg ~~~ input
@@ -65,7 +66,7 @@ flowchart TD
     style sgUp fill:#FFFFFF,stroke:#5AA6D4,color:#3A82B4
     style sgR fill:#FFFFFF,stroke:#5AA6D4,color:#3A82B4
     classDef action fill:#EDF4FA,stroke:#7FAECE,color:#15212B
-    class p1,p2,p3,p4,c1,c2,c3,up1,up2,up3,r1,r2,r3 action
+    class p1,p2,p3,c1,c2,c3,up1,up2,up3,r1,r2,r3 action
 ```
 
 ## Quick start
