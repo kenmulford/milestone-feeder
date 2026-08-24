@@ -11,7 +11,7 @@ Release notes for milestone-feeder. Each tagged release is also published on the
 
 | Issue | PR | What |
 |---|---|---|
-| #483 Agent briefs point at `milestone-driver/skills/citation-format.md`, a path that is on no disk | #TBD | The cross-repo pointer deleted at all seven sites, a Read scope rule bounding each authoring agent to the repo root, and a third gate check holding `agents/` clear |
+| #483 Agent briefs point at `milestone-driver/skills/citation-format.md`, a path that is on no disk | #484 | The cross-repo pointer deleted at all seven sites, a Read scope rule bounding each authoring agent to the repo root, and a third gate check holding `agents/` clear |
 
 ### Consumer notes (upgrading from v0.15.0)
 
@@ -21,7 +21,7 @@ Release notes for milestone-feeder. Each tagged release is also published on the
 
 ### ⚖️ Audit trail
 
-Judgment-call PR for review: **#TBD** (`agents/remediator.md` ships naming the two citation forms and defining neither. The deleted pointer was the only definition it referenced, and this repo's recorded position, in the v0.13.0 consumer notes below, is that the forms are defined once in milestone-driver and restated nowhere here. No sibling inline rule was added in its place.)
+Judgment-call PR for review: **#484** (`agents/remediator.md` ships naming the two citation forms and defining neither. The deleted pointer was the only definition it referenced, and this repo's recorded position, in the v0.13.0 consumer notes below, is that the forms are defined once in milestone-driver and restated nowhere here. No sibling inline rule was added in its place.)
 
 - The seven edited sites: `agents/issue-author.md` carried three (clause 5's pattern-to-mirror bullet, the §4 Design template, and the Rigor gate's grounding bullet); `agents/architect.md`, `agents/roadmap-splitter.md`, and `agents/remediator.md` carried one each, in their Rigor gate; `SPEC.md` carried the seventh, in its copy of the §4 Design template. The `SPEC.md` and `agents/issue-author.md` template blocks now match byte for byte in the edited region only; the two copies still diverge elsewhere, since the agent's copy carries a `Sites searched:` line `SPEC.md` never received.
 - The new check is scoped to `agents/` by pathspec and to nothing else. `docs/file-map.md` and `docs/plan-file-contract.md` keep their three references, which a human reads and no agent loads as instructions, and `SPEC.md` is outside the check even though its pointer was deleted. That scoping is also what makes the gate structurally unable to match its own source, which holds the literal path verbatim.
