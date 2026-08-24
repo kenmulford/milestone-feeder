@@ -16,9 +16,15 @@ name: CI
 #                                agents/**/*.md, SPEC.md, or a
 #                                runtime-referenced docs/*.md) exceeds its
 #                                size-budget ceiling (issue #270).
-#   3. contract-strings gate:    fails if the implied-surfaces marker or the
-#                                anti-fixation prompt drifts from its
-#                                canonical hyphen form (gate from issue #369;
+#   3. contract-strings gate:    three checks. Fails if the implied-surfaces
+#                                marker or the anti-fixation prompt drifts
+#                                from its canonical hyphen form; if a pinned
+#                                contract clause is missing from its named
+#                                file; or if a file under agents/ names the
+#                                cross-repo citation-format path, which
+#                                resolves on no consumer disk and sent three
+#                                issue-authors into a filesystem-root `find`
+#                                (issue #483). (gate from issue #369;
 #                                hyphen canonical since issue #398).
 #
 # The three job names below ("vocabulary-purge gate", "plugin-structure check",
