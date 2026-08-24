@@ -3,8 +3,9 @@
 # check-contract-strings.sh — the contract-strings gate.
 #
 # What this checks, in plain terms:
-#   Two checks run in order: a DRIFT scan over the whole live surface, then a
-#   per-file PRESENCE assertion. Both must be clean for exit 0.
+#   Three checks run in order: a DRIFT scan over the whole live surface, a
+#   per-file PRESENCE assertion, then a POINTER scan over agents/. All three
+#   must be clean for exit 0.
 #
 #   Check 1 (drift).
 #   Two prompt strings are contract-declared byte-exact, separator and all.
@@ -32,6 +33,22 @@
 #   59c0aff) compressed the authoring agents and dropped three, with every CI
 #   gate then in place staying green. The presence table is at PRESENCE_ROWS
 #   below; each row is verified with fixed-string matching, not regex.
+#
+#   Check 3 (pointer).
+#   Four agent briefs used to close their citation rule with a pointer to
+#   milestone-driver/skills/citation-format.md. That path is on no consumer
+#   disk and in no feeder install, so an agent reading its own brief took it
+#   for a file to open and searched the machine for it: in one 2026-08-24
+#   plan run three issue-authors each escalated to a filesystem-root `find`
+#   and ran for over an hour apiece (issue #483). Every one of those sites
+#   already states the citation forms inline, so the pointer bought nothing
+#   and cost that. This check fails the moment the literal path turns up in
+#   any file under agents/. Self-match is structurally impossible, for the
+#   same reason check 2's is: the pathspec is agents/ and this script lives
+#   in scripts/, so the literal can sit here verbatim (POINTER below) and
+#   never be scanned. The scope is agents/ and ONLY agents/. docs/file-map.md
+#   and docs/plan-file-contract.md keep their references on purpose; a human
+#   reads those, and no agent loads them as its own instructions.
 #
 # The two contract strings (canonical form, ASCII hyphen U+002D):
 #   implied - review / trim / augment
@@ -72,10 +89,12 @@
 #   FAIL CLOSED on a scan error instead of silently passing.
 #
 # Run it locally from the repo root:  ./scripts/check-contract-strings.sh
-# Exit 0 = both checks clean. Exit 1 = a drifted variant found (check 1,
+# Exit 0 = all three checks clean. Exit 1 = a drifted variant found (check 1,
 # file:line:match printed), or a pinned fragment missing from its named file
-# (check 2, fragment and file printed), or a named file missing from disk.
-# Exit 2 = a scan itself failed (treated as a failure, never as "clean").
+# (check 2, fragment and file printed), or a named file missing from disk, or
+# the retired cross-repo pointer found under agents/ (check 3,
+# file:line:match printed). Exit 2 = a scan itself failed (treated as a
+# failure, never as "clean").
 
 set -euo pipefail
 
@@ -139,8 +158,9 @@ case "${status}" in
     exit 1
     ;;
   1)
-    # No drifted variant anywhere. Check 1 is clean; fall through to check 2.
-    # The PASS message covering BOTH checks prints at the end of the script.
+    # No drifted variant anywhere. Check 1 is clean; fall through to checks 2
+    # and 3. The PASS message covering ALL THREE prints at the end of the
+    # script.
     ;;
   *)
     echo "ERROR: 'git grep' failed (exit ${status}) — scan unreliable; failing closed." >&2
@@ -229,8 +249,44 @@ if [ "${presence_failures}" -gt 0 ]; then
   exit 1
 fi
 
-echo "PASS: both contract-string checks are clean."
+# --- check 3: the retired cross-repo pointer under agents/ -------------------
+
+POINTER='milestone-driver/skills/citation-format.md'
+
+# Same three-state discipline as check 1: capture the status explicitly so a
+# scan *error* can't masquerade as a clean tree. Fixed-string matching (-F),
+# because this is a literal path and not a pattern. The pathspec is agents/
+# alone: docs/ and SPEC.md are out of its reach by design (see the header), and
+# scoping it this way is also what makes this script unable to match itself.
+set +e
+POINTER_HITS="$(git grep -FInH -e "${POINTER}" -- 'agents/')"
+pointer_status=$?
+set -e
+
+case "${pointer_status}" in
+  0)
+    echo "FAIL: an agent brief points at a path that is on no disk." >&2
+    echo "      path: ${POINTER}" >&2
+    echo "      An agent reading this takes it for a file to open and searches" >&2
+    echo "      the machine for it (issue #483). Delete the pointer and add no" >&2
+    echo "      replacement text: every site that carried it already states the" >&2
+    echo "      citation forms inline." >&2
+    echo >&2
+    echo "${POINTER_HITS}" >&2
+    exit 1
+    ;;
+  1)
+    # No agent brief names the path. Check 3 is clean.
+    ;;
+  *)
+    echo "ERROR: 'git grep' failed (exit ${pointer_status}) on agents/. Scan unreliable; failing closed." >&2
+    exit 2
+    ;;
+esac
+
+echo "PASS: all three contract-string checks are clean."
 echo "      drift:    both contract strings intact wherever they appear"
 echo "                (the implied-surfaces marker and anti-fixation prompt)"
 echo "      presence: all ${#PRESENCE_ROWS[@]} pinned clauses found in their named files"
+echo "      pointer:  no file under agents/ names the cross-repo citation-format path"
 exit 0

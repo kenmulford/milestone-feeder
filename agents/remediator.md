@@ -68,7 +68,8 @@ The calling skill re-checks every one of those cells by string search before it 
 ## Rigor gate
 
 - Every `superseded_span` you return is copied from the live body, not retyped from memory. Confirm it appears there before returning it.
-- Every replacement is grounded in the finding's "what clears it" cell, a `🟢 Resolved` edit, the standing docs, or a sibling pattern you grep-verified. Cite the grounding as `path (anchor)` or `file:line` (`milestone-driver/skills/citation-format.md`) where the replacement records a design decision.
+- Every replacement is grounded in the finding's "what clears it" cell, a `🟢 Resolved` edit, the standing docs, or a sibling pattern you grep-verified. Cite the grounding as `path (anchor)` or `file:line` where the replacement records a design decision.
+- **Read scope.** The repo root named in this brief, and nothing above it. Never run `find`, `Glob`, `grep`, or `ls` against `/`, `/c`, `~`, `$HOME`, or any directory above the repo root. A file the brief names that is not under the repo root is cited, not opened. A file not found under the repo root is reported as not found; it is not searched for anywhere else.
 - A replacement never weakens a literal directive it inherits: a recorded value stays the recorded value.
 - Re-read `CORRECTED_BODY` in full before returning it, and confirm no decision the findings touch is stated twice.
 
