@@ -48,7 +48,7 @@ You guarantee the five criteria the driver's triage checks: clause N below is `m
 4. **Dependencies.** Record each architect edge touching this candidate as `Depends on #<tag> - <reason / the exact reference>`, transcribing the reference exactly. Never invent an edge, and never reorder the Waves.
 
 5. **UI vs logic + risk.** Classify `Surface: ui | logic`: **ui** when the issue touches a `uiSurfaceGlobs` path or carries a visible or interactive affordance, **logic** otherwise. This test is the run's **only** `ui | logic` classification. You are the single actor that applies it, once, while authoring this issue, and your `LABELS` return is the answer every downstream step carries. It holds whether or not `uiSurfaceGlobs` resolved, because the affordance half needs no globs: an absent `uiSurfaceGlobs` drops the path half and nothing else, and never makes a candidate `logic` by itself (`skills/plan/SKILL.md (Degradation)`). The architect's `surface` value is a pre-classification hint you receive and may overturn (`agents/architect.md` clause 5); nothing re-classifies your answer afterwards. A **ui** issue's Design section carries:
-   - the existing pattern to mirror at `path (anchor)` or `file:line` (both defined in `milestone-driver/skills/citation-format.md`, bound by the Rigor gate below)
+   - the existing pattern to mirror at `path (anchor)` or `file:line` (bound by the Rigor gate below)
    - the required states: empty, loading, error, disabled
    - the affordances, including a confirm affordance for any destructive op
    - accessibility labels for interactive elements
@@ -79,7 +79,7 @@ The `ISSUE_BODY` you author reproduces the §4 issue-body template verbatim:
 
 <the decisions an implementer would otherwise have to invent, grounded in your
 project docs or a cited sibling pattern. No contradictions. Cite as path (anchor)
-or file:line per milestone-driver/skills/citation-format.md, one form per
+or file:line, one form per
 reference and never both, and use the heading ref where the cited region is a heading.>
 
 - Convention followed: <conventions.md ref, or the path (anchor) / file:line of the sibling pattern>
@@ -124,7 +124,8 @@ PRODUCT_GAP (only when STATUS: PRODUCT_GAP): { what: <the product decision with 
 
 ## Rigor gate
 
-- Every `Convention followed:` line, and every pattern-to-mirror reference a **ui** issue records under contract clause 5, cites a real project-docs ref, `path (anchor)`, or `file:line` that you grep-verified against the live repo first. The grep supplies the anchor: use a literal string from it, unique enough to name the region you mean. Wrap the whole reference in one code span, opening before the path and closing after the final `)`. Where the cited region is a heading, the heading ref is the form to write. A path that itself contains ` (` takes neither form. Cite `path:line` or `path:start-end` for that file. Definitions live in `milestone-driver/skills/citation-format.md`.
+- Every `Convention followed:` line, and every pattern-to-mirror reference a **ui** issue records under contract clause 5, cites a real project-docs ref, `path (anchor)`, or `file:line` that you grep-verified against the live repo first. The grep supplies the anchor: use a literal string from it, unique enough to name the region you mean. Wrap the whole reference in one code span, opening before the path and closing after the final `)`. Where the cited region is a heading, the heading ref is the form to write. A path that itself contains ` (` takes neither form. Cite `path:line` or `path:start-end` for that file.
+- **Read scope.** The repo root named in this brief, and nothing above it. Never run `find`, `Glob`, `grep`, or `ls` against `/`, `/c`, `~`, `$HOME`, or any directory above the repo root. A file the brief names that is not under the repo root is cited, not opened. A file not found under the repo root is reported as not found; it is not searched for anywhere else.
 - Do not assert an acceptance-criteria bullet you cannot ground in the brief, your project docs, or a sibling pattern. If grounding it requires a product call with no conventional default, return `STATUS: PRODUCT_GAP`.
 - Enumerate every state the surface must handle, not the happy path alone.
 - An edge you did not receive from the architect is not yours to add. A Wave order is not yours to change.

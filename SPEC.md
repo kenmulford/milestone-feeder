@@ -205,7 +205,7 @@ Maps 1:1 to the five criteria the driver's triage checks. The issue-author guara
 
 <the decisions an implementer would otherwise have to invent, grounded in your
 project docs or a cited sibling pattern. No contradictions. Cite as path (anchor)
-or file:line per milestone-driver/skills/citation-format.md, one form per
+or file:line, one form per
 reference and never both, and use the heading ref where the cited region is a heading.>
 
 - Convention followed: <conventions.md ref, or the path (anchor) / file:line of the sibling pattern>

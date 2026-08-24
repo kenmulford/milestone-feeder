@@ -3,6 +3,33 @@
 Release notes for milestone-feeder. Each tagged release is also published on the
 [GitHub Releases page](https://github.com/kenmulford/milestone-feeder/releases).
 
+## v0.15.1: agent read scope
+
+**Theme:** Four agent briefs closed their citation rule with a pointer to `milestone-driver/skills/citation-format.md`, a path that is on no consumer disk, and agents took it for a file to open. The pointer is gone from all seven sites, the four authoring agents carry a verbatim **Read scope** rule bounding every `find`, `Glob`, `grep`, and `ls` to the repo root, and a third contract-strings check holds `agents/` clear of the path. The citation forms themselves are unchanged: every site that carried the pointer already stated them inline.
+
+### 🔧 Fixes
+
+| Issue | PR | What |
+|---|---|---|
+| #483 Agent briefs point at `milestone-driver/skills/citation-format.md`, a path that is on no disk | #484 | The cross-repo pointer deleted at all seven sites, a Read scope rule bounding each authoring agent to the repo root, and a third gate check holding `agents/` clear |
+
+### Consumer notes (upgrading from v0.15.0)
+
+- **No schema changes** to `.milestone-config/feeder.json` or `.milestone-config/driver.json`. No new config key, no changed default, and no consumer action required.
+- **Agent read scope narrows.** An authoring agent reads only under the repo root named in its brief, and never runs `find`, `Glob`, `grep`, or `ls` against `/`, `/c`, `~`, `$HOME`, or any directory above it. A brief that names a path outside the repo root is cited, not opened; a file absent under the repo root is reported as not found and searched for nowhere else.
+- **The citation forms are unchanged.** `path (anchor)` and `file:line` stand as written at every site the pointer left, so nothing already authored migrates and no plan-file or issue-body shape changes.
+
+### ⚖️ Audit trail
+
+Judgment-call PR for review: **#484** (`agents/remediator.md` ships naming the two citation forms and defining neither. The deleted pointer was the only definition it referenced, and this repo's recorded position, in the v0.13.0 consumer notes below, is that the forms are defined once in milestone-driver and restated nowhere here. No sibling inline rule was added in its place.)
+
+- The seven edited sites: `agents/issue-author.md` carried three (clause 5's pattern-to-mirror bullet, the §4 Design template, and the Rigor gate's grounding bullet); `agents/architect.md`, `agents/roadmap-splitter.md`, and `agents/remediator.md` carried one each, in their Rigor gate; `SPEC.md` carried the seventh, in its copy of the §4 Design template. The `SPEC.md` and `agents/issue-author.md` template blocks now match byte for byte in the edited region only; the two copies still diverge elsewhere, since the agent's copy carries a `Sites searched:` line `SPEC.md` never received.
+- The new check is scoped to `agents/` by pathspec and to nothing else. `docs/file-map.md` and `docs/plan-file-contract.md` keep their three references, which a human reads and no agent loads as instructions, and `SPEC.md` is outside the check even though its pointer was deleted. That scoping is also what makes the gate structurally unable to match its own source, which holds the literal path verbatim.
+- The issue's fourth acceptance criterion, that a `plan` run produces subagent transcripts with no filesystem-root `find`, is verified post-merge by observation on the next consumer run. No gate asserts it: CI cannot execute a Step 4 fan-out.
+- Word ceilings held and none was raised: `agents/issue-author.md` 2806 of 2900, `agents/architect.md` 2873 of 2950, `agents/remediator.md` 1502 of 1550, `agents/roadmap-splitter.md` 1813 of 1850. The issue's third requirement expected prose to be trimmed to pay for the 69-word rule. No prose was trimmed, but the change is not word-neutral: the deletions returned 1 to 10 words per file and the remaining 59 to 68 came out of existing ceiling headroom, a resource the ratchet only ever shrinks. `agents/remediator.md` now sits 48 words from its ceiling and `agents/roadmap-splitter.md` 37.
+- The Read scope rule ships byte-identical in all four agents and no `PRESENCE_ROWS` entry pins any copy, so a prose pass can drop one with every gate green. It also reads against the repo's one-definition-plus-pointers doctrine (`docs/style-contracts.md`), which a pointer-based fix cannot satisfy while the rule itself bounds reads to the consumer repo. Both are for the follow-up issue.
+- The rule's "repo root named in this brief" names an input no dispatching skill hands in. For `agents/remediator.md` the only root its brief names is the resolved `projectDocs` path, so that agent's bound is ambiguous between the repo and `.project/`. The agent's own line 20 ("Read the repo and the standing docs") contradicts the narrow reading. Recorded as a known defect for the follow-up issue rather than resolved here.
+
 ## v0.15.0: the remediation path
 
 **Theme:** A driver triage Blocker now has a verb that fixes the issue. `/milestone-feeder:remediate <issue-number>` reads the driver's recorded `🔴 Triage` findings and rewrites the issue body, editing the text each finding names in place instead of appending a correction section that leaves two live statements for one decision. Everything else is unchanged: no verb, agent contract, or park boundary shifts behavior.
