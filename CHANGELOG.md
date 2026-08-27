@@ -3,9 +3,42 @@
 Release notes for milestone-feeder. Each tagged release is also published on the
 [GitHub Releases page](https://github.com/kenmulford/milestone-feeder/releases).
 
+## v0.15.3: scratch-ignore convergence
+
+**Theme:** The feeder wrote the nested `.milestone-config/.gitignore` as twelve lines naming eight scratch markers one by one, while milestone-driver 1.24 writes five patterns with `*-notice`, so a consumer the feeder self-healed first kept a file that left every newer driver marker untracked. The three copies here now carry the driver's five patterns, a check in `scripts/validate-plugin-structure.py` pins them line for line, and the setup skill names the glob instead of eight marker names.
+
+### ✨ Structural gate
+
+| Issue | PR | What |
+|---|---|---|
+| #492 Pin the three nested .gitignore copies line for line in validate-plugin-structure.py | #495 | Check 7 in `scripts/validate-plugin-structure.py` reads `scripts/emit-notice.json`'s `self-heal-nested-gitignore` `writes.lines`, the fenced block under `## Self-heal the nested .milestone-config/.gitignore` in `docs/one-time-notices.md`, and the committed `.milestone-config/.gitignore`, and fails naming the drifted copy (a single odd copy against the two that agree; all three differing, the JSON array as reference) or the missing source; the false "byte-pinned" claim in the `FILE_WORD_CEILINGS` comment is corrected |
+
+### 🔧 Fixes
+
+| Issue | PR | What |
+|---|---|---|
+| #493 Converge the nested .milestone-config/.gitignore on the driver's five patterns at all three pinned sites | #496 | All three copies carry `*-notice`, `triage-cache.json`, `tests-stamp`, `.runtime/`, `worktrees/` under the four unchanged comment lines; the doc's Sync bullet states five entries, the driver's six writing sites, the one differing comment-line mark, and the check 7 pin |
+| #494 Name the *-notice glob in setup Phase 3 instead of eight marker names | #497 | The self-heal bullet's parenthetical in `skills/setup/SKILL.md` reads `*-notice`, `triage-cache.json`, `tests-stamp`, plus the `.runtime/` and `worktrees/` dirs |
+
+### Consumer notes (upgrading from v0.15.2)
+
+- **No schema changes** to `.milestone-config/feeder.json` or `.milestone-config/driver.json`. No new config key, no changed default.
+- **A consumer with no nested `.milestone-config/.gitignore` now receives the nine-line five-pattern body** from `plan` Step 0 or `setup` Phase 3, and `*-notice` covers every current and future driver marker. Both plugins write create-only: a consumer already holding the eight-name file keeps it. To adopt the glob, delete the nested file and re-run `plan` or `setup`, or edit it by hand.
+- The feeder's block and the driver's differ on one byte-run, the first comment line's mark (a comma here, a spaced hyphen there); the driver recasts its line in its own follow-up.
+
+### ⚖️ Audit trail
+
+Judgment-call PRs: none.
+
+- Check 7's two review findings are fixed, not accepted: the section scan is fence-aware, so a doubled-hash comment line inside the block no longer false-fails as "never closed"; and a missing `docs/one-time-notices.md` is named by check 7 itself whenever the `FILE_WORD_CEILINGS` loop is not already reporting it. The driver's review ladder granted one fix cycle and disallowed a second, so both landed in a follow-up PR instead.
+
+- Check 7 pins three copies; the `skills/setup/SKILL.md` parenthetical stays prose and is not pinned.
+- The driver's six sites keep the spaced-hyphen first line; the comma recast is a milestone-driver follow-up, alongside its triage-reviewer honoring a declared `Depends on #<n> - <reason>` edge (carried from v0.15.2).
+- Ceilings after this release: `docs/one-time-notices.md` 2163 of 2300, `skills/setup/SKILL.md` 2269 of 2400; neither moved.
+
 ## v0.15.2: shared-file ordering
 
-**Theme:** Two candidates that edit the same existing file used to share a parallel Wave, because the architect emitted an edge only when one candidate consumed an artifact another introduced; every fold after the first conflicted. Each candidate now declares the existing files it modifies, two intersecting lists get one ordering edge the Wave sort consumes like any other, and the list reaches the issue body so the driver sees the file scope before it cuts a branch. This tag also carries v0.15.1 below, which was merged to `develop` on 2026-08-24 and never tagged on its own.
+**Theme:** Two candidates that edit the same existing file used to share a parallel Wave, because the architect emitted an edge only when one candidate consumed an artifact another introduced; every fold after the first conflicted. Each candidate now declares the existing files it modifies, two intersecting lists get one ordering edge the Wave sort consumes like any other, and the list reaches the issue body so the driver sees the file scope before it cuts a branch.
 
 ### 🔧 Fixes
 
@@ -13,12 +46,11 @@ Release notes for milestone-feeder. Each tagged release is also published on the
 |---|---|---|
 | #486 Architect emits no edge for candidates that edit the same existing file, so they fold into conflicts | #487 | An optional `edits:` list on each `CANDIDATES` entry (existing repo files, each verified to exist); clause 11 emits `#B after #A - edits: <path>[, <path>]` for intersecting lists, one edge per pair, suppressed by any clause 3 or clause 9 edge already relating the pair, direction from the clause 3/9 order then the smaller list then the earlier-assigned tag, so the graph cannot cycle; `plan` threads the list to an `Edits:` line in the issue's `## Design` block; scenario 17 pins the four golden cases and a disjoint control |
 
-### Consumer notes (upgrading from v0.15.0)
+### Consumer notes (upgrading from v0.15.1)
 
 - **No schema changes** to `.milestone-config/feeder.json` or `.milestone-config/driver.json`. No new config key, no changed default, and no consumer action required.
 - **The architect's return block grows by one optional field and one edge kind.** A `CANDIDATES` entry may carry `edits:`; `EDGES` may carry `#B after #A - edits: <path>`. Both are additive: anything reading `tag` / `title` / `surface` / `risk` / `sketch` is unaffected, and milestone descriptions render every edge kind as the same `(depends on #A)` Wave line.
 - **Issue bodies may carry an `Edits:` line** in `## Design (recorded, consistent)`, the architect's list transcribed verbatim, and a `Depends on #<n> - edits: <path>` dependency for a shared-file edge. At the driver that dependency is a hard hold until the earlier issue merges. At plan time a park on the earlier file-sharer drops the later one with a `[dropped - depends on parked #<tag>]` marker, the same cascade every other edge takes.
-- **v0.15.1's notes below apply too**: agent read scope narrows to the repo root, the cross-repo citation-format pointer is gone, and the citation forms are unchanged.
 
 ### ⚖️ Audit trail
 
