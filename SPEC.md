@@ -130,14 +130,26 @@ The reference's three triggers: the new-entity baseline (list / detail / create 
 
 ### Layer-aware breakdown: architecture-keyed ordering
 
-When the project's standing docs state a stack + layering convention, the `architect` assigns each candidate its architectural layer and derives the issue order from the layer dependency, not only from ad-hoc type references (`agents/architect.md` clause 9). The architect consults the stated architecture (primarily `.project/design-philosophy.md#Layering & boundaries` for the layers and their allowed dependency directions, with `.project/conventions.md#File & folder layout` for where each layer's files live and `.project/library-manifest.md#Runtime & frameworks` for the stack), places each CRUD / helper task in the layer the convention dictates, and records the result:
+When the project's standing docs state a stack + layering convention, the `architect` assigns each candidate its architectural layer and derives the issue order from the layer dependency, not only from ad-hoc type references (`agents/architect.md` clause 9). It consults the stated architecture (`.project/design-philosophy.md#Layering & boundaries` for the layers and their allowed dependency directions, `.project/conventions.md#File & folder layout` for where each layer's files live, `.project/library-manifest.md#Runtime & frameworks` for the stack), places each CRUD / helper task in the layer the convention dictates, and records the result:
 
 - **Assignment.** Each candidate carries an optional `layer` field naming the architectural layer the convention places it in: a CRUD / persistence task in the data layer, a formatting helper in the utility layer, a view-model in the view-model layer.
-- **Ordering.** A layer that others depend on precedes them: the architect emits a dependency edge keyed by layer (`#B depends_on #A - layer: <B-layer> depends on <A-layer> per <citation>`), consumed by the same Waves / topological sort the dependency graph already uses (§4, Milestone description template). A concrete artifact `depends_on` edge is authoritative; a layer edge only orders candidates that are otherwise independent. The two compose, and a layer edge never violates a concrete edge.
+- **Ordering.** A layer that others depend on precedes them: the architect emits a dependency edge keyed by layer (`#B depends_on #A - layer: <B-layer> depends on <A-layer> per <citation>`), consumed by the same Waves / topological sort the dependency graph already uses (§4, Milestone description template). A concrete artifact `depends_on` edge is authoritative; a layer edge only orders candidates that are otherwise independent. The two compose; a layer edge never violates a concrete edge.
 - **Grounded, never invented.** Each layer assignment and layer edge cites the project's stated architecture (`.project/<doc>#<section>` or a sibling `file:line`), the same rigor gate every design call clears. A layer that cannot be grounded is not assigned.
-- A project whose `.project` states no layering convention (the section absent / `[TBD]`, or an unlayered stack) produces the dependency-only breakdown it does today: no `layer` field, no layer edge. No error, no fabricated layering (`.project/design-philosophy.md#Error & failure philosophy`).
+- A project whose `.project` states no layering convention (the section absent / `[TBD]`, or an unlayered stack) produces no `layer` field and no layer edge; ordering falls to clause 3 and clause 11 edges. No error, no fabricated layering (`.project/design-philosophy.md#Error & failure philosophy`).
 
-**The layer threads architect → plan → issue-author → issue.** `plan` captures the optional `layer` verbatim alongside each candidate (Step 3), threads it into the issue-author brief (Step 4), and the issue-author records it as a `Layer:` line in the issue's `## Design` block (§4). A candidate with no assigned layer carries no `layer` field and no `Layer:` line. No new config key: the layer pass reuses the existing `projectDocs` grounding.
+**The layer threads architect → plan → issue-author → issue.** `plan` captures the optional `layer` verbatim (Step 3), threads it into the issue-author brief (Step 4), and the author records it as a `Layer:` line in the issue's `## Design` block (§4). A candidate with no assigned layer carries no `layer` field and no `Layer:` line. No new config key: the layer pass reuses the existing `projectDocs` grounding.
+
+### Shared-file ordering: edits-keyed edges
+
+Two candidates that modify the same existing file share no artifact reference, so nothing relates them in the graph and the Wave sort leaves them parallel. Each declares the existing files it modifies, and an intersection is an ordering edge (`agents/architect.md` clause 11):
+
+- **Declaration.** An optional `edits` field lists the EXISTING repo files the candidate modifies, every path verified to exist and written as a bare repo path, never a citation. A path that does not exist, or a file the candidate introduces (concrete-edge territory), is never listed.
+- **Ordering.** Intersecting `edits` lists get one edge naming every shared path (`#B after #A - edits: <path>[, <path>]`), emitted pairwise over each overlapping pair. Direction comes from the order the clause 3 and clause 9 edges alone produce: the candidate in the earlier Wave of that sort first; within one Wave, the smaller list, then the earlier-assigned tag. Every `after` edge derives from that one order, so the graph stays acyclic.
+- **One edge per pair.** A clause 3 or clause 9 edge already relating the pair, in either direction, orders it and suppresses the `after` edge: one edge per pair, never two, and no `after` edge ever points against the order those clauses set.
+- **An ordinary edge.** The Waves / topological sort the graph already uses (§4, Milestone description template) consumes it, so the two land in successive Waves, the later branch cut from a tree already holding the earlier one.
+- No intersecting lists: no `after` edge, and the order clauses 3 and 9 produce, unchanged.
+
+**The list threads architect → plan → issue-author → issue.** `plan` captures `edits` verbatim (Step 3), threads it into the issue-author brief (Step 4), and the author records it as an `Edits:` line in the issue's `## Design` block (§4), so triage and the implementer see the file scope. A candidate modifying no existing file carries no `edits` field and no `Edits:` line. No new config key: the pass reuses the repo the architect reads.
 
 ### Cross-candidate invariants: resolve once, transcribe verbatim
 
@@ -210,6 +222,7 @@ reference and never both, and use the heading ref where the cited region is a he
 
 - Convention followed: <conventions.md ref, or the path (anchor) / file:line of the sibling pattern>
 - Layer: <the architectural layer the architect assigned, citing the stated architecture that places it (.project/<doc>#<section>, or a sibling ref). OPTIONAL: omit when the candidate carried no `layer` field>
+- Edits: <the existing repo paths the architect listed, verbatim. OPTIONAL: omit when the candidate carried no `edits` field>
 - Config pointers: <the `.project` config the driver reads at BUILD time, keyed to what the issue touches: styling → `.project/tokens.json` + `.project/design-system.md#<section>`; deployment/env → `.project/environment.md`. PATH only, never resolved values (no hex, no parsed tokens, no pre-solved render). OPTIONAL: omit when the issue touches none or the doc is absent>
 
 ## Dependencies
@@ -235,6 +248,8 @@ Labels applied by `create`: a UI/logic label, and `risk:light` / `risk:heavy` wh
 - Wave 2: #D (depends on #A, #B)
 - Wave 3: #E (depends on #D)
 ```
+
+A Wave line's `depends on` carries every edge kind alike (a clause 3 concrete edge, a clause 9 layer edge, a clause 11 shared-file `after` edge), so the driver reads one build order.
 
 Human-readable, and the exact ordering source `solve-milestone` and triage consume. In the plan file the identifiers are local slugs; `create` rewrites them to real GitHub numbers once the issues exist.
 

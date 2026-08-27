@@ -598,9 +598,11 @@ for skill_md in sorted((REPO_ROOT / "skills").rglob("SKILL.md")):
 #     so no run loads them.
 # Every value below was re-pinned to its governed file's actual
 # `len(text.split())` count as of milestone v0.14.1, by the formula above
-# (that count times 1.05, rounded up to the next 50). Two entries hold their
-# previously recorded value instead, because the formula exceeds it and the
-# never-up rule outranks the formula; each carries a per-entry note.
+# (that count times 1.05, rounded up to the next 50). Entries carrying a
+# per-entry note were set by that note's own recorded decision instead: two
+# hold a previously recorded value the formula exceeds (the never-up rule
+# outranks the formula), and the rest were raised or ratcheted by a decision
+# recorded on the issue the note names.
 FILE_WORD_CEILINGS: dict[str, int] = {
     # 4549 words times 1.05 is 4776.45, which rounds up to 4800. The recorded
     # 4650 stands instead, because the never-up rule outranks the formula.
@@ -614,14 +616,36 @@ FILE_WORD_CEILINGS: dict[str, int] = {
     # 1505.7, rounding up to 1550. Both go only down from here.
     "skills/remediate/SKILL.md": 3450,
     "agents/remediator.md": 1550,
-    "agents/architect.md": 2950,
-    "agents/issue-author.md": 2900,
+    # Raised from 2950 by issue #486; the decision is recorded on that issue
+    # and its PR, as the never-up rule requires. Clause 11 (shared-file
+    # ordering) gained the `edits:` declaration sentence, the one-edge-per-pair
+    # rule covering clause 9 as well as clause 3, and the acyclic direction
+    # rule that derives every `after` edge from the clause 3 / clause 9 order;
+    # the Rigor gate and the refusals now name the grounding each edge kind
+    # carries. The previous round paid for new words by tightening existing
+    # prose. That is NOT repeated here: it reworded the Read-scope bullet four
+    # authoring agents must hold byte-identical, breaking that rule. 3087 words
+    # times 1.05 is 3241.35, which rounds up to 3250.
+    "agents/architect.md": 3250,
+    # Raised from 2900 by issue #486, same recorded decision. The Rigor gate
+    # gained the `Edits:` bullet: transcribe the architect's list verbatim,
+    # confirm each path, and reconcile it against the clause 3 site search on
+    # the `Sites searched:` line rather than editing the list. Tightening was
+    # not used to pay for it, for the reason above. 2936 words times 1.05 is
+    # 3082.8, which rounds up to 3100.
+    "agents/issue-author.md": 3100,
     "agents/roadmap-splitter.md": 1850,
-    # Ratcheted DOWN from 6800 by issue #343: an AI-prose pass cut 737 words
-    # (provenance, editing history, rejected-alternative framing, and the
-    # quality-bar statement that §1, §3 and §5 each carried in full). 6059
-    # words times 1.05 is 6361.95, which rounds up to 6400.
-    "SPEC.md": 6400,
+    # Raised from 6400 by issue #486 (issue #343 had ratcheted it down to that
+    # from 6800 after an AI-prose pass cut 737 words); the decision is recorded
+    # on #486 and its PR, as the never-up rule requires. §3.1's shared-file
+    # ordering and layer-aware subsections were rewritten onto the corrected
+    # clause 11: one edge per pair for any clause 3 or clause 9 edge already
+    # relating it, direction derived from that order so the graph stays
+    # acyclic, and an unlayered project ordered by clauses 3 and 11 rather than
+    # promised an unchanged breakdown. Tightening was not used to pay for it,
+    # for the reason recorded on agents/architect.md above. 6441 words times
+    # 1.05 is 6763.05, which rounds up to 6800.
+    "SPEC.md": 6800,
     "docs/create-deploy-sequence.md": 12100,
     "docs/file-map.md": 1450,
     "docs/implied-surfaces.md": 1250,
