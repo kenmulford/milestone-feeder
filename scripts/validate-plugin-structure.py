@@ -752,10 +752,7 @@ def read_self_heal_json_lines(path: Path) -> list[str] | None:
     unit = None
     if isinstance(units, list):
         for candidate in units:
-            if (
-                isinstance(candidate, dict)
-                and candidate.get("id") == SELF_HEAL_UNIT_ID
-            ):
+            if isinstance(candidate, dict) and candidate.get("id") == SELF_HEAL_UNIT_ID:
                 unit = candidate
                 break
     if unit is None:
@@ -781,10 +778,17 @@ def read_self_heal_json_lines(path: Path) -> list[str] | None:
 def read_self_heal_doc_lines(path: Path) -> list[str] | None:
     """Return the fenced gitignore block under the self-heal section heading."""
     if not path.is_file():
-        # Silent on purpose: this path is in FILE_WORD_CEILINGS, so "--- 6 ---"
-        # above already fails it as missing from disk, and that section states
-        # this check does not double-report. Every other branch below names a
-        # defect no other check can see.
+        # Silent ONLY while "--- 6 ---" still covers this path: that section
+        # reports a listed-but-missing file and states this check does not
+        # double-report. Dropping the ceiling entry and the file in one change
+        # would otherwise retire the doc copy from the pin with nothing saying so.
+        if str(path.relative_to(REPO_ROOT)) not in FILE_WORD_CEILINGS:
+            err(
+                path,
+                "is missing from disk. It carries the fenced copy of the "
+                "self-heal ignore block that this check pins to "
+                "scripts/emit-notice.json",
+            )
         return None
     lines = path.read_text(encoding="utf-8-sig").splitlines()
     heading_idx = None
@@ -804,8 +808,13 @@ def read_self_heal_doc_lines(path: Path) -> list[str] | None:
     # missing and still PASS), an unrelated block gets reported as this one's
     # drift, and a deleted CLOSING fence is masked by the next section's.
     section_end = len(lines)
+    in_fence = False
     for i in range(heading_idx + 1, len(lines)):
-        if lines[i].startswith("## "):
+        if lines[i].startswith("```"):
+            in_fence = not in_fence
+        elif not in_fence and lines[i].startswith("## "):
+            # A doubled-hash line is a legal gitignore comment, so an unfenced
+            # scan would end the section inside the block it is looking for.
             section_end = i
             break
     open_idx = None

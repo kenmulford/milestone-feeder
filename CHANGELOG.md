@@ -28,7 +28,9 @@ Release notes for milestone-feeder. Each tagged release is also published on the
 
 ### ⚖️ Audit trail
 
-Judgment-call PR for review: **#495** (the fresh review after the one granted fix cycle returned two latent Minor findings, accepted rather than parked: a `## `-prefixed line inside the fenced block would end the section scan early and false-fail as "never closed"; deleting `docs/one-time-notices.md` and its `FILE_WORD_CEILINGS` entry in the same change passes check 7 silently. Neither is reachable on `develop` today.)
+Judgment-call PRs: none.
+
+- Check 7's two review findings are fixed, not accepted: the section scan is fence-aware, so a doubled-hash comment line inside the block no longer false-fails as "never closed"; and a missing `docs/one-time-notices.md` is named by check 7 itself whenever the `FILE_WORD_CEILINGS` loop is not already reporting it. The driver's review ladder granted one fix cycle and disallowed a second, so both landed in a follow-up PR instead.
 
 - Check 7 pins three copies; the `skills/setup/SKILL.md` parenthetical stays prose and is not pinned.
 - The driver's six sites keep the spaced-hyphen first line; the comma recast is a milestone-driver follow-up, alongside its triage-reviewer honoring a declared `Depends on #<n> - <reason>` edge (carried from v0.15.2).
