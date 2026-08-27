@@ -80,21 +80,14 @@ step.
 - **Legacy-fallback:** none.
 - **Writes:** the nested `.milestone-config/.gitignore`.
 - **Safety:** best-effort; never clobbers a user-edited file; a failed self-heal never aborts the run.
-- **Sync:** the authority for the entry set is this repo's committed `.milestone-config/.gitignore`. This block carries all 12 of its entries, byte-exact, in its order. Keep it byte-exact with this unit's `writes.lines` array in `scripts/emit-notice.json`, which is what the self-heal actually writes; `plan` Step 0 and feeder `setup` Phase 3 both run that one unit, so the two call sites cannot drift. The driver's `tests-green` twins (`milestone-driver/hooks/tests-green.sh` / `tests-green.ps1`) **DIVERGE**: 6 entries, and a first comment line still carrying the em-dash form this repo has purged. Both live in the `milestone-driver` repo, so do not edit them from here.
+- **Sync:** five entries. The three copies here (this unit's `writes.lines` array in `scripts/emit-notice.json`, this fenced block, and the committed `.milestone-config/.gitignore`) are pinned line for line by check 7 in `scripts/validate-plugin-structure.py`. The driver writes the same five patterns in the same order at six sites in the `milestone-driver` repo, never edited from here: `skills/solve-issue/SKILL.md` step 1.1, `skills/solve-milestone/SKILL.md` step 2.0.5, `hooks/tests-green.sh`, `hooks/tests-green.ps1`, `scripts/triage-cache.sh`, `scripts/triage-cache.ps1`. The one byte-run the two blocks differ on is the first comment line's mark: a comma here, a spaced hyphen there.
 
 ```gitignore
 # milestone-driver / milestone-feeder per-clone scratch, git-invisible by default.
 # Committed so per-run scratch stays out of `git status` with zero user setup.
 # Patterns are relative to this .milestone-config/ directory. Tracked config
 # (driver.json, feeder.json) is intentionally NOT listed, so it stays tracked.
-preflight-notice
-trello-notice
-visualcapture-notice
-parallel-default-notice
-code-review-gate-notice
-aiprefilter-notice
-cost-record-notice
-uisurfaceglobs-notice
+*-notice
 triage-cache.json
 tests-stamp
 .runtime/
