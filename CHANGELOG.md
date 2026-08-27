@@ -5,7 +5,7 @@ Release notes for milestone-feeder. Each tagged release is also published on the
 
 ## v0.15.2: shared-file ordering
 
-**Theme:** Two candidates that edit the same existing file used to share a parallel Wave, because the architect emitted an edge only when one candidate consumed an artifact another introduced; every fold after the first conflicted. Each candidate now declares the existing files it modifies, two intersecting lists get one ordering edge the Wave sort consumes like any other, and the list reaches the issue body so the driver sees the file scope before it cuts a branch. This tag also carries v0.15.1 below, which was merged to `develop` on 2026-08-24 and never tagged on its own.
+**Theme:** Two candidates that edit the same existing file used to share a parallel Wave, because the architect emitted an edge only when one candidate consumed an artifact another introduced; every fold after the first conflicted. Each candidate now declares the existing files it modifies, two intersecting lists get one ordering edge the Wave sort consumes like any other, and the list reaches the issue body so the driver sees the file scope before it cuts a branch.
 
 ### 🔧 Fixes
 
@@ -13,12 +13,11 @@ Release notes for milestone-feeder. Each tagged release is also published on the
 |---|---|---|
 | #486 Architect emits no edge for candidates that edit the same existing file, so they fold into conflicts | #487 | An optional `edits:` list on each `CANDIDATES` entry (existing repo files, each verified to exist); clause 11 emits `#B after #A - edits: <path>[, <path>]` for intersecting lists, one edge per pair, suppressed by any clause 3 or clause 9 edge already relating the pair, direction from the clause 3/9 order then the smaller list then the earlier-assigned tag, so the graph cannot cycle; `plan` threads the list to an `Edits:` line in the issue's `## Design` block; scenario 17 pins the four golden cases and a disjoint control |
 
-### Consumer notes (upgrading from v0.15.0)
+### Consumer notes (upgrading from v0.15.1)
 
 - **No schema changes** to `.milestone-config/feeder.json` or `.milestone-config/driver.json`. No new config key, no changed default, and no consumer action required.
 - **The architect's return block grows by one optional field and one edge kind.** A `CANDIDATES` entry may carry `edits:`; `EDGES` may carry `#B after #A - edits: <path>`. Both are additive: anything reading `tag` / `title` / `surface` / `risk` / `sketch` is unaffected, and milestone descriptions render every edge kind as the same `(depends on #A)` Wave line.
 - **Issue bodies may carry an `Edits:` line** in `## Design (recorded, consistent)`, the architect's list transcribed verbatim, and a `Depends on #<n> - edits: <path>` dependency for a shared-file edge. At the driver that dependency is a hard hold until the earlier issue merges. At plan time a park on the earlier file-sharer drops the later one with a `[dropped - depends on parked #<tag>]` marker, the same cascade every other edge takes.
-- **v0.15.1's notes below apply too**: agent read scope narrows to the repo root, the cross-repo citation-format pointer is gone, and the citation forms are unchanged.
 
 ### ⚖️ Audit trail
 
