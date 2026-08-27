@@ -246,8 +246,8 @@ compose, never conflict.
 Every layer assignment and layer edge **cites the project's stated architecture**
 (the same rigor gate every design call clears); a layer that cannot be grounded is
 **not** assigned. A project that states **no** layering convention (the section
-absent / `[TBD]`, or an unlayered stack) produces the **dependency-only** breakdown
-it does today: no `layer` field, no layer edge, byte-for-byte unchanged, no
+absent / `[TBD]`, or an unlayered stack) produces **no** `layer` field and **no**
+layer edge; ordering falls to clause 3 and clause 11 edges, with no
 fabricated layering. `plan` threads the optional `layer` from the architect (Step 3)
 through the issue-author brief (Step 4), and the issue-author **records** it as a
 `Layer:` line in the issue's existing `## Design` block, so the driver sees which
@@ -255,6 +255,23 @@ layer the work sits in. The field is additive: every downstream consumer reads
 `tag` / `title` / `surface` / `risk` / `sketch` and is unaffected by its presence,
 and it reuses the existing `projectDocs` grounding. **No new config key** (`SPEC.md`
 §3.1, layer-aware breakdown).
+
+### Shared-file ordering
+
+Two candidates that modify the same existing file share no artifact reference, so
+nothing in the dependency graph relates them, the Wave sort leaves them parallel, and
+the second fold conflicts. Each candidate declares the existing files it modifies as an
+optional `edits` field, every path verified to exist; a file the candidate introduces
+belongs to a concrete edge, not here. Two intersecting lists get one ordering edge naming
+every shared path (`#B after #A - edits: <path>`), its direction taken from the order the
+concrete and layer edges alone produce: the candidate in the earlier Wave of that sort
+first, then the smaller list, then the earlier-assigned tag. A concrete or layer edge
+already relating the pair is **authoritative** and suppresses the `after` edge, so one
+edge orders each pair and the graph stays acyclic. The Waves consume an `after` edge
+like any other, so the two land in
+successive Waves. `plan` threads the list into the issue's `Edits:` line, so the driver
+sees the file scope. Additive, **no new config key**, and lists that never intersect
+produce today's dependency-only order, unchanged (`SPEC.md` §3.1, shared-file ordering).
 
 ### Config pointers (reference, not pre-solve)
 

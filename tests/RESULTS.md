@@ -24,6 +24,7 @@ What each fixture asserts (the `expected.grader.md` contract, not a fresh execut
 | 13 | layer-aware-breakdown | issues assigned/ordered by the project's `.project` layering convention; degrades to dependency-only when none is declared |
 | 14 | config-pointers | a styling issue points at `.project` config by path: a reference, never inlined token/render values |
 | 15 | prose-style | the authored issue reads concise per the prose-style ruleset while every completeness state, the literal "30 rows per page" directive, and the `Convention followed:` citation survive verbatim |
+| 17 | shared-file-ordering | candidates that modify the same existing file declare it in `edits:` and are ordered into successive Waves by an `after` edge; a pair a concrete edge already relates carries no second edge, and disjoint lists keep the order the concrete edges alone produce |
 
 `05-reviewer-backends` was **removed in v0.9.0**: its subject (the retired `reviewer` config key + reviewer backends) no longer exists.
 
