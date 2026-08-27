@@ -3,6 +3,33 @@
 Release notes for milestone-feeder. Each tagged release is also published on the
 [GitHub Releases page](https://github.com/kenmulford/milestone-feeder/releases).
 
+## v0.15.2: shared-file ordering
+
+**Theme:** Two candidates that edit the same existing file used to share a parallel Wave, because the architect emitted an edge only when one candidate consumed an artifact another introduced; every fold after the first conflicted. Each candidate now declares the existing files it modifies, two intersecting lists get one ordering edge the Wave sort consumes like any other, and the list reaches the issue body so the driver sees the file scope before it cuts a branch. This tag also carries v0.15.1 below, which was merged to `develop` on 2026-08-24 and never tagged on its own.
+
+### 🔧 Fixes
+
+| Issue | PR | What |
+|---|---|---|
+| #486 Architect emits no edge for candidates that edit the same existing file, so they fold into conflicts | #487 | An optional `edits:` list on each `CANDIDATES` entry (existing repo files, each verified to exist); clause 11 emits `#B after #A - edits: <path>[, <path>]` for intersecting lists, one edge per pair, suppressed by any clause 3 or clause 9 edge already relating the pair, direction from the clause 3/9 order then the smaller list then the earlier-assigned tag, so the graph cannot cycle; `plan` threads the list to an `Edits:` line in the issue's `## Design` block; scenario 17 pins the four golden cases and a disjoint control |
+
+### Consumer notes (upgrading from v0.15.0)
+
+- **No schema changes** to `.milestone-config/feeder.json` or `.milestone-config/driver.json`. No new config key, no changed default, and no consumer action required.
+- **The architect's return block grows by one optional field and one edge kind.** A `CANDIDATES` entry may carry `edits:`; `EDGES` may carry `#B after #A - edits: <path>`. Both are additive: anything reading `tag` / `title` / `surface` / `risk` / `sketch` is unaffected, and milestone descriptions render every edge kind as the same `(depends on #A)` Wave line.
+- **Issue bodies may carry an `Edits:` line** in `## Design (recorded, consistent)`, the architect's list transcribed verbatim, and a `Depends on #<n> - edits: <path>` dependency for a shared-file edge. At the driver that dependency is a hard hold until the earlier issue merges. At plan time a park on the earlier file-sharer drops the later one with a `[dropped - depends on parked #<tag>]` marker, the same cascade every other edge takes.
+- **v0.15.1's notes below apply too**: agent read scope narrows to the repo root, the cross-repo citation-format pointer is gone, and the citation forms are unchanged.
+
+### ⚖️ Audit trail
+
+Judgment-call PR for review: **#487** (the second review cycle returned one Important finding, caused by a first-cycle fix that let a surviving file-sharer keep a `Depends on` to a parked, never-created issue; the driver's rule parks there, and the operator chose to land it instead. The cycle-3 fix reverted that carve-out and closed four Minor doc nits, gated by the three CI checks and not re-reviewed.)
+
+- Three word ceilings raised in `scripts/validate-plugin-structure.py`, by the table's own formula, with the decision recorded on #486 and in the table: `agents/architect.md` 2950 → 3250 (now 3111), `agents/issue-author.md` 2900 → 3100 (now 2957), `SPEC.md` 6400 → 6800 (now 6444). The first build round paid for its words by tightening existing agent prose, which broke the Read-scope bullet the four authoring agents hold byte-identical; the fix round restored it and did not tighten again. No gate pins that four-way identity.
+- The driver's triage-reviewer preserving a declared `Depends on #<n> - edits: <path>` edge is not verified here. Its fold-early cuts gate on `edges`, so a dropped edge recreates the conflict this release fixes. A milestone-driver follow-up.
+- `docs/file-map.md` does not seed the issue-author's neighborhood from `edits:` paths; the author receives the list directly in its brief.
+- Scenario 17 is designed and unexecuted, like 01, 04, 10, 11, 12b, 13, and 14.
+- The three byte-exact copies of `.milestone-config/.gitignore` (`docs/one-time-notices.md`, `scripts/emit-notice.json`, `skills/setup/SKILL.md`) still list eight `-notice` names where milestone-driver 1.24 writes `*-notice`; a consumer self-healed by the feeder leaves the driver's two newest markers untracked. A follow-up.
+
 ## v0.15.1: agent read scope
 
 **Theme:** Four agent briefs closed their citation rule with a pointer to `milestone-driver/skills/citation-format.md`, a path that is on no consumer disk, and agents took it for a file to open. The pointer is gone from all seven sites, the four authoring agents carry a verbatim **Read scope** rule bounding every `find`, `Glob`, `grep`, and `ls` to the repo root, and a third contract-strings check holds `agents/` clear of the path. The citation forms themselves are unchanged: every site that carried the pointer already stated them inline.
