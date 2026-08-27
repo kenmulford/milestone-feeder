@@ -26,6 +26,12 @@ It checks:
      `description` also stays at or under a flat 150-word ceiling. A
      written size standard with no gate is exactly what let these regrow past
      their targets before (see "--- 6: size budgets ---" below).
+  5. The nested .milestone-config/.gitignore self-heal block (issue #492): its
+     three hand-synced copies stay equal line for line. Those are
+     scripts/emit-notice.json's `writes.lines` array, the fenced block in
+     docs/one-time-notices.md, and this repo's own committed
+     .milestone-config/.gitignore. A drifted copy is named, and so is a
+     missing one (see "--- 7: nested .gitignore three-copy pin ---" below).
 
 Two readers, two rules (read before "upgrading" this):
   Claude Code's frontmatter reader is tolerant: it takes everything after the
@@ -655,9 +661,10 @@ FILE_WORD_CEILINGS: dict[str, int] = {
     # section per unit, each of which must fence that unit's printed text
     # verbatim ("Section fields" in the doc). An eighth such section does not
     # fit in the headroom the 2050 ceiling left, whatever its wording, because
-    # the fenced copy is byte-pinned to scripts/emit-notice.json and is not the
-    # author's to shorten independently. 2185 words times 1.05 is 2294.25,
-    # which rounds up to 2300.
+    # the fenced copy is pinned line for line to BOTH scripts/emit-notice.json's
+    # `writes.lines` array and .milestone-config/.gitignore by check 7 below,
+    # and is not the author's to shorten independently. 2185 words times 1.05
+    # is 2294.25, which rounds up to 2300.
     "docs/one-time-notices.md": 2300,
     "docs/plan-file-contract.md": 1600,
     "docs/profile-schema.md": 2400,
@@ -712,6 +719,189 @@ if agents_dir.is_dir():
                 f"over the flat {AGENT_DESCRIPTION_WORD_CEILING}-word "
                 f"ceiling every agent description is held to. Trim it",
             )
+
+# --- 7: nested .gitignore three-copy pin ------------------------------------
+#
+# Why this exists: the self-heal's ignore block is hand-synced across three
+# files, and hand-syncing it has already failed twice (issues #333 and #366).
+# Nothing reads one copy from another, so a divergence stays invisible until a
+# consumer is handed a block no doc describes. `scripts/emit-notice.json`'s
+# `writes.lines` array is what the self-heal actually WRITES; the fenced block
+# in `docs/one-time-notices.md` is what a reader is told they will get; and
+# `.milestone-config/.gitignore` is this repo's own copy of the result.
+#
+# Naming the drift: a single odd copy out of three is named against the two
+# that agree. When all three differ there is no majority, so the JSON array is
+# the reference (it is the writer) and every copy differing from it is named.
+# A source absent ENTIRELY (the unit gone from the JSON, the fenced block gone
+# from the doc, the committed .gitignore gone from disk) fails naming that
+# source, never a silent pass, on the same rule as "--- 6 ---"'s named-but-
+# missing case above.
+
+SELF_HEAL_UNIT_ID = "self-heal-nested-gitignore"
+SELF_HEAL_DOC_HEADING = "## Self-heal the nested .milestone-config/.gitignore"
+SELF_HEAL_DOC_FENCE = "```gitignore"
+
+
+def read_self_heal_json_lines(path: Path) -> list[str] | None:
+    """Return the self-heal unit's `writes.lines` array, or None on any miss."""
+    data = load_json(path)
+    if data is None:
+        return None
+    units = data.get("units")
+    unit = None
+    if isinstance(units, list):
+        for candidate in units:
+            if (
+                isinstance(candidate, dict)
+                and candidate.get("id") == SELF_HEAL_UNIT_ID
+            ):
+                unit = candidate
+                break
+    if unit is None:
+        err(
+            path,
+            f"has no unit with id '{SELF_HEAL_UNIT_ID}'. That unit is what "
+            f"writes a consumer's .milestone-config/.gitignore, so without "
+            f"it there is nothing for the other two copies to be pinned to",
+        )
+        return None
+    writes = unit.get("writes")
+    lines = writes.get("lines") if isinstance(writes, dict) else None
+    if not isinstance(lines, list) or not all(isinstance(x, str) for x in lines):
+        err(
+            path,
+            f"unit '{SELF_HEAL_UNIT_ID}' has no 'writes.lines' list of "
+            f"strings. That array is the block the self-heal writes",
+        )
+        return None
+    return lines
+
+
+def read_self_heal_doc_lines(path: Path) -> list[str] | None:
+    """Return the fenced gitignore block under the self-heal section heading."""
+    if not path.is_file():
+        # Silent on purpose: this path is in FILE_WORD_CEILINGS, so "--- 6 ---"
+        # above already fails it as missing from disk, and that section states
+        # this check does not double-report. Every other branch below names a
+        # defect no other check can see.
+        return None
+    lines = path.read_text(encoding="utf-8-sig").splitlines()
+    heading_idx = None
+    for i, line in enumerate(lines):
+        if line.strip() == SELF_HEAL_DOC_HEADING:
+            heading_idx = i
+            break
+    if heading_idx is None:
+        err(
+            path,
+            f"has no '{SELF_HEAL_DOC_HEADING}' heading, so the fenced copy "
+            f"of the self-heal ignore block cannot be found to pin",
+        )
+        return None
+    # Both scans stop at the next section. Unbounded, a LATER section's
+    # ```gitignore fence stands in for a deleted one here (the block could go
+    # missing and still PASS), an unrelated block gets reported as this one's
+    # drift, and a deleted CLOSING fence is masked by the next section's.
+    section_end = len(lines)
+    for i in range(heading_idx + 1, len(lines)):
+        if lines[i].startswith("## "):
+            section_end = i
+            break
+    open_idx = None
+    for i in range(heading_idx + 1, section_end):
+        if lines[i].startswith(SELF_HEAL_DOC_FENCE):
+            open_idx = i
+            break
+    if open_idx is None:
+        err(
+            path,
+            f"'{SELF_HEAL_DOC_HEADING}' carries no '{SELF_HEAL_DOC_FENCE}' "
+            f"fenced block. That block is the reader-facing copy of what "
+            f"the self-heal writes",
+        )
+        return None
+    for i in range(open_idx + 1, section_end):
+        if lines[i].strip() == "```":
+            return lines[open_idx + 1 : i]
+    err(
+        path,
+        f"'{SELF_HEAL_DOC_FENCE}' block under '{SELF_HEAL_DOC_HEADING}' is "
+        f"never closed",
+    )
+    return None
+
+
+def read_committed_gitignore(path: Path) -> list[str] | None:
+    """Return this repo's own committed nested .gitignore, line by line."""
+    if not path.is_file():
+        err(
+            path,
+            "is missing from disk. This repo's committed copy is one of the "
+            "three the self-heal block is pinned across; deleting or "
+            "renaming it fails here rather than dropping out of the pin",
+        )
+        return None
+    return path.read_text(encoding="utf-8-sig").splitlines()
+
+
+def first_line_difference(actual: list[str], expected: list[str]) -> str:
+    """Describe the first line on which two copies of the block disagree."""
+    for line_no, (got, want) in enumerate(zip(actual, expected), start=1):
+        if got != want:
+            return f"line {line_no} is {got!r} where {want!r} is expected"
+    if len(actual) > len(expected):
+        return (
+            f"carries {len(actual)} lines to {len(expected)}: line "
+            f"{len(expected) + 1}, {actual[len(expected)]!r}, is extra"
+        )
+    return (
+        f"carries {len(actual)} lines to {len(expected)}: line "
+        f"{len(actual) + 1}, {expected[len(actual)]!r}, is missing"
+    )
+
+
+emit_notice_json = REPO_ROOT / "scripts" / "emit-notice.json"
+one_time_notices_md = REPO_ROOT / "docs" / "one-time-notices.md"
+nested_gitignore = REPO_ROOT / ".milestone-config" / ".gitignore"
+
+# JSON first: `present` keeps this order, so present[0] is the writer whenever
+# the JSON parsed, and it is the reference wherever no majority names the drift.
+self_heal_copies = [
+    (emit_notice_json, read_self_heal_json_lines(emit_notice_json)),
+    (one_time_notices_md, read_self_heal_doc_lines(one_time_notices_md)),
+    (nested_gitignore, read_committed_gitignore(nested_gitignore)),
+]
+checked += len(self_heal_copies)
+present = [(p, lines) for p, lines in self_heal_copies if lines is not None]
+
+# Two present still compare: withholding the drift until the missing source is
+# restored would hand a fixer one defect per run instead of both at once.
+if len(present) >= 2:
+    odd = [
+        p
+        for p, lines in present
+        if all(lines != other for q, other in present if q != p)
+    ]
+    if len(odd) == 1:
+        drifted = odd
+        expected_path, expected_lines = next(
+            (p, lines) for p, lines in present if p not in odd
+        )
+    else:
+        expected_path, expected_lines = present[0]
+        drifted = [p for p, lines in present if lines != expected_lines]
+    for drifted_path in drifted:
+        drifted_lines = next(lines for p, lines in present if p == drifted_path)
+        err(
+            drifted_path,
+            f"has drifted from "
+            f"{expected_path.relative_to(REPO_ROOT)}'s copy of the self-heal "
+            f"ignore block: "
+            f"{first_line_difference(drifted_lines, expected_lines)}. The "
+            f"three copies are hand-synced and must stay equal line for "
+            f"line; re-sync this one",
+        )
 
 # --- report -----------------------------------------------------------------
 
