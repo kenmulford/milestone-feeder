@@ -6,7 +6,7 @@ description: >-
 
 # plan: brief → reviewable plan file
 
-Read config + project docs, ingest a brief, separate product gaps from design decisions, dispatch the architect once and the issue-author per candidate, assemble the dependency graph, render the milestone description, and write a reviewable plan file. The driver's predecessor: it specifies what the driver then builds.
+Read config + project docs, ingest a brief, separate product gaps from design decisions, dispatch the architect once per brief (plus one incremental dispatch per batch of items added on a re-plan) and the issue-author per candidate, assemble the dependency graph, render the milestone description, and write a reviewable plan file. The driver's predecessor: it specifies what the driver then builds.
 
 This skill is the compile step of the feeder pipeline (`SPEC.md` §6, Steps 0–5; write the plan file at Step 7). It makes *design and implementation* calls when the project docs or a stated repo convention supplies the answer, and it parks *product* calls (decisions about what to build or user-facing behavior with no conventional default) to a report instead of guessing them (`SPEC.md` §2 park boundary). It **DRAFTS** well-formed candidate issues engineered to pass the driver's triage clean (`SPEC.md` §5), but it does **NOT** run that gate itself. The driver's own triage is the single automated entry gate, and the human reviews the plan file before `create`. It runs every dispatched agent read-only, against provided text, and lands its output in local scratch files (`## Non-negotiables`, the no-GitHub-state bullet). Authors no code, opens no PRs, never touches branches, never invents product scope. Product gaps are parked to a report, never guessed.
 
@@ -53,6 +53,8 @@ Resolve the **shared keys** the architect and issue-author need for grounding, f
 
 The shared keys are exactly three: `sourceGlobs`, `uiSurfaceGlobs`, `integrationBranch` (the canonical consumer-facing set: `SPEC.md` §7, `docs/profile-schema.md` §2). Each resolves down the chain above. The `agentIssueTemplate` read at `docs/step-0-grounding.md` §5 rung 1 uses this same chain but does **not** join the triple. That set stays three.
 
+**Ground on the integration branch when the working tree is dirty.** Probe `git status --porcelain`, ignoring `.milestone-config/` paths. Clean → ground on the working tree, unchanged. Dirty → resolve `groundingRoot` to a fresh detached worktree of `integrationBranch` instead (`docs/step-0-grounding.md` §6); every grounding read and every dispatched agent's repo root uses it for this run. Plan-file writes still target the real checkout. Log the dirty state and the ref grounded on, one line. Remove the worktree at every run exit, success or failure.
+
 **Degradation:** when `uiSurfaceGlobs` is absent (neither driver file carries it), no candidate can be matched to a UI surface **by glob**. Classification itself is unaffected: the issue-author classifies every candidate at Step 4 under its own affordance test (`agents/issue-author.md` clause 5), which reads the candidate's own facts and needs no globs. Its `LABELS` return is the run's **single authoritative** `ui | logic` answer, glob-present or glob-absent; the architect's `surface` value (`agents/architect.md` clause 5) is a hint `plan` threads through and never a second verdict. **State the degradation** in the plan file's grounding section as the absent key and its effect (no glob-based UI match), **never** as a `logic` verdict: candidates are not flattened to `logic`. The pipeline still runs.
 
 ### The single-milestone inner routine (Steps 1–7): callable contract
@@ -67,7 +69,7 @@ Steps 1–7 below are **one named, callable routine**: the single-milestone plan
 
 The roadmap fan-out (Step 3.7) supplies **two OPTIONAL parameters**; **both are ABSENT on the single-brief path**, where Step 5.1 runs the version ladder (`docs/version-ladder.md`) and Step 7 derives the slug from the goal:
 
-4. **`preResolvedVersion?`**: `{ title: <the exact milestone title, semver INSIDE the string>, provenance: <explicit | declaration | inferred from <x> | prompted> }`. Supplied **only on the roadmap path**. The fan-out resolved it **once, on the main thread** (`docs/roadmap-fan-out.md` 3.7.c), so the interactive rung never runs inside a background subagent. When provided, **Step 5.1 ADOPTS this title + provenance verbatim and runs NO ladder rung and NO prompt** (the ADOPT branch at Step 5.1, `docs/version-ladder.md`). **Absent → Step 5.1 runs the ladder.**
+4. **`preResolvedVersion?`**: `{ title: <the exact milestone title, semver INSIDE the string>, provenance: <explicit | declaration | inferred from <x> | prompted> }`. Supplied **only on the roadmap path**, and on an incremental re-plan from the prior plan file (`docs/incremental-replan.md` §4). The fan-out resolved it **once, on the main thread** (`docs/roadmap-fan-out.md` 3.7.c), so the interactive rung never runs inside a background subagent. When provided, **Step 5.1 ADOPTS this title + provenance verbatim and runs NO ladder rung and NO prompt** (the ADOPT branch at Step 5.1, `docs/version-ladder.md`). **Absent → Step 5.1 runs the ladder.**
 5. **`assignedSlug?`**: the disambiguated plan-file slug the fan-out assigned this milestone (the `-m<index>` collision tiebreaker, `docs/roadmap-fan-out.md` 3.7.d). When provided, **Step 7 writes the plan file to `.milestone-feeder/plan-<assignedSlug>.md`** (the ADOPT branch at Step 7). **Absent → Step 7 derives `<slug>` from the milestone goal.**
 
 **Returns:** one plan file at `.milestone-feeder/plan-<slug>.md` (Step 7), **plus** the needs-product-input report at `.milestone-feeder/needs-product-input-<slug>.md` when anything parked. Every in-routine failure exit is **part of the routine** and surfaces to the caller unchanged: the Step 2 product-gap STOP and the product-gap parks (the Step 3.5 pre-park and any Step 4 issue-author `PRODUCT_GAP` return) fire from inside the routine, not from the boundary. A `briefSlice` that yields **zero surviving buildable issues** (the parked/dropped path) still routes **entirely** through the routine and emits the empty/parked plan-file markers and needs-product-input report.
@@ -101,6 +103,8 @@ Record `epicIssueNumber` when the brief was an epic issue. `plan` posts **nothin
 
 **Capture the explicit milestone identity (`milestoneLine`) when the user states it up front** (`docs/specs/v0.3.1-driver-handoff.md` §3: milestone identity is a user-owned field). The user may name the milestone, with its version, either as a labelled `Milestone: <name> vX.Y.Z` line **in the brief doc** or as an inline statement alongside the brief. When present, capture that verbatim `<name> vX.Y.Z` string as `milestoneLine`. It is carried **verbatim** into the version-resolution step (Step 5's ladder, rung 1; `docs/specs/v0.3.1-driver-handoff.md` §2). This field is **optional and additive**: a brief with no `Milestone:` line and no inline statement omits it and normalizes without it (`skills/plan/SKILL.md (Ingest the brief)` and `skills/plan/SKILL.md (normalize internally)`). The missing field degrades gracefully to the rest of the ladder.
 
+**Detect an incremental re-plan.** Compute this run's slug early (Step 7's own derivation) and check for a prior plan file there. Classify per `docs/incremental-replan.md` §2: no prior file, an identical brief, or any other change takes the full path unchanged; a strict superset of the prior persisted brief takes the incremental path at Step 3.
+
 ### Step 2: Product-gap check (the park boundary)
 
 Separate the two classes of decision the brief implies (`SPEC.md` §2, §6 Step 2):
@@ -112,9 +116,9 @@ Separate the two classes of decision the brief implies (`SPEC.md` §2, §6 Step 
 
 If a product gap is severe enough that the candidate set **cannot even be formed** without it (the brief's core scope is undecided), **STOP**: write the "needs product input" report (Step 7 format) and end the run. Do not dispatch the architect against an undecided scope. The report is the local file `.milestone-feeder/needs-product-input-<slug>.md`. Because this STOP can be the run's **first** write under `.milestone-feeder/`, ensure the scratch dir self-ignores before writing the report (Step 7's "Make the scratch git-invisible from the first write": create `.milestone-feeder/` if absent and ensure `.milestone-feeder/.gitignore` contains `*`). (No issues exist on a Step 2 STOP, so only the report is written; nothing else is produced.) Otherwise carry `productGaps[]` forward: the pipeline proceeds with the decidable work, and the gaps surface in the plan + report at Step 7.
 
-### Step 3: Dispatch the architect (once)
+### Step 3: Dispatch the architect
 
-Dispatch the agent named in `architectAgent` (default `milestone-feeder:architect`) **exactly once** (`SPEC.md` §6 Step 3, one heavy reasoning step).
+Dispatch the agent named in `architectAgent` (default `milestone-feeder:architect`) **once per brief** (`SPEC.md` §6 Step 3, one heavy reasoning step). **On the incremental path (Step 1), dispatch it in incremental mode instead** (`agents/architect.md` → "Incremental mode"; `docs/incremental-replan.md` §3): it never rewrites a prior candidate. Merge its return and recompute `WAVES` per `docs/incremental-replan.md` §4.
 
 **Brief it with** (matches `agents/architect.md` → "What you receive"):
 
@@ -315,12 +319,14 @@ The plan file and the report are local scratch (`## Non-negotiables`, the no-Git
 
 Defined once at `docs/style-contracts.md#output-style`. Read it there; it is not restated here.
 
+**Plain English.** Write every response, document, and GitHub issue, milestone, comment, and PR body in plain, concise English. Never include hypothesis, conjecture, or defensive text.
+
 ## Non-negotiables
 
 - **`plan` writes NO GitHub state: its entire output is local scratch files (the plan file + the needs-input report).** No milestone is created, no issue is opened, no label is applied, no comment is posted on any epic. The plan file is the build artifact `create` reads; `create` is the only thing that writes GitHub state.
 - **Authors no code, opens no PRs, never touches branches.** The feeder reads code to ground decisions; it never edits a source file, creates a branch, or opens a PR. Every dispatched agent is read-only and runs against provided text. **No flags:** `plan` is a verb; nothing is argument-parsed (`docs/specs/v0.3.0-humanize-the-surface.md` §2: zero flags anywhere).
 - **Parks product gaps, never invents scope.** A decision with no conventional default is recorded to `productGaps[]` and surfaced in the needs-product-input report, never guessed to make an issue buildable. Design / implementation calls the project docs or a stated convention answers are resolved and cited; calls with no conventional default are parked.
 - **Project docs are read best-effort, never fabricated.** Absent or `[TBD]` sections are skipped, never grounded on. A design call cites its real grounding (`.project/<doc>.md#<section>` or a verified sibling `file:line`) or it is parked as a product gap.
-- **The architect is dispatched exactly once; the issue-author once per candidate.** The pipeline owns the dispatch count; the agents return text and the orchestrator consumes it. No agent opens a GitHub artifact of its own.
+- **One architect dispatch per brief, plus one incremental dispatch per batch of added items (`docs/incremental-replan.md`); the issue-author once per candidate.** The pipeline owns the dispatch count; the agents return text and the orchestrator consumes it. No agent opens a GitHub artifact of its own.
 - **The plan file persists the FULL original brief** delimited by the paired `## Original brief` … `## End original brief` markers (Step 7): verbatim, never fabricated, and robust to briefs containing their own `## ` headings (a consumer reads strictly between the markers). It is a durable record of the brief this plan was built from; it mirrors the roadmap manifest's `## Original brief` (`skills/build-roadmap/SKILL.md`), which persists the whole-app brief for a roadmap run.
 - **Drafts to the driver's triage bar, runs NO gate of its own.** Every candidate issue is authored to pass the driver's triage clean (`SPEC.md` §5), but `plan` runs no reviewer gate. The driver's own triage is the single automated entry gate, and the human reviews the plan file before `create`. Product gaps are parked (Step 2 / Step 3.5), never silently planned.

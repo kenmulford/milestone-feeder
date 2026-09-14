@@ -120,7 +120,7 @@ shape that matters:
 | Stage | What happens |
 |---|---|
 | Read config + project docs | Loads `feeder.json` (auto-invokes `setup` if absent), reads the standing docs best-effort, resolves shared keys from the driver config. |
-| Plan | Dispatches the architect once → candidate issues + dependency edges + Wave order. |
+| Plan | Dispatches the architect once per brief (plus one incremental dispatch per batch of items added on a re-plan) → candidate issues + dependency edges + Wave order. |
 | Author | Dispatches the `issue-author` per candidate → each issue's full §4 spec (acceptance criteria covering empty/error/disabled states, recorded consistent design, declared edges, UI/logic + risk), drafted to pass the driver's triage clean. |
 | Drop + emit | Drops parked issues and their dependents, then writes a plan file to `.milestone-feeder/plan-<slug>.md` and a "needs product input" report when product gaps remain. The plan file carries the milestone description (Wave order) plus every surviving issue body. **No GitHub writes**: the GitHub artifacts are built later by `create`. |
 

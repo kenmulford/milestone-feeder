@@ -9,6 +9,7 @@
 3. [The global implied-surfaces reference](#3-the-global-implied-surfaces-reference)
 4. [The project-local overlay: additive merge](#4-the-project-local-overlay-additive-merge)
 5. [The consumer issue-template](#5-the-consumer-issue-template)
+6. [The grounding root](#6-the-grounding-root)
 
 ## 1. The shared contract: resolve-once / hand-in / degrade / supplement
 
@@ -88,3 +89,27 @@ The global reference is the **FLOOR, never reduced**; the merge is **purely addi
 Carry the form's **`labels:`** and its **`title:` prefix** when present, so the author can apply them. Carry each field's **`validations.required`** flag through: the author needs it to decide when an ungroundable required field returns `STATUS: PRODUCT_GAP` (`agents/issue-author.md` → "Authoring to a resolved consumer template").
 
 **Specific degrade.** An unusable `agentIssueTemplate` falls through to rung 2 (above). Below that: an absent `.github/ISSUE_TEMPLATE/`, an unreadable template, or unparseable YAML → **rung 3, resolves to nothing**; the author uses the built-in default. **No error, no park: it never blocks issue creation** (`.project/design-philosophy.md#Error & failure philosophy`: best-effort, read-only, non-blocking; "they never stop `plan`"). The changed default output shape carries its own existing-user discovery path, the one-time issue-template notice (`docs/one-time-notices.md` → "Consumer issue-template notice"), per `.project/design-philosophy.md#One-way doors` ("non-breaking is necessary but not sufficient").
+
+## 6. The grounding root
+
+Resolved once here: `groundingRoot`, what every grounding read and dispatched agent's repo root use this run.
+
+**Probe** `git status --porcelain`, ignoring `.milestone-config/`. Clean: the checkout.
+
+**Dirty → a fresh detached worktree** of `integrationBranch` at `.milestone-config/worktrees/feeder-plan-<runId>` (`<runId>`: UTC start, `yyyyMMddTHHmmssZ`). Never reused: force-remove any leftover first.
+
+```bash
+w=".milestone-config/worktrees/feeder-plan-$runId"
+git worktree remove --force "$w" 2>/dev/null
+git worktree add --detach "$w" "origin/$integrationBranch" 2>/dev/null ||
+  git worktree add --detach "$w" "$integrationBranch"
+```
+
+```powershell
+$w = ".milestone-config/worktrees/feeder-plan-$runId"
+git worktree remove --force $w 2>$null
+git worktree add --detach $w "origin/$integrationBranch" 2>$null
+if ($LASTEXITCODE) { git worktree add --detach $w $integrationBranch }
+```
+
+`origin/<integrationBranch>` first, else local. `groundingRoot` = `$w`. Plan-file writes stay at the checkout. **Log the dirty state and the ref**, one line. **Remove the worktree at every exit.** `.milestone-config/.gitignore` ignores `worktrees/`.

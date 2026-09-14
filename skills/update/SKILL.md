@@ -211,6 +211,8 @@ This is the keystone behavior. It holds by construction. It follows from the pla
 
 Defined once at `docs/style-contracts.md#output-style`: read it there; it is not restated here.
 
+**Plain English.** Write every response, document, and GitHub issue, milestone, comment, and PR body in plain, concise English. Never include hypothesis, conjecture, or defensive text.
+
 ## Non-negotiables
 
 - **Reconciles a refreshed plan onto an EXISTING milestone: milestone-not-found → ERROR-AND-STOP.** `update` resolves the milestone **by the deploy-receipt number `create` recorded (Step 3a), falling back to the exact title when there is no receipt (Step 3b)**, and **NEVER creates it**; a missing milestone is a 🔴 terminal stop directing the user to `/milestone-feeder:create` (and, since a missing receipt means no in-place rename, carrying a one-line `gh` rename pointer for the rename-not-create case). Creating the milestone is `create`'s job, not `update`'s.
