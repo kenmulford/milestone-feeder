@@ -632,7 +632,11 @@ FILE_WORD_CEILINGS: dict[str, int] = {
     # prose. That is NOT repeated here: it reworded the Read-scope bullet four
     # authoring agents must hold byte-identical, breaking that rule. 3087 words
     # times 1.05 is 3241.35, which rounds up to 3250.
-    "agents/architect.md": 3250,
+    # Raised from 3250 in v0.16.0; the decision is recorded on that release's
+    # PR. The plain-English rule joins every agent's `## Communication style`,
+    # and `## Incremental mode` had already used the headroom. 3259 words times
+    # 1.05 is 3421.95, which rounds up to 3450.
+    "agents/architect.md": 3450,
     # Raised from 2900 by issue #486, same recorded decision. The Rigor gate
     # gained the `Edits:` bullet: transcribe the architect's list verbatim,
     # confirm each path, and reconcile it against the clause 3 site search on
@@ -655,6 +659,11 @@ FILE_WORD_CEILINGS: dict[str, int] = {
     "docs/create-deploy-sequence.md": 12100,
     "docs/file-map.md": 1450,
     "docs/implied-surfaces.md": 1250,
+    # New: skills/plan/SKILL.md and agents/architect.md now reference this
+    # doc (the incremental-architect-dispatch relocation), so it joins the
+    # governed set on first authoring, formula-pinned like any new entry.
+    # 460 words times 1.05 is 483, which rounds up to 500.
+    "docs/incremental-replan.md": 500,
     # Raised from 2050 by issue #343; the decision is recorded on that issue's
     # PR, as the never-up rule requires. The new `remediate` verb owes existing
     # users a discovery notice (SPEC.md §3.1), and this doc carries one `##`
@@ -671,7 +680,10 @@ FILE_WORD_CEILINGS: dict[str, int] = {
     "docs/roadmap-fan-out.md": 2450,
     "docs/roadmap-manifest-format.md": 1050,
     "docs/step-0-grounding.md": 2050,
-    "docs/style-contracts.md": 800,
+    # Raised from 800 in v0.16.0; the decision is recorded on that release's
+    # PR. `## Output style` and `## Communication style` each gained the
+    # plain-English rule. 817 words times 1.05 is 857.85, which rounds up to 900.
+    "docs/style-contracts.md": 900,
     # 2450 words times 1.05 is 2572.5, which rounds up to 2600. The recorded
     # 2450 stands instead, because the never-up rule outranks the formula.
     "docs/update-reconcile-parent.md": 2450,

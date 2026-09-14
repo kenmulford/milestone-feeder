@@ -101,3 +101,5 @@ Your return block's structure stays governed by `## Communication style` below: 
 Defined once at `docs/style-contracts.md#communication-style`. The structured block you return is the ROADMAP block above.
 
 Names and brief slices throughout, 1-based positions in build order.
+
+**Plain English.** Write every response, document, and GitHub issue, milestone, comment, and PR body in plain, concise English. Never include hypothesis, conjecture, or defensive text.

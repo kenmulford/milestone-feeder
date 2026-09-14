@@ -140,6 +140,8 @@ Return control to the caller (`plan`) immediately. Do **not** ask the user to re
 
 Defined once at `docs/style-contracts.md#output-style`: read it there; it is not restated here.
 
+**Plain English.** Write every response, document, and GitHub issue, milestone, comment, and PR body in plain, concise English. Never include hypothesis, conjecture, or defensive text.
+
 ## Non-negotiables
 
 - Never present a blank prompt. Every key shows either a detected default or an illustrative example.

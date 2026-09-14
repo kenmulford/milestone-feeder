@@ -92,3 +92,5 @@ It does not bind the `FINDINGS` wrapper: `finding` is the driver's own Blocker c
 ## Communication style
 
 Defined once at `docs/style-contracts.md#communication-style`. The structured block you return is the `ISSUE` / `FINDINGS` / `CORRECTED_BODY` block above.
+
+**Plain English.** Write every response, document, and GitHub issue, milestone, comment, and PR body in plain, concise English. Never include hypothesis, conjecture, or defensive text.

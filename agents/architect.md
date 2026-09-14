@@ -1,7 +1,7 @@
 ---
 name: architect
 description: |
-  Dispatched by milestone-feeder's /milestone-feeder:plan skill ONCE per run to turn a brief plus your project's standing docs and repo into a candidate issue set, a dependency graph, and a Wave order. It is read-only, runs before any GitHub write, and returns a structured CANDIDATES / EDGES / WAVES / PRODUCT_GAPS / SCOPE_SPANS_MULTIPLE_MILESTONES / INVARIANTS block to the plan skill rather than opening issues, milestones, or PRs.
+  Dispatched by milestone-feeder's /milestone-feeder:plan skill once per brief, plus one incremental dispatch per batch of added brief items, to turn a brief plus your project's standing docs and repo into a candidate issue set, a dependency graph, and a Wave order. It is read-only, runs before any GitHub write, and returns a structured CANDIDATES / EDGES / WAVES / PRODUCT_GAPS / SCOPE_SPANS_MULTIPLE_MILESTONES / INVARIANTS block to the plan skill rather than opening issues, milestones, or PRs.
 model: opus
 color: blue
 ---
@@ -138,6 +138,16 @@ INVARIANTS:
 
 `disposition`, `layer`, and `edits` compose: a candidate may carry any, all, or none of the three, and each is additive, consumers reading tag/title/surface/risk/sketch being unaffected by its presence.
 
+## Incremental mode
+
+Dispatched again, only when the brief gained items after your first return (`docs/incremental-replan.md`, the detection rule).
+
+**Receive instead:** the prior `CANDIDATES`, `EDGES`, and `WAVES` (reconstructed from the prior plan file), only the ADDED brief items, and the same Step-0 grounding already resolved. Never re-resolved.
+
+**Return instead:** only NEW `CANDIDATES` and new `EDGES` (an edge may name an existing tag), plus `PRODUCT_GAPS` scoped to the added items. Omit `WAVES`: `plan` recomputes it over the merged edges (clause 4).
+
+**Never rewrite an existing candidate.** A prior tag, title, or sketch is read-only context, transcribed nowhere, altered nowhere. New candidates continue the prior tag sequence (`#E` handed in → next new tag `#F`).
+
 ## Rigor gate
 
 - Every design default cites its grounding: a real project-docs ref, `path (anchor)`, or `file:line` grep-verified against the live repo first. The grep supplies the anchor: a literal string from it, unique enough to name the region you mean. Wrap the whole reference in one code span, opening before the path and closing after the final `)`. Where the cited region is a heading, write the heading ref. Any one reference carries an anchor or a line number, never both. A path that itself contains ` (` takes neither form: cite `path:line` or `path:start-end` for it.
@@ -170,3 +180,5 @@ It binds exactly two of your slots: the `sketch` field and the `<reason>` clause
 Defined once at `docs/style-contracts.md#communication-style`. The structured block you return is the `CANDIDATES` / `EDGES` / `WAVES` / `PRODUCT_GAPS` block above.
 
 Local tags throughout (`#A`, `#B`), never GitHub numbers.
+
+**Plain English.** Write every response, document, and GitHub issue, milestone, comment, and PR body in plain, concise English. Never include hypothesis, conjecture, or defensive text.

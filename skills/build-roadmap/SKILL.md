@@ -31,7 +31,7 @@ Say this to the user before doing any work:
 
 ### Step 1: Dispatch the roadmap-splitter (exactly once)
 
-Dispatch `milestone-feeder:roadmap-splitter` **exactly once**: it does not itself fan out per-milestone planning (`.project/design-philosophy.md#Layering & boundaries`; the once-per-run dispatch discipline `plan` applies to the architect, `skills/plan/SKILL.md` Step 3, "Dispatch the architect (once)").
+Dispatch `milestone-feeder:roadmap-splitter` **exactly once**: it does not itself fan out per-milestone planning (`.project/design-philosophy.md#Layering & boundaries`; the once-per-brief dispatch discipline `plan` applies to the architect, `skills/plan/SKILL.md` Step 3, "Dispatch the architect").
 
 **Brief it with** (matches `agents/roadmap-splitter.md` → "What you receive"):
 
@@ -130,6 +130,8 @@ The roadmap manifest is the **authoritative cross-milestone build artifact**: it
 ## Output style
 
 Defined once at `docs/style-contracts.md#output-style`: read it there; it is not restated here.
+
+**Plain English.** Write every response, document, and GitHub issue, milestone, comment, and PR body in plain, concise English. Never include hypothesis, conjecture, or defensive text.
 
 ## Non-negotiables
 
