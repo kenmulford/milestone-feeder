@@ -23,7 +23,7 @@ None. No caching layer.
 
 ## Async & messaging
 Background jobs, queues, streams, schedulers. Or "none."
-None. Synchronous skill execution; agents are dispatched as subagents within a `plan` run (architect once, issue-author per candidate, parallelizable). No queues, schedulers, or background jobs. (Grounded in `docs/architecture.md` The plan procedure Steps 3–4.)
+None. Synchronous skill execution; agents are dispatched as subagents within a `plan` run (architect once per brief plus one incremental dispatch per batch of added items, issue-author per candidate, parallelizable). No queues, schedulers, or background jobs. (Grounded in `docs/architecture.md` The plan procedure Steps 3–4.)
 
 ## External services & integrations
 Third-party services the app depends on: auth / identity, payments, email / SMS, object storage, analytics, other APIs.

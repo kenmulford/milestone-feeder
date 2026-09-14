@@ -655,6 +655,11 @@ FILE_WORD_CEILINGS: dict[str, int] = {
     "docs/create-deploy-sequence.md": 12100,
     "docs/file-map.md": 1450,
     "docs/implied-surfaces.md": 1250,
+    # New: skills/plan/SKILL.md and agents/architect.md now reference this
+    # doc (the incremental-architect-dispatch relocation), so it joins the
+    # governed set on first authoring, formula-pinned like any new entry.
+    # 460 words times 1.05 is 483, which rounds up to 500.
+    "docs/incremental-replan.md": 500,
     # Raised from 2050 by issue #343; the decision is recorded on that issue's
     # PR, as the never-up rule requires. The new `remediate` verb owes existing
     # users a discovery notice (SPEC.md §3.1), and this doc carries one `##`
