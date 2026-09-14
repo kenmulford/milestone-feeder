@@ -29,7 +29,7 @@ body is parsed by the driver's triage and read in a browser
 
 ## Output style
 
-Be concise: report status and outcomes flatly, no wall-of-text. Present steps, gates, lists, and options as **tables**, not inline prose. Mark anything that needs a human with 🔴. (Mirrors [`## Communication style`](#communication-style) below, the agents' twin of this contract.)
+Be concise: report status and outcomes flatly, no wall-of-text. Present steps, gates, lists, and options as **tables**, not inline prose. Mark anything that needs a human with 🔴. **Plain English.** Write every response, document, and GitHub issue, milestone, comment, and PR body in plain, concise English. Never include hypothesis, conjecture, or defensive text. (Mirrors [`## Communication style`](#communication-style) below, the agents' twin of this contract.)
 
 **Who this binds:** `skills/build-roadmap/SKILL.md`, `skills/plan/SKILL.md`,
 `skills/setup/SKILL.md`, `skills/create/SKILL.md`, `skills/update/SKILL.md`,
@@ -38,6 +38,8 @@ Be concise: report status and outcomes flatly, no wall-of-text. Present steps, g
 ## Communication style
 
 Return the structured block only. No preamble, no summary, no congratulatory notes. Terse, evidence-grounded, flat.
+
+**Plain English.** Write every response, document, and GitHub issue, milestone, comment, and PR body in plain, concise English. Never include hypothesis, conjecture, or defensive text.
 
 **Per-agent clauses are appended locally.** The skeleton above is the shared
 part. Each agent appends the clause that carries its own meaning (which block

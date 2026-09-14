@@ -141,6 +141,8 @@ This is the keystone behavior. It holds by construction, from the diff-gate at S
 
 Defined once at `docs/style-contracts.md#output-style`: read it there; it is not restated here.
 
+**Plain English.** Write every response, document, and GitHub issue, milestone, comment, and PR body in plain, concise English. Never include hypothesis, conjecture, or defensive text.
+
 ## Non-negotiables
 
 - **Edit the named text IN PLACE; never append a correction section.** A correction section that restates a constraint on unedited text is the failure mode this verb exists to prevent: it leaves two live statements for one decision, which the driver's next triage reports as a contradiction Blocker. Step 4's check (c) fails the run mechanically, at any heading depth, rather than trusting the intent.

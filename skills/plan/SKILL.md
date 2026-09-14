@@ -319,6 +319,8 @@ The plan file and the report are local scratch (`## Non-negotiables`, the no-Git
 
 Defined once at `docs/style-contracts.md#output-style`. Read it there; it is not restated here.
 
+**Plain English.** Write every response, document, and GitHub issue, milestone, comment, and PR body in plain, concise English. Never include hypothesis, conjecture, or defensive text.
+
 ## Non-negotiables
 
 - **`plan` writes NO GitHub state: its entire output is local scratch files (the plan file + the needs-input report).** No milestone is created, no issue is opened, no label is applied, no comment is posted on any epic. The plan file is the build artifact `create` reads; `create` is the only thing that writes GitHub state.

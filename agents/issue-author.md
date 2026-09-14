@@ -162,3 +162,5 @@ The Rigor gate above governs what you record. These rules govern how it reads, b
 ## Communication style
 
 Defined once at `docs/style-contracts.md#communication-style`. The structured wrapper you return is the `STATUS` / `ISSUE_TAG` / `TITLE` / `ISSUE_BODY` / `LABELS` / `PRODUCT_GAP` block above.
+
+**Plain English.** Write every response, document, and GitHub issue, milestone, comment, and PR body in plain, concise English. Never include hypothesis, conjecture, or defensive text.

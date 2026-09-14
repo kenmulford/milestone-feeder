@@ -5,7 +5,7 @@ Release notes for milestone-feeder. Each tagged release is also published on the
 
 ## v0.16.0: incremental re-plan and clean grounding
 
-**Theme:** A brief that grew after the architect ran had no path back through it, and `plan` grounded on the working tree even while a driver build was editing that checkout. A re-plan whose brief is a strict superset of the prior plan's persisted brief now gets one incremental architect pass that returns only new candidates and edges. A dirty working tree makes `plan` ground on a fresh detached worktree of `integrationBranch`.
+**Theme:** A brief that grew after the architect ran had no path back through it, and `plan` grounded on the working tree even while a driver build was editing that checkout. A re-plan whose brief is a strict superset of the prior plan's persisted brief now gets one incremental architect pass that returns only new candidates and edges. A dirty working tree makes `plan` ground on a fresh detached worktree of `integrationBranch`. Every agent and skill now requires plain, concise English with no hypothesis, conjecture, or defensive text.
 
 ### ✨ Plan
 
@@ -13,6 +13,12 @@ Release notes for milestone-feeder. Each tagged release is also published on the
 |---|---|---|
 | none | TBD | Incremental re-plan. `skills/plan/SKILL.md` Step 1 detects a strict-superset brief against the prior plan file's `## Original brief`. Step 3 dispatches the architect in incremental mode (`agents/architect.md` `## Incremental mode`) with the prior CANDIDATES, EDGES, and WAVES plus only the added items. `plan` merges, recomputes WAVES, dispatches `issue-author` only for new candidates, and adopts the prior milestone title and provenance through `preResolvedVersion`. Mechanics live in the new `docs/incremental-replan.md`. |
 | none | TBD | Dirty-tree grounding. Step 0 probes `git status --porcelain`, ignoring `.milestone-config/`. A dirty tree resolves `groundingRoot` to a fresh detached worktree of `origin/<integrationBranch>` (local fallback) at `.milestone-config/worktrees/feeder-plan-<runId>`, removed at every exit (`docs/step-0-grounding.md` `## 6. The grounding root`). |
+
+### ✨ Style
+
+| Issue | PR | What |
+|---|---|---|
+| none | TBD | Plain-English rule. Every agent's `## Communication style`, every skill's `## Output style`, and both surfaces in `docs/style-contracts.md` carry: write every response, document, and GitHub issue, milestone, comment, and PR body in plain, concise English, with no hypothesis, conjecture, or defensive text. |
 
 ### Consumer notes (upgrading from v0.15.3)
 
@@ -27,7 +33,8 @@ Judgment-call PRs: none.
 - Code review (medium) returned three findings, all fixed: the incremental ADOPT path had no way to set `preResolvedVersion` outside the roadmap path, and the `agents/architect.md` frontmatter and the `docs/architecture.md` agent row still said the architect is dispatched once.
 - No one-time discovery notice ships for either change. The notice files sit at their word ceilings.
 - Not exercised in a live run: a dirty-tree `plan` and an incremental re-plan.
-- Ceilings after this release: `skills/plan/SKILL.md` 9502 of 9550, `agents/architect.md` 3234 of 3250, `docs/step-0-grounding.md` 2045 of 2050, `docs/incremental-replan.md` 471 of 500 (new).
+- Ceilings raised: `agents/architect.md` 3250 to 3450, `docs/style-contracts.md` 800 to 900.
+- Ceilings after this release: `skills/plan/SKILL.md` 9527 of 9550, `agents/architect.md` 3259 of 3450, `docs/style-contracts.md` 817 of 900, `docs/step-0-grounding.md` 2045 of 2050, `docs/incremental-replan.md` 471 of 500 (new).
 
 ## v0.15.3: scratch-ignore convergence
 

@@ -131,6 +131,8 @@ The roadmap manifest is the **authoritative cross-milestone build artifact**: it
 
 Defined once at `docs/style-contracts.md#output-style`: read it there; it is not restated here.
 
+**Plain English.** Write every response, document, and GitHub issue, milestone, comment, and PR body in plain, concise English. Never include hypothesis, conjecture, or defensive text.
+
 ## Non-negotiables
 
 - **Internal only.** Invoked by `plan`'s front-door route (`skills/plan/SKILL.md` Step 3.6) when it detects an oversized brief, never a user command. Introduces **no new `feeder.json` key**; that route owns the user-facing discovery / migration path (`.project/design-philosophy.md#One-way doors`: a new profile key is added only when a real consumer needs it).
