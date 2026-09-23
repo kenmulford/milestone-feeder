@@ -3,6 +3,32 @@
 Release notes for milestone-feeder. Each tagged release is also published on the
 [GitHub Releases page](https://github.com/kenmulford/milestone-feeder/releases).
 
+## v1.0.0: build pointers
+
+**Theme:** Each issue `plan` writes now names where its change lands, the existing code it calls, and the test it mirrors, as `path (anchor)` pointers on three optional Design-block lines that milestone-driver resolves at build time. The architect sizes each candidate to one user-observable behavior and folds a one-site change into the candidate that already edits that file. Issues still carry no code.
+
+### ✨ Build pointers
+
+| Issue | PR | What |
+|---|---|---|
+| #513 Add Edit points, Calls, and Tests pointer lines to the issue-author Design block | #515 | The Design block in `agents/issue-author.md` and `SPEC.md` gains three optional lines after `Edits:`. `Edit points:` lists each existing symbol the change modifies. `Calls:` lists each existing symbol the new code calls or conforms to. `Tests:` names the test file and the sibling test it mirrors. Each entry is `path (anchor)` anchored on declaration or heading text, or `path (new)` for a file the issue creates. The Rigor gate requires every pointer grep-verified against the live repo. A consumer template with no Design section carries the lines in the section that covers design. `SPEC.md` also gains its missing `Sites searched:` line. |
+| #514 Add one-behavior sizing and folding rules to architect clause 1 | #516 | `agents/architect.md` clause 1: a candidate delivers one user-observable outcome whose happy, empty, error, and disabled criteria fit in 6 acceptance criteria, and a sketch needing more is two candidates. A candidate that changes one existing site and introduces no type, file, screen, or behavior folds into another candidate whose `edits` lists that file. A tie goes to the earliest-assigned tag. In incremental mode a prior candidate never absorbs one. Folding runs before clause 3, 9, and 11 edges are derived. A set `issueSize` overrides both rules. `Sizing guidance` and the `plan` Step 3 `issueSize` bullet now point to clause 1. |
+
+### Consumer notes (upgrading from v0.16.0)
+
+- **No schema changes** to `.milestone-config/feeder.json` or `.milestone-config/driver.json`.
+- **Issues planned from this release carry `Edit points:`, `Calls:`, and `Tests:`** wherever they apply. milestone-driver triage resolves each `path (anchor)` pointer through `resolve-citation`, so an anchor that no longer matches fails loud at triage. Issues without the lines build as before.
+- **With `issueSize` unset,** a brief whose sketches exceed 6 acceptance criteria yields more candidates, and a one-site change no longer gets its own issue when another candidate edits its file. Set `issueSize` to keep your own sizing rule.
+
+### ⚖️ Audit trail
+
+Judgment-call PRs: none.
+
+- Code review of #516 found two defects, both fixed before merge: the fold was unspecified against a prior candidate in incremental mode, and the tie-break named a tag as the absorbing candidate.
+- The pointer dogfood ran on one candidate (#514's): 8 pointers, all resolved through milestone-driver `scripts/resolve-citation.sh`. No full `plan` run has emitted the lines yet, and the fold has not run on a live brief.
+- Ceilings raised: `agents/issue-author.md` 3100 to 3350.
+- Ceilings after this release: `agents/issue-author.md` 3171 of 3350, `agents/architect.md` 3430 of 3450, `skills/plan/SKILL.md` 9527 of 9550, `SPEC.md` 6647 of 6800.
+
 ## v0.16.0: incremental re-plan and clean grounding
 
 **Theme:** A brief that grew after the architect ran had no path back through it, and `plan` grounded on the working tree even while a driver build was editing that checkout. A re-plan whose brief is a strict superset of the prior plan's persisted brief now gets one incremental architect pass that returns only new candidates and edges. A dirty working tree makes `plan` ground on a fresh detached worktree of `integrationBranch`. Every agent and skill now requires plain, concise English with no hypothesis, conjecture, or defensive text.
