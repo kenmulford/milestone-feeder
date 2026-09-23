@@ -643,7 +643,15 @@ FILE_WORD_CEILINGS: dict[str, int] = {
     # the `Sites searched:` line rather than editing the list. Tightening was
     # not used to pay for it, for the reason above. 2936 words times 1.05 is
     # 3082.8, which rounds up to 3100.
-    "agents/issue-author.md": 3100,
+    # Raised from 3100 by issue #513; the decision is recorded in that issue's
+    # Design section, as the never-up rule requires. The Design-block template
+    # gained the `Edit points:`, `Calls:`, and `Tests:` lines, the Rigor gate
+    # gained the bullet that grep-verifies them, and "Content never
+    # disappears" gained the sentence placing them in a template with no
+    # Design section. Tightening was not used to pay for it, for the reason
+    # recorded on agents/architect.md above. 3171 words times 1.05 is
+    # 3329.55, which rounds up to 3350.
+    "agents/issue-author.md": 3350,
     "agents/roadmap-splitter.md": 1850,
     # Raised from 6400 by issue #486 (issue #343 had ratcheted it down to that
     # from 6800 after an AI-prose pass cut 737 words); the decision is recorded
