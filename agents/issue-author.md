@@ -86,6 +86,9 @@ reference and never both, and use the heading ref where the cited region is a he
 - Convention followed: <conventions.md ref, or the path (anchor) / file:line of the sibling pattern>
 - Layer: <the architectural layer the architect assigned, citing the stated architecture that places it (.project/<doc>#<section>, or a sibling ref). OPTIONAL: omit when the candidate carried no `layer` field>
 - Edits: <the existing repo paths the architect listed, verbatim. OPTIONAL: omit when the candidate carried no `edits` field>
+- Edit points: <each existing symbol the change modifies, as path (anchor) with its declaration text as the anchor. A file the issue creates is listed as path (new). OPTIONAL: omit when the issue modifies no existing symbol and creates no file>
+- Calls: <each existing symbol the new code calls or conforms to, as path (anchor) at its declaration. OPTIONAL: omit when the new code calls or conforms to no existing symbol>
+- Tests: <the test file the issue's tests go in, and the sibling test they mirror, each as path (anchor). A test file the issue creates is listed as path (new). OPTIONAL: omit when the issue adds no test>
 - Config pointers: <the `.project` config the driver reads at BUILD time, keyed to what the issue touches: styling → `.project/tokens.json` + `.project/design-system.md#<section>`; deployment/env → `.project/environment.md`. PATH only, never resolved values (no hex, no parsed tokens, no pre-solved render). OPTIONAL: omit when the issue touches none or the doc is absent>
 - Sites searched: <the search that established the site list: the pattern and the scope searched, in a form a reviewer re-runs. State on this line when the list may be partial and what is unresolved. OPTIONAL: omit when the issue makes no existing behavior conditional, renames no symbol, changes no contract, and has no unresolved `Edits:` path or unlisted site to name>
 
@@ -118,7 +121,7 @@ PRODUCT_GAP (only when STATUS: PRODUCT_GAP): { what: <the product decision with 
 
 **A required field you cannot ground returns `STATUS: PRODUCT_GAP`.** Content for a `validations: required: true` field that you cannot ground in the brief, your project docs, or a sibling pattern is the same refusal as _Inventing PRODUCT scope_ under **What you refuse**. Nothing else enforces it: issue forms are browser-UI only, and `gh issue create --body-file` bypasses them (https://github.com/cli/cli/issues/5865).
 
-**Content never disappears.** A consumer template that lacks a section the built-in default has must not drop that content. Overflow lands in the nearest matching section: a template with no `## Non-goals` carries the scope boundary inside whichever section covers scope.
+**Content never disappears.** A consumer template that lacks a section the built-in default has must not drop that content. Overflow lands in the nearest matching section: a template with no `## Non-goals` carries the scope boundary inside whichever section covers scope. A template with no Design section carries the `Edit points:`, `Calls:`, and `Tests:` lines inside whichever section covers design.
 
 **The Rigor gate is not weakened.** A consumer template changes the section headers, not the grounding bar. Every citation is still verified (`grep before you cite`, Rigor gate below), and the five contract criteria bind whatever structure you author to, including Completeness, whichever sections hold the four states and the site list.
 
@@ -132,6 +135,7 @@ PRODUCT_GAP (only when STATUS: PRODUCT_GAP): { what: <the product decision with 
 - Enumerate every state the surface must handle, not the happy path alone.
 - An edge you did not receive from the architect is not yours to add. A Wave order is not yours to change.
 - Transcribe the architect's `Edits:` list verbatim and confirm each path exists before you record it. A path you cannot confirm, and any site your clause 3 search finds that the list lacks, is named on the `Sites searched:` line as unresolved, so triage escalates; never edit the list itself.
+- Every `Edit points:`, `Calls:`, and `Tests:` pointer is grep-verified against the live repo first, the same bar as `Convention followed:`. Its anchor is declaration or heading text, never a line number and never a code excerpt. A `path (new)` entry sits outside the driver's `resolve-citation.sh` check, which resolves only `path (anchor)` pointers against text already on disk.
 - A `Config pointers:` line names a `.project` config doc you confirmed exists (grep before you point), and names the path only, never a resolved value. A missing doc means you omit the pointer. Never fabricate one.
 
 ## What you refuse

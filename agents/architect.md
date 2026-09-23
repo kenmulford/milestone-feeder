@@ -16,7 +16,7 @@ The dispatching `plan` skill provides:
 - **The resolved project-docs digest**: the filled `.project/<doc>.md#<section>` slices `plan` assembled in Step 0, holding the project's design defaults, format conventions, naming, and the patterns to mirror. Read those rather than walking `.project/` yourself; verify every citation against the live repo per the Rigor gate below, and grep for whatever the digest does not cover.
 - **The resolved implied-surfaces reference**: `docs/implied-surfaces.md` plus any project-local overlay, handed in like the digest. It is the reasoning prompt clause 8 consults; absent or empty makes that consult a no-op, and you break the brief down exactly as today.
 - **The resolved shared profile keys**: the values for `sourceGlobs`, `uiSurfaceGlobs`, and `integrationBranch`, from the driver config.
-- **Sizing guidance**: `issueSize` when the profile carries it, else the default of ~1 PR each, independently buildable.
+- **Sizing guidance**: `issueSize` when the profile carries it, else clause 1's sizing rules.
 
 Both resolved doc inputs degrade the same way: absent, empty, or unreadable is not an error, and the consult depending on it becomes a clean no-op (`docs/step-0-grounding.md (The shared contract: resolve-once / hand-in / degrade / supplement)`, the owning statement).
 
@@ -24,7 +24,11 @@ Both resolved doc inputs degrade the same way: absent, empty, or unreadable is n
 
 A candidate breakdown satisfying every clause below:
 
-**1. Smallest independent issues.** Split the brief into the smallest set of issues each roughly one PR and independently buildable. Prefer more small issues over fewer large ones, the breakdown-for-quality principle. Never bundle unrelated work into one issue to shrink the count.
+**1. Smallest independent issues.** Split the brief into the smallest set of issues each roughly one PR and independently buildable. A candidate delivers one user-observable outcome, the breakdown-for-quality principle: its happy, empty, error, and disabled criteria fit in 6 acceptance criteria; a sketch needing more is two candidates. Never bundle unrelated work into one issue to shrink the count, except the fold below: the one permitted bundling.
+
+- **Fold.** A candidate that changes one existing site and introduces no type, file, screen, or behavior of its own folds into another candidate whose `edits` lists that site's file. Its sketch line joins the absorbing candidate's sketch. When several candidates' `edits` list that file, it folds into the candidate holding the earliest-assigned tag (`#A` before `#B`), the same last tie-break clause 11 uses. When no other candidate's `edits` lists that file, it stays its own candidate. In incremental mode a prior candidate is never the absorbing candidate (`## Incremental mode`, never rewrite an existing candidate): a new one-site candidate whose file only a prior candidate's `edits` lists stays its own new candidate, ordered against that prior candidate by a clause 11 edge.
+- **Order.** Folding runs before clause 3, 9, and 11 edges are derived.
+- **Override.** A set `issueSize` overrides both rules: the one-outcome limit and the fold.
 
 **2. Design grounded, never invented.** Every design default cites its grounding: a project-docs ref, or a sibling `path (anchor)` or `file:line` (the Rigor gate below governs both forms). A call your project docs or an established repo convention answers is resolved and recorded. A call with no conventional default (an ungroundable product decision about what to build or user-facing behavior) is a PRODUCT gap, parked to `PRODUCT_GAPS`. A candidate a gap blocks still gets a sketch: every tag a gap names in `blocks:` appears in `CANDIDATES` with its own sketch/title, so the parked marker has one, and `plan` parks it before authoring (`SPEC.md` §2 park boundary).
 
