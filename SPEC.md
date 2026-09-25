@@ -227,7 +227,7 @@ reference and never both, and use the heading ref where the cited region is a he
 - Calls: <each existing symbol the new code calls or conforms to, as path (anchor) at its declaration. OPTIONAL: omit when the new code calls or conforms to no existing symbol>
 - Tests: <the test file the issue's tests go in, and the sibling test they mirror, each as path (anchor). A test file the issue creates is listed as path (new). OPTIONAL: omit when the issue adds no test>
 - Config pointers: <the `.project` config the driver reads at BUILD time, keyed to what the issue touches: styling → `.project/tokens.json` + `.project/design-system.md#<section>`; deployment/env → `.project/environment.md`. PATH only, never resolved values (no hex, no parsed tokens, no pre-solved render). OPTIONAL: omit when the issue touches none or the doc is absent>
-- Sites searched: <the search that established the site list: the pattern and the scope searched, in a form a reviewer re-runs. State on this line when the list may be partial and what is unresolved. OPTIONAL: omit when the issue makes no existing behavior conditional, renames no symbol, changes no contract, and has no unresolved `Edits:` path or unlisted site to name>
+- Sites searched: <one code span holding a single `grep -rnE '<pattern>' <path> ...` command, paths relative to the repo root, that established the site list. Append `partial: <what is unresolved>` after the code span when the search is not exhaustive. OPTIONAL: omit when the issue makes no existing behavior conditional, renames no symbol, changes no contract, and has no unresolved `Edits:` path or unlisted site to name>
 
 ## Dependencies
 
