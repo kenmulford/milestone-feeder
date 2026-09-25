@@ -3,6 +3,35 @@
 Release notes for milestone-feeder. Each tagged release is also published on the
 [GitHub Releases page](https://github.com/kenmulford/milestone-feeder/releases).
 
+## v1.0.1: runnable site search
+
+**Theme:** The `Sites searched:` line an issue records is now one runnable `grep -rnE` command, so milestone-driver triage re-runs the search byte for byte instead of searching again. A search that is not exhaustive says so with a `partial:` marker.
+
+### ✨ Issue authoring
+
+| Issue | PR | What |
+|---|---|---|
+| #522 Write `Sites searched:` as one runnable grep command with a `partial:` marker | #523 | The `Sites searched:` line in `agents/issue-author.md` and `SPEC.md` holds one code span with a single `grep -rnE '<pattern>' <path> ...` command, paths relative to the repo root, several patterns joined as one ERE alternation. A search that is not exhaustive appends `partial: <what is unresolved>` after the code span; an exhaustive one carries no `partial:`. The Rigor gate names an unconfirmed `Edits:` path, or a site the search found that the list lacks, after `partial:`. |
+
+### 📄 Docs
+
+| Issue | PR | What |
+|---|---|---|
+| none | #521 | `.project/library-manifest.md` points at `.claude-plugin/plugin.json` for the plugin version instead of copying it. |
+| none | #525 | `docs/briefs/` gains the briefs behind milestone #32 (`2026-09-05-prompt-audit.md`) and v1.0.0 (`2026-09-23-build-pointers.md`). |
+
+### Consumer notes (upgrading from v1.0.0)
+
+- **No schema changes** to `.milestone-config/feeder.json` or `.milestone-config/driver.json`.
+- **Issues planned from this release** write `Sites searched:` as one `grep -rnE` code span, with `partial:` when the search is not exhaustive. Issues planned earlier keep the prose form and build as before.
+
+### ⚖️ Audit trail
+
+Judgment-call PRs: none.
+
+- Code review of #523 (low effort) returned no findings.
+- Ceilings after this release: `agents/issue-author.md` 3205 of 3350, `SPEC.md` 6652 of 6800; neither moved.
+
 ## v1.0.0: build pointers
 
 **Theme:** Each issue `plan` writes now names where its change lands, the existing code it calls, and the test it mirrors, as `path (anchor)` pointers on three optional Design-block lines that milestone-driver resolves at build time. The architect sizes each candidate to one user-observable behavior and folds a one-site change into the candidate that already edits that file. Issues still carry no code.
