@@ -1,6 +1,6 @@
 ---
 name: setup
-description: This skill should be used when "milestone-feeder:setup" is invoked directly, OR auto-invoked by `plan` when `.milestone-config/feeder.json` is absent. Guides an interactive first-run bootstrap that infers every profile key from repo signals, writes `.milestone-config/feeder.json`, aligns the issue-label taxonomy with the driver's, and returns control so the original task continues.
+description: This skill should be used when "milestone-feeder:setup" is invoked directly, or auto-invoked by `plan`, `create`, `update`, or `remediate` when `.milestone-config/feeder.json` is absent. Guides an interactive first-run bootstrap that infers every profile key from repo signals, writes `.milestone-config/feeder.json`, aligns the issue-label taxonomy with the driver's, and returns control so the original task continues.
 ---
 
 # setup: first-run profile bootstrap
@@ -9,11 +9,11 @@ Generate or repair the feeder profile through a guided, inference-first flow. Op
 
 The canonical profile location is `<repo-root>/.milestone-config/feeder.json`, the suite-wide `.milestone-config/` directory the sibling `milestone-driver` plugin also reads from (it stores `driver.json` alongside).
 
-**After writing the file, return control to the caller** (`plan`) so the original task continues immediately. The user does not need to re-run the command.
+**After writing the file, return control to the calling skill** (`plan`, `create`, `update`, or `remediate`) so the original task continues immediately. The user does not need to re-run the command.
 
 ## When this runs
 
-- **Auto-invoked** by `plan` when `.milestone-config/feeder.json` is absent (Step 0 of the `plan` procedure, `SPEC.md` §6).
+- **Auto-invoked** by `plan`, `create`, `update`, or `remediate` when `.milestone-config/feeder.json` is absent (each one's Step 0 config read; `plan`'s is `SPEC.md` §6).
 - **Direct invocation** (`/milestone-feeder:setup`) when onboarding a new repo or repairing an existing profile.
 
 ## Procedure
@@ -99,7 +99,7 @@ Writing the file is sufficient for `plan` to read it immediately this session: n
 
 ### Phase 4: Provision and align the label taxonomy
 
-After the profile is written (Phase 3) and before returning control, provision the feeder's classification labels in the target repo, aligned to the driver's taxonomy so the driver's triage/solve read them natively. This step runs both during direct `/milestone-feeder:setup` invocations and any time setup is auto-invoked by `plan`.
+After the profile is written (Phase 3) and before returning control, provision the feeder's classification labels in the target repo, aligned to the driver's taxonomy so the driver's triage/solve read them natively. This step runs both during direct `/milestone-feeder:setup` invocations and any time setup is auto-invoked by a calling skill.
 
 #### Taxonomy (aligned to the driver)
 
@@ -129,7 +129,7 @@ The driver derives UI vs logic from a **`uiSurfaceGlobs` diff-match** (it checks
 
 ### Phase 5: Return control
 
-Return control to the caller (`plan`) immediately. Do **not** ask the user to re-run `/milestone-feeder:plan`. The bootstrap is a sub-step, not a restart.
+Return control to the calling skill (`plan`, `create`, `update`, or `remediate`) immediately. Do **not** ask the user to re-run the command that triggered setup. The bootstrap is a sub-step, not a restart.
 
 ## Re-run behavior (idempotency)
 
@@ -148,4 +148,4 @@ Defined once at `docs/style-contracts.md#output-style`: read it there; it is not
 - Skip always states its consequence. A user who skips knows exactly what default or behavior applies.
 - No required hard-stop key. Unlike the driver, the feeder writes no branches and no key hard-stops the write: every key falls back to its default, except `versioning`, which has none (skip = infer-or-ask).
 - Always write the file. Even an all-defaults result writes `.milestone-config/feeder.json` (an empty `{}` is valid), so config-presence detection is unambiguous. Omit default-filled keys from the written object (absent-means-default); also omit `versioning` when skipped: it has no default, so a skip means omit (infer-or-ask), never a placeholder.
-- Committing the profile: writing the file is enough for `plan` to read it this session. When `setup` is invoked **directly** (`/milestone-feeder:setup`), suggest the user commit it (`git add .milestone-config/feeder.json && git commit -m "chore: add milestone-feeder profile"`) so every clone and CI has it. When `setup` is auto-invoked by `plan`, leave the commit to the normal flow: do not create a commit on the current branch.
+- Committing the profile: writing the file is enough for the calling skill to read it this session. When `setup` is invoked **directly** (`/milestone-feeder:setup`), suggest the user commit it (`git add .milestone-config/feeder.json && git commit -m "chore: add milestone-feeder profile"`) so every clone and CI has it. When `setup` is auto-invoked by a calling skill, leave the commit to the normal flow: do not create a commit on the current branch.

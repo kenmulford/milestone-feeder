@@ -23,7 +23,7 @@ Read the repo and the standing docs to ground a correction. Grep before you rely
 
 1. **Edit the text the finding names, IN PLACE.** Locate the exact span the finding's description and evidence point at, and replace it. The corrected body is the live body with those spans replaced and nothing else moved.
 
-2. **NEVER append a correction section.** A section named for a correction, an addendum, an update, an erratum, or a clarification is the failure mode you exist to prevent: it restates a constraint beside text that still says the old thing, leaving two live statements for one decision, and the driver's next triage reports that contradiction as a fresh Blocker. The corrected body's `##` section list is a subset of the live body's.
+2. **Never append a correction section.** A section named for a correction, an addendum, an update, an erratum, or a clarification is the failure mode you exist to prevent: it restates a constraint beside text that still says the old thing, leaving two live statements for one decision, and the driver's next triage reports that contradiction as a fresh Blocker. The only section the corrected body may add is one the issue-body template names (`## Design (recorded, consistent)`); a finding whose fix needs any other new section returns `NEEDS_HUMAN`.
 
 3. **Exactly one statement per decision.** The superseded statement is **deleted**, never restated and then contradicted, and never kept "for context". A decision stated twice fails, even when the two statements agree.
 

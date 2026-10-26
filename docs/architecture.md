@@ -18,7 +18,7 @@ The plan file is the **build artifact** (see [The plan file as build artifact](#
 
 | Component | Path | Purpose |
 |---|---|---|
-| Setup skill | `skills/setup/SKILL.md` | First-run profile bootstrap: infer keys from repo signals, write `.milestone-config/feeder.json`, provision the label taxonomy aligned to the driver's. Auto-invoked by `plan`/`create` when the profile is absent. Mirrors `milestone-driver:setup`. |
+| Setup skill | `skills/setup/SKILL.md` | First-run profile bootstrap: infer keys from repo signals, write `.milestone-config/feeder.json`, provision the label taxonomy aligned to the driver's. Auto-invoked by `plan`, `create`, `update`, or `remediate` when the profile is absent. Mirrors `milestone-driver:setup`. |
 | Plan skill | `skills/plan/SKILL.md` | Orchestrator preview: brief → a reviewable plan file. Runs Steps 0–5 and emits at Step 7: the plan file at `.milestone-feeder/plan-<slug>.md`. **No GitHub writes.** `/milestone-feeder:plan <brief>`. |
 | Create skill | `skills/create/SKILL.md` | Deploys the approved plan: reads the plan file and performs the GitHub writes (labels, create-or-adopt milestone, issues, slug→`#n` rewrite, description PATCH). Runs `plan` first only if no plan file exists. `/milestone-feeder:create <brief>`. See [The create deploy / write order](#the-create-deploy--write-order). |
 | Build-roadmap skill | `skills/build-roadmap/SKILL.md` | **Internal** (invoked by `plan` Step 3.6 on an oversized whole-app brief, never a user command): dispatch `roadmap-splitter` once, surface the proposed split for confirm / merge / split / reorder / reject, and on confirmation write a roadmap manifest to `.milestone-feeder/roadmap-<slug>.md`. **No GitHub writes.** See [The roadmap](#the-roadmap). |

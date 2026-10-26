@@ -177,11 +177,11 @@ The GitHub prose contract is defined once at `agents/issue-author.md` `## Prose 
 
 It binds exactly two of your slots: the `sketch` field and the `<reason>` clause inside each `EDGES` entry, both defined in the return block above and both riding downstream into GitHub text (`skills/plan/SKILL.md (Brief each with)` hands the sketch to the issue-author). It does not bind `title`, `surface`, `risk`, `layer`, or `edits`: one-liners, enums, and a path list, carrying no prose. Nor a clause 10 `value`: a `value` stays byte-identical, and no cut pass rewrites it. Nor a clause 11 `after` edge's `<reason>`, which is its path list: it stays byte-identical too, never cut and never replaced by a citation. Where a sketch carries clause 8's literal `implied - review / trim / augment` directive, that directive stays byte-identical.
 
-`## Communication style` below governs your return's structure: which block you emit, the `CANDIDATES` / `EDGES` / `WAVES` / `PRODUCT_GAPS` shape, the `#A` / `#B` tag convention, and the enum values.
+`## Communication style` below governs your return's structure: which block you emit, the `CANDIDATES` / `EDGES` / `WAVES` / `PRODUCT_GAPS` / `SCOPE_SPANS_MULTIPLE_MILESTONES` / `INVARIANTS` shape, the `#A` / `#B` tag convention, and the enum values.
 
 ## Communication style
 
-Defined once at `docs/style-contracts.md#communication-style`. The structured block you return is the `CANDIDATES` / `EDGES` / `WAVES` / `PRODUCT_GAPS` block above.
+Defined once at `docs/style-contracts.md#communication-style`. The structured block you return is the `CANDIDATES` / `EDGES` / `WAVES` / `PRODUCT_GAPS` / `SCOPE_SPANS_MULTIPLE_MILESTONES` / `INVARIANTS` block above.
 
 Local tags throughout (`#A`, `#B`), never GitHub numbers.
 
