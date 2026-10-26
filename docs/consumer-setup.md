@@ -13,7 +13,7 @@ or from a marketplace once published). Confirm it is enabled with `/plugin`.
 
 | Plugin | Status | Why |
 |---|---|---|
-| [`superpowers`](https://github.com/anthropics/claude-code) | **Required** | A hard dependency: a required prerequisite you install yourself (no longer auto-installed; see `README.md`). The plan pipeline depends on it. |
+| [`superpowers`](https://github.com/anthropics/claude-code) | **Required** | A hard dependency: a required prerequisite you install yourself (not auto-installed; see `README.md`). The plan pipeline depends on it. |
 | `milestone-driver` | **Optional** | The feeder drafts every issue to pass the driver's triage clean, and on a clean run `create` can hand the milestone straight to the driver to start building (and, if the driver is set up with Trello, mirror the milestone onto your board). **Absent → the feeder still plans and deploys**; you run the driver later (or not at all). |
 
 **The `milestone-driver` soft dependency.** The feeder writes issues meant to be
@@ -36,7 +36,7 @@ milestone shows up on your project board the moment it's created (instead of wai
 for the driver's first build run). It reads that setting from the **driver's**
 profile. **There is no feeder-side Trello setting to add** (the driver already owns
 the board destination). If you don't use the driver's Trello integration, or run no
-driver at all, **nothing changes**: `create` deploys to GitHub exactly as before and
+driver at all, **nothing changes**: `create` deploys to GitHub and
 the mirror is a silent no-op. The card's shape and its best-effort, never-blocking
 behavior are the driver's; `create` just seeds the card. See milestone-driver's
 `skills/solve-milestone/trello-sync.md` for the details, and

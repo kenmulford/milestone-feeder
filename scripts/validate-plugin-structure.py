@@ -664,7 +664,8 @@ FILE_WORD_CEILINGS: dict[str, int] = {
     # for the reason recorded on agents/architect.md above. 6441 words times
     # 1.05 is 6763.05, which rounds up to 6800.
     "SPEC.md": 6800,
-    "docs/create-deploy-sequence.md": 12100,
+    # 10907 words times 1.05 is 11452.35, which rounds up to 11500.
+    "docs/create-deploy-sequence.md": 11500,
     "docs/file-map.md": 1450,
     "docs/implied-surfaces.md": 1250,
     # New: skills/plan/SKILL.md and agents/architect.md now reference this

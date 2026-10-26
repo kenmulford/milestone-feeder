@@ -35,7 +35,7 @@ The plan file is the **build artifact** (see [The plan file as build artifact](#
 | Plan-file-contract reference | `docs/plan-file-contract.md` | The shared definition of the plan file's fields and output templates: the field table, the plan-file output template, and the needs-product-input report template that `create` and `update` parse. The three artifacts are defined there once, and `skills/plan/SKILL.md` Step 7 cites them and instantiates their scaffolds byte-exact rather than carrying a copy, so downstream skills cite one definition instead of each repeating the contract. |
 | Style-contracts reference | `docs/style-contracts.md` | The canonical source for the three style contracts: `## Output style` (what a skill prints to the terminal), `## Communication style` (the wrapper an agent returns to its caller), and `## GitHub prose style` (an index pointing at `agents/issue-author.md` `## Prose style`, the single definition of the rules binding agent-authored GitHub text). Carries the surface-boundary table stating which surface each contract governs. Reference content only; the six governed skills and the four agents each cite a section by `file:section` rather than restating it. |
 | Roadmap-manifest reference | `docs/roadmap-manifest-format.md` | The exact shape of the roadmap manifest `build-roadmap` writes to `.milestone-feeder/roadmap-<slug>.md`: the cross-milestone build artifact recording which milestones to plan, in what order, plus the full original brief. Read on demand by `build-roadmap` (Step 4) and its downstream `plan` / `create` consumers. |
-| Create-deploy-sequence reference | `docs/create-deploy-sequence.md` | The full mechanics of `create`'s heavy deploy steps (Step 1R, the Step 3 write-sequence passes a–d, Step 4), relocated byte-for-byte from `skills/create/SKILL.md` so the skill keeps a lean orchestration skeleton. `create` reads it on demand; behavior-neutral. |
+| Create-deploy-sequence reference | `docs/create-deploy-sequence.md` | The full mechanics of `create`'s heavy deploy steps (Step 1R, the Step 3 write-sequence passes a–d, Step 4), kept out of `skills/create/SKILL.md` so the skill keeps a lean orchestration skeleton. `create` reads it on demand. |
 | `create` GitHub write path | (in `create`, §7-apply deploy sequence) | Ensures the labels idempotently, creates-or-adopts the milestone by title, opens each surviving issue, rewrites slug→`#n` references, PATCHes the Wave-encoded milestone description, and files the needs-product-input report (epic comment for a GitHub-epic brief / local file otherwise). Idempotent re-run via adopt + match-by-title. |
 
 **Targets the driver's triage, does not run it.** The feeder authors every issue
@@ -156,8 +156,7 @@ loop**:
 
 - **Single / normal brief (the default).** The architect's
   `SCOPE_SPANS_MULTIPLE_MILESTONES` signal is `none`; `plan` runs the inner
-  routine **exactly once** on the whole brief. Byte-for-byte the prior behavior.
-- **Oversized whole-app brief.** The architect raises the signal, and `plan`'s
+  routine **exactly once** on the whole brief.- **Oversized whole-app brief.** The architect raises the signal, and `plan`'s
   front-door (Step 3.6) routes the brief into the internal **`build-roadmap`**
   skill: it dispatches `roadmap-splitter` once for a build-ordered partition of the
   brief into named milestones, surfaces the split for the user to **confirm / merge
@@ -200,7 +199,7 @@ named capability or new entity implies. That reference is a stack-agnostic
 
 `plan` threads the `disposition` field from the architect (Step 3) through the
 issue-author brief (Step 4) to the plan file (Step 7); a candidate the architect did
-not mark is recorded `grounded`, byte-for-byte as before. At Step 7 `plan` renders
+not mark is recorded `grounded`. At Step 7 `plan` renders
 each `implied` candidate **distinctly**, carrying the
 `[implied - review / trim / augment]` marker on its issue heading. And **only when
 the plan carries at least one implied candidate**, it fires a structural
@@ -210,7 +209,7 @@ confirm/override moment the user already sees the milestone identity:
 non-blocking: the user reviews, trims, or augments the implied candidates before
 running `create`, and every proposed surface lands in a plan reviewed before any
 issue exists. When no candidate is implied, nothing here surfaces (no marker, no
-prompt), exactly as before.
+prompt).
 
 **The reference is a floor, not a ceiling.** It is deliberately short and
 conceptual: it ensures the architect *considers* the conventional set, and never
@@ -270,12 +269,12 @@ edge orders each pair and the graph stays acyclic. The Waves consume an `after` 
 like any other, so the two land in
 successive Waves. `plan` threads the list into the issue's `Edits:` line, so the driver
 sees the file scope. Additive, **no new config key**, and lists that never intersect
-produce today's dependency-only order, unchanged (`SPEC.md` §3.1, shared-file ordering).
+produce the dependency-only order (`SPEC.md` §3.1, shared-file ordering).
 
 ### Config pointers (reference, not pre-solve)
 
-With the feeder no longer reviewing (the driver's triage is the single automated entry
-gate), its job is to make sure the driver has the right config, so the issue-author
+The feeder does not review (the driver's triage is the single automated entry
+gate); its job is to make sure the driver has the right config, so the issue-author
 also POINTS each issue at the `.project` config the driver reads at **build time**. In
 the same `## Design` block that carries `Convention followed:` and `Layer:`, keyed to
 what the issue touches: styling → `.project/tokens.json` / `.project/design-system.md#<section>`;
@@ -284,7 +283,7 @@ deployment/env → `.project/environment.md` (a touched convention already rides
 the values into the body: no resolved hex, no parsed token values, no pre-solved
 render. The render and tokens are the **driver's** to consume at build time; the feeder
 only reminds the driver where they live. The line is additive: an issue touching none
-of these, or a project missing the doc, carries no pointer, byte-for-byte as today. A
+of these, or a project missing the doc, carries no pointer. A
 missing doc is no error and no fabricated reference. It reuses the existing `projectDocs`
 grounding. **No new config key** (`SPEC.md` §4, config pointers).
 
@@ -317,7 +316,7 @@ position the driver reads to build the roadmap in sequence), ridden inside pass 
 REPLACE-form PATCH so it stays idempotent: the count never grows. The single-plan
 path is the **N=1** case, byte-for-byte unchanged; a mid-loop failure stops and
 reports, deletes nothing, and a re-run resumes (already-deployed milestones adopted
-by exact title, the rest deployed). That resume is now short-circuited for
+by exact title, the rest deployed). That resume is short-circuited for
 already-fully-deployed milestones by a per-run deploy checkpoint
 (`docs/create-deploy-sequence.md` → "The deploy checkpoint (resume short-circuit,
 roadmap-only)").

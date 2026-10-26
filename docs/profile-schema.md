@@ -69,13 +69,12 @@ to invoke the driver yourself. It is **build-kickoff only**: it invokes
   starts the build, **no** stops.
 - `"auto"`: on a clean run, `create` kicks off the driver **immediately**, with no
   prompt (a one-line notice for legibility).
-- `"off"`: `create` **never** offers the handoff and never prompts (exactly
-  today's no-handoff behavior).
+- `"off"`: `create` **never** offers the handoff and never prompts (no handoff).
 
 **Three gates, all must hold for the handoff to be offered:** (1) **clean run
 only: no gaps/parks**: the run produced no product gap and parked / dropped
 nothing (the plan file's needs-input pointer is "none"). A gapped run surfaces its
-gaps as today and offers no handoff; (2) **driver
+gaps and offers no handoff; (2) **driver
 installed, else silent skip**: `create` detects
 whether `/milestone-driver:solve-milestone` resolves in this session and, if it
 does **not**, silently skips with no prompt and no error (the same way the optional
@@ -89,9 +88,8 @@ An **invalid or unrecognized value** (anything that is not exactly `"prompt"`,
 errors on the key (mirrors how `versioning` treats an invalid value as absent). The
 key is **optional and follows the
 [absent-means-default discipline](#absent-means-default-discipline)** (omit it on
-skip; the default applies at runtime). Note the default is a **new behavior**:
-absent `autoHandoff` means `create` offers the prompt on a clean run when the
-driver is installed. To keep exactly today's no-handoff behavior, set
+skip; the default applies at runtime). Absent `autoHandoff` means `create` offers the prompt on a clean run when the
+driver is installed. To turn the handoff off, set
 `"off"`.
 
 **`architectAgent` / `issueAuthorAgent`.** Default-filled agent identifiers
