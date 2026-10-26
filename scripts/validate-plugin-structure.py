@@ -664,7 +664,8 @@ FILE_WORD_CEILINGS: dict[str, int] = {
     # for the reason recorded on agents/architect.md above. 6441 words times
     # 1.05 is 6763.05, which rounds up to 6800.
     "SPEC.md": 6800,
-    "docs/create-deploy-sequence.md": 12100,
+    # 10778 words times 1.05 is 11316.9, which rounds up to 11350.
+    "docs/create-deploy-sequence.md": 11350,
     "docs/file-map.md": 1450,
     "docs/implied-surfaces.md": 1250,
     # New: skills/plan/SKILL.md and agents/architect.md now reference this
@@ -684,17 +685,18 @@ FILE_WORD_CEILINGS: dict[str, int] = {
     # is 2294.25, which rounds up to 2300.
     "docs/one-time-notices.md": 2300,
     "docs/plan-file-contract.md": 1600,
-    "docs/profile-schema.md": 2400,
-    "docs/roadmap-fan-out.md": 2450,
+    # 2236 words times 1.05 is 2347.8, which rounds up to 2350.
+    "docs/profile-schema.md": 2350,
+    # 2246 words times 1.05 is 2358.3, which rounds up to 2400.
+    "docs/roadmap-fan-out.md": 2400,
     "docs/roadmap-manifest-format.md": 1050,
     "docs/step-0-grounding.md": 2050,
     # Raised from 800 in v0.16.0; the decision is recorded on that release's
     # PR. `## Output style` and `## Communication style` each gained the
     # plain-English rule. 817 words times 1.05 is 857.85, which rounds up to 900.
     "docs/style-contracts.md": 900,
-    # 2450 words times 1.05 is 2572.5, which rounds up to 2600. The recorded
-    # 2450 stands instead, because the never-up rule outranks the formula.
-    "docs/update-reconcile-parent.md": 2450,
+    # 2136 words times 1.05 is 2242.8, which rounds up to 2250.
+    "docs/update-reconcile-parent.md": 2250,
     "docs/version-ladder.md": 1300,
 }
 AGENT_DESCRIPTION_WORD_CEILING = 150
@@ -930,6 +932,75 @@ if len(present) >= 2:
             f"{first_line_difference(drifted_lines, expected_lines)}. The "
             f"three copies are hand-synced and must stay equal line for "
             f"line; re-sync this one",
+        )
+
+# --- 8: emphasis register ----------------------------------------------------
+#
+# Why this exists: docs/briefs/2026-10-19-prompt-audit.md (## 6. Emphasis
+# register) fixed this drift by hand, and nothing stopped it returning. Outside
+# fenced blocks, a line carries at most one bold run, and no ordinary English
+# word is written in caps for emphasis. The two tests are that section's
+# acceptance awk, except that inline code spans are stripped first: code is not
+# prose, so the gate is stricter than the awk about prose and looser about code.
+# Scope is one set, the same one scripts/check-vocabulary.sh category 3 scans:
+# skills/*/SKILL.md, agents/*.md, .project/*.md, and the top-level docs/*.md.
+# docs/briefs/** and docs/specs/** are history records, so they are excluded.
+
+# A code span closes only on a backtick run of exactly the opening length.
+EMPHASIS_CODE_SPAN_RE = re.compile(r"(?<!`)(`+)(?!`).+?(?<!`)\1(?!`)")
+EMPHASIS_FENCE_RE = re.compile(r"^\s*(`{3,}(?=[^`]*$)|~{3,})")
+EMPHASIS_MULTI_BOLD_RE = re.compile(r"(\*\*[^*]+\*\*.*){2,}")
+EMPHASIS_CAPS_RE = re.compile(
+    r"\b(NOT|AND|MUST|ONLY|NEVER|ONCE|ONE|BOTH|THIS|ALWAYS|EXACTLY|ANY|EVERY|OUTER|ALL)\b"
+)
+
+
+def emphasis_violations(text: str) -> list[tuple[int, str]]:
+    """Return (line number, reason) for each emphasis breach outside fences."""
+    found: list[tuple[int, str]] = []
+    fence = ""  # the opening fence run while inside a fenced block
+    for lineno, line in enumerate(text.splitlines(), start=1):
+        opener = EMPHASIS_FENCE_RE.match(line)
+        if fence:
+            # CommonMark: a closing fence is the same character, at least as
+            # long as the opener, with nothing after it but whitespace.
+            if (
+                opener
+                and opener.group(1)[0] == fence[0]
+                and len(opener.group(1)) >= len(fence)
+                and not line[opener.end():].strip()
+            ):
+                fence = ""
+            continue
+        if opener:
+            fence = opener.group(1)
+            continue
+        line = EMPHASIS_CODE_SPAN_RE.sub("", line)
+        if EMPHASIS_MULTI_BOLD_RE.search(line):
+            found.append((lineno, "2+ bold runs on one line"))
+        for word in dict.fromkeys(m.group(0) for m in EMPHASIS_CAPS_RE.finditer(line)):
+            found.append((lineno, f"caps emphasis word '{word}'"))
+    return found
+
+
+emphasis_files = sorted(
+    [
+        *(REPO_ROOT / "skills").glob("*/SKILL.md"),
+        *(REPO_ROOT / "agents").glob("*.md"),
+        *(REPO_ROOT / ".project").glob("*.md"),
+        *(REPO_ROOT / "docs").glob("*.md"),
+    ]
+)
+for emphasis_md in emphasis_files:
+    checked += 1
+    for lineno, reason in emphasis_violations(
+        emphasis_md.read_text(encoding="utf-8-sig")
+    ):
+        errors.append(
+            f"{emphasis_md.relative_to(REPO_ROOT)}:{lineno}: {reason}. At most "
+            f"one bold run per line, on the clause that gates behavior; "
+            f"lowercase caps on ordinary words "
+            f"(docs/briefs/2026-10-19-prompt-audit.md, ## 6. Emphasis register)"
         )
 
 # --- report -----------------------------------------------------------------

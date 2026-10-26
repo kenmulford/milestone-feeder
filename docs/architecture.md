@@ -18,24 +18,24 @@ The plan file is the **build artifact** (see [The plan file as build artifact](#
 
 | Component | Path | Purpose |
 |---|---|---|
-| Setup skill | `skills/setup/SKILL.md` | First-run profile bootstrap: infer keys from repo signals, write `.milestone-config/feeder.json`, provision the label taxonomy aligned to the driver's. Auto-invoked by `plan`/`create` when the profile is absent. Mirrors `milestone-driver:setup`. |
+| Setup skill | `skills/setup/SKILL.md` | First-run profile bootstrap: infer keys from repo signals, write `.milestone-config/feeder.json`, provision the label taxonomy aligned to the driver's. Auto-invoked by `plan`, `create`, `update`, or `remediate` when the profile is absent. Mirrors `milestone-driver:setup`. |
 | Plan skill | `skills/plan/SKILL.md` | Orchestrator preview: brief → a reviewable plan file. Runs Steps 0–5 and emits at Step 7: the plan file at `.milestone-feeder/plan-<slug>.md`. **No GitHub writes.** `/milestone-feeder:plan <brief>`. |
 | Create skill | `skills/create/SKILL.md` | Deploys the approved plan: reads the plan file and performs the GitHub writes (labels, create-or-adopt milestone, issues, slug→`#n` rewrite, description PATCH). Runs `plan` first only if no plan file exists. `/milestone-feeder:create <brief>`. See [The create deploy / write order](#the-create-deploy--write-order). |
-| Build-roadmap skill | `skills/build-roadmap/SKILL.md` | **Internal** (invoked by `plan` Step 3.6 on an oversized whole-app brief, never a user command): dispatch `roadmap-splitter` once, surface the proposed split for confirm / merge / split / reorder / reject, and on confirmation write a roadmap manifest to `.milestone-feeder/roadmap-<slug>.md`. **No GitHub writes.** See [The roadmap](#the-roadmap). |
+| Build-roadmap skill | `skills/build-roadmap/SKILL.md` | Internal (invoked by `plan` Step 3.6 on an oversized whole-app brief, never a user command): dispatch `roadmap-splitter` once, surface the proposed split for confirm / merge / split / reorder / reject, and on confirmation write a roadmap manifest to `.milestone-feeder/roadmap-<slug>.md`. **No GitHub writes.** See [The roadmap](#the-roadmap). |
 | Architect agent | `agents/architect.md` | Architect lens: brief + standing docs + repo → candidate issue set + dependency edges + Wave order. One heavy reasoning step, dispatched once per brief, plus one incremental dispatch per batch of added items (`docs/incremental-replan.md`). Read-only. Raises `SCOPE_SPANS_MULTIPLE_MILESTONES`: the signal that triggers the roadmap route. Also consults the implied-surfaces reference and labels each conventional companion surface it proposes with the `disposition: implied` field (see [Implied surfaces](#implied-surfaces)). When the project states a layering convention, assigns each candidate its architectural `layer` and keys the Wave order to the layer dependency (see [Layer-aware breakdown](#layer-aware-breakdown)). Resolves each directive that binds two or more candidates once, as an `INVARIANTS` entry the issue-authors transcribe rather than re-derive (`SPEC.md` §3.1, cross-candidate invariants). |
 | Issue-author agent | `agents/issue-author.md` | Per-issue subagent: authors one issue's full spec to the §4 output contract so it passes the driver's triage clean. Read-only; returns issue text, never opens the issue. |
-| Remediate skill | `skills/remediate/SKILL.md` | The correction verb: reads one issue plus the driver's last `🔴 Triage` comment, dispatches `remediator` once, verifies each superseded span is gone, then shows the diff and patches the body. `gh issue edit <n> --body` is its entire write-set: no labels, no comments. `/milestone-feeder:remediate <issue-number>`. See [The remediation path](#the-remediation-path). |
+| Remediate skill | `skills/remediate/SKILL.md` | The correction verb: reads one issue plus the driver's last `🔴 Triage` comment, dispatches `remediator` once, verifies each superseded span is gone, then shows the diff and patches the body. `gh issue edit <n> --body-file` is its entire write-set: no labels, no comments. `/milestone-feeder:remediate <issue-number>`. See [The remediation path](#the-remediation-path). |
 | Remediator agent | `agents/remediator.md` | Correction lens: one issue body + the driver's recorded findings → that body with each correction applied **in place**, plus the superseded-span ledger the skill verifies mechanically. Read-only; returns text, never edits the issue. A finding needing a product or architecture decision returns `NEEDS_HUMAN`. |
 | Roadmap-splitter agent | `agents/roadmap-splitter.md` | Roadmap lens: an oversized whole-app brief + standing docs → a strict, build-ordered partition into named milestones (the `ROADMAP` block). Dispatched once by `build-roadmap`. Read-only. Supersedes the architect's passive multi-milestone advisory with a real, ordered split. |
-| Hook: `no-source-edit` | `hooks/` (`hooks.json`, `run-hook.cmd`, `.sh`, `.ps1`) | `PreToolUse` (`Write`/`Edit`/`MultiEdit`/`NotebookEdit`): unconditionally deny edits to the feeder's own `sourceGlobs`. The only mechanical gate the feeder needs: it authors no code and opens no PRs. See [The mechanical gate](#the-mechanical-gate). |
+| Hook: `no-source-edit` | `hooks/` (`hooks.json`, `run-hook.cmd`, `.sh`, `.ps1`) | `PreToolUse` (`Write`/`Edit`/`MultiEdit`/`NotebookEdit`): deny edits to the feeder's own `sourceGlobs`. The only mechanical gate the feeder needs: it authors no code and opens no PRs. See [The mechanical gate](#the-mechanical-gate). |
 | Manifest + registration | `.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`, `hooks/hooks.json` | Plugin metadata (`superpowers` is a documented prerequisite, not a manifest dependency; see `README.md`), marketplace registration, and Claude-side hook registration. |
-| Update skill | `skills/update/SKILL.md` | Plan-driven reconcile against an existing milestone: reconcile the recorded plan onto the live milestone by patching gapped bodies, filling missing edges, and re-rendering the Wave order. `/milestone-feeder:update <brief>`. Creates and deletes no issues; a clean milestone is a no-op. Reuses `create`'s write-primitives by reference. |
-| Implied-surfaces reference | `docs/implied-surfaces.md` | The stack-agnostic implied-surfaces **reasoning reference** the architect consults during breakdown: the standard companion surfaces a capability or a new entity implies, framed as a reviewable floor (a robust start, never a scope-emitting catalog). Also **defines** the project-local overlay shape (`.milestone-config/implied-surfaces.md`, additive-merge: add / extend, never delete a global surface). PR-able; shipped so the capability set grows by community PR. |
+| Update skill | `skills/update/SKILL.md` | Plan-driven reconcile against an existing milestone: reconcile the recorded plan onto the live milestone by patching gapped bodies, filling missing edges, and re-rendering the Wave order. `/milestone-feeder:update <brief>`. Creates missing issues and deletes none; a clean milestone is a no-op. Reuses `create`'s write-primitives by reference. |
+| Implied-surfaces reference | `docs/implied-surfaces.md` | The stack-agnostic implied-surfaces reasoning reference the architect consults during breakdown: the standard companion surfaces a capability or a new entity implies, framed as a reviewable floor (a robust start, never a scope-emitting catalog). Also defines the project-local overlay shape (`.milestone-config/implied-surfaces.md`, additive-merge: add / extend, never delete a global surface). PR-able; shipped so the capability set grows by community PR. |
 | One-time-notices reference | `docs/one-time-notices.md` | The canonical source for eight one-time Step-0 units (a self-heal + seven notices) shared across `plan`, `create`, and `update` (each announces a self-heal one of them performed, flags a repo-state problem to fix by hand, points at a new/optional capability, or announces a behavior change), shown at most once per clone via a per-clone marker. Reference content only; the live emitter is the `scripts/emit-notice.sh` / `scripts/emit-notice.ps1` twin pair reading `scripts/emit-notice.json`, which `skills/plan/SKILL.md`, `skills/create/SKILL.md`, `skills/update/SKILL.md`, and `skills/remediate/SKILL.md` Step 0 each run under their own name (no unit's `skills` list names `remediate` today, so that call selects nothing), and `skills/setup/SKILL.md` Phase 3 runs by section id. |
 | Plan-file-contract reference | `docs/plan-file-contract.md` | The shared definition of the plan file's fields and output templates: the field table, the plan-file output template, and the needs-product-input report template that `create` and `update` parse. The three artifacts are defined there once, and `skills/plan/SKILL.md` Step 7 cites them and instantiates their scaffolds byte-exact rather than carrying a copy, so downstream skills cite one definition instead of each repeating the contract. |
 | Style-contracts reference | `docs/style-contracts.md` | The canonical source for the three style contracts: `## Output style` (what a skill prints to the terminal), `## Communication style` (the wrapper an agent returns to its caller), and `## GitHub prose style` (an index pointing at `agents/issue-author.md` `## Prose style`, the single definition of the rules binding agent-authored GitHub text). Carries the surface-boundary table stating which surface each contract governs. Reference content only; the six governed skills and the four agents each cite a section by `file:section` rather than restating it. |
 | Roadmap-manifest reference | `docs/roadmap-manifest-format.md` | The exact shape of the roadmap manifest `build-roadmap` writes to `.milestone-feeder/roadmap-<slug>.md`: the cross-milestone build artifact recording which milestones to plan, in what order, plus the full original brief. Read on demand by `build-roadmap` (Step 4) and its downstream `plan` / `create` consumers. |
-| Create-deploy-sequence reference | `docs/create-deploy-sequence.md` | The full mechanics of `create`'s heavy deploy steps (Step 1R, the Step 3 write-sequence passes a–d, Step 4), relocated byte-for-byte from `skills/create/SKILL.md` so the skill keeps a lean orchestration skeleton. `create` reads it on demand; behavior-neutral. |
+| Create-deploy-sequence reference | `docs/create-deploy-sequence.md` | The full mechanics of `create`'s heavy deploy steps (Step 1R, the Step 3 write-sequence passes a–d, Step 4), kept out of `skills/create/SKILL.md` so the skill keeps a lean orchestration skeleton. `create` reads it on demand. |
 | `create` GitHub write path | (in `create`, §7-apply deploy sequence) | Ensures the labels idempotently, creates-or-adopts the milestone by title, opens each surviving issue, rewrites slug→`#n` references, PATCHes the Wave-encoded milestone description, and files the needs-product-input report (epic comment for a GitHub-epic brief / local file otherwise). Idempotent re-run via adopt + match-by-title. |
 
 **Targets the driver's triage, does not run it.** The feeder authors every issue
@@ -120,12 +120,11 @@ default: what to build, or user-facing behavior.
 
 One `PreToolUse` hook, registered in `hooks/hooks.json` and invoked via the
 bash-first / pwsh-fallback `run-hook.cmd` launcher (fail-open). The feeder reads
-code and authors issue text; it never writes source, so the deny is
-**unconditional** (no subagent carve-out, unlike the driver's `force-subagent`).
+code and authors issue text; it never writes source, so the deny binds the main thread and the feeder's own agents (the four names in `FEEDER_OWN_AGENTS`). A subagent with an `agent_id` and a non-feeder `agent_type` passes; an `agent_id` with an empty or unknown `agent_type` is denied.
 
 | Gate | Matcher | Mechanism |
 |---|---|---|
-| `no-source-edit` | `Write` / `Edit` / `MultiEdit` / `NotebookEdit` | Unconditionally denies edits to the resolved `sourceGlobs`. Resolution: `<repo>/.milestone-config/feeder.json` first (self-protection of the feeder's own repo), then the driver config (`.milestone-config/driver.json` → root `milestone-driver.json`), else **fail-open**. `docs/**`, `.claude/**`, and `Obsidian/**` are always exempt. Escape hatch: `CLAUDE_HOOK_DISABLE_NO_SOURCE_EDIT=1`. |
+| `no-source-edit` | `Write` / `Edit` / `MultiEdit` / `NotebookEdit` | Denies edits to the resolved `sourceGlobs`. Resolution: `<repo>/.milestone-config/feeder.json` first (self-protection of the feeder's own repo), then the driver config (`.milestone-config/driver.json` → root `milestone-driver.json`), else **fail-open**. The `docs/`, `.claude/`, and `Obsidian/` subtrees are always exempt. Escape hatch: `CLAUDE_HOOK_DISABLE_NO_SOURCE_EDIT=1`. |
 
 The `sourceGlobs` this gate reads is **self-protection only** (the feeder guarding
 its own repo) and is semantically distinct from the *consumer's* shared
@@ -147,7 +146,7 @@ emits the plan file at Step 7. It writes **no GitHub state**. `create` then depl
 | 3.5 | **Park candidates blocked by a shared product gap** before the fan-out, and drop their dependents (no doomed author dispatches). |
 | 4 | Dispatch the `issue-author` **per candidate** (parallelizable) → each issue's full §4 spec. |
 | 5 | **Drop parked issues + their dependents**; assemble the dependency graph; render the milestone description to the §4 Wave template (local slugs). |
-| 7 | **Emit the plan file.** Write the reviewable plan file to `.milestone-feeder/plan-<slug>.md` (the build artifact `create`/`update` deploy) plus a "needs product input" report when product gaps remain. **No GitHub writes.** |
+| 7 | Emit the plan file. Write the reviewable plan file to `.milestone-feeder/plan-<slug>.md` (the build artifact `create`/`update` deploy) plus a "needs product input" report when product gaps remain. **No GitHub writes.** |
 
 ### The roadmap
 
@@ -157,7 +156,7 @@ loop**:
 
 - **Single / normal brief (the default).** The architect's
   `SCOPE_SPANS_MULTIPLE_MILESTONES` signal is `none`; `plan` runs the inner
-  routine **exactly once** on the whole brief. Byte-for-byte the prior behavior.
+  routine exactly once on the whole brief.
 - **Oversized whole-app brief.** The architect raises the signal, and `plan`'s
   front-door (Step 3.6) routes the brief into the internal **`build-roadmap`**
   skill: it dispatches `roadmap-splitter` once for a build-ordered partition of the
@@ -201,7 +200,7 @@ named capability or new entity implies. That reference is a stack-agnostic
 
 `plan` threads the `disposition` field from the architect (Step 3) through the
 issue-author brief (Step 4) to the plan file (Step 7); a candidate the architect did
-not mark is recorded `grounded`, byte-for-byte as before. At Step 7 `plan` renders
+not mark is recorded `grounded`. At Step 7 `plan` renders
 each `implied` candidate **distinctly**, carrying the
 `[implied - review / trim / augment]` marker on its issue heading. And **only when
 the plan carries at least one implied candidate**, it fires a structural
@@ -211,7 +210,7 @@ confirm/override moment the user already sees the milestone identity:
 non-blocking: the user reviews, trims, or augments the implied candidates before
 running `create`, and every proposed surface lands in a plan reviewed before any
 issue exists. When no candidate is implied, nothing here surfaces (no marker, no
-prompt), exactly as before.
+prompt).
 
 **The reference is a floor, not a ceiling.** It is deliberately short and
 conceptual: it ensures the architect *considers* the conventional set, and never
@@ -245,8 +244,8 @@ compose, never conflict.
 
 Every layer assignment and layer edge **cites the project's stated architecture**
 (the same rigor gate every design call clears); a layer that cannot be grounded is
-**not** assigned. A project that states **no** layering convention (the section
-absent / `[TBD]`, or an unlayered stack) produces **no** `layer` field and **no**
+**not** assigned. A project that states no layering convention (the section
+absent / `[TBD]`, or an unlayered stack) produces **no** `layer` field and no
 layer edge; ordering falls to clause 3 and clause 11 edges, with no
 fabricated layering. `plan` threads the optional `layer` from the architect (Step 3)
 through the issue-author brief (Step 4), and the issue-author **records** it as a
@@ -271,13 +270,13 @@ edge orders each pair and the graph stays acyclic. The Waves consume an `after` 
 like any other, so the two land in
 successive Waves. `plan` threads the list into the issue's `Edits:` line, so the driver
 sees the file scope. Additive, **no new config key**, and lists that never intersect
-produce today's dependency-only order, unchanged (`SPEC.md` §3.1, shared-file ordering).
+produce the dependency-only order (`SPEC.md` §3.1, shared-file ordering).
 
 ### Config pointers (reference, not pre-solve)
 
-With the feeder no longer reviewing (the driver's triage is the single automated entry
-gate), its job is to make sure the driver has the right config, so the issue-author
-also POINTS each issue at the `.project` config the driver reads at **build time**. In
+The feeder does not review (the driver's triage is the single automated entry
+gate); its job is to make sure the driver has the right config, so the issue-author
+also points each issue at the `.project` config the driver reads at **build time**. In
 the same `## Design` block that carries `Convention followed:` and `Layer:`, keyed to
 what the issue touches: styling → `.project/tokens.json` / `.project/design-system.md#<section>`;
 deployment/env → `.project/environment.md` (a touched convention already rides the
@@ -285,7 +284,7 @@ deployment/env → `.project/environment.md` (a touched convention already rides
 the values into the body: no resolved hex, no parsed token values, no pre-solved
 render. The render and tokens are the **driver's** to consume at build time; the feeder
 only reminds the driver where they live. The line is additive: an issue touching none
-of these, or a project missing the doc, carries no pointer, byte-for-byte as today. A
+of these, or a project missing the doc, carries no pointer. A
 missing doc is no error and no fabricated reference. It reuses the existing `projectDocs`
 grounding. **No new config key** (`SPEC.md` §4, config pointers).
 
@@ -303,6 +302,7 @@ invariant holds) performs the GitHub writes in a fixed order. Only the
 | c | **Create each gate-surviving issue** in Wave order, applying its `ui`/`logic` + `risk:*` labels; build the slug→`#n` map. On adopt, title-matched open issues are reused (no duplicate) and their bodies left as-is. |
 | d | **Second pass: rewrite slug→`#n`** (substring-safe) in each newly-created issue body and in the milestone description, then `gh issue edit`/`gh api PATCH`. Two passes are required because numbers don't exist until pass (c). |
 | e | **File the needs-product-input report**: epic comment when the brief was a GitHub epic, else a local file. |
+| f | **Mirror the milestone to Trello**: best-effort, only when the driver profile carries `integrations.trello`; a Trello failure logs one line and never fails the deploy. |
 
 Idempotent re-run relies on stable, exact, open issue titles: the adopt +
 match-by-title path reuses existing issues rather than duplicating them, and pass
@@ -310,20 +310,20 @@ match-by-title path reuses existing issues rather than duplicating them, and pas
 
 **A roadmap of N milestones (Step 1R).** When `plan`'s roadmap flow left a **roadmap
 manifest** for the brief, `create` deploys **all N** milestones in one run by
-**looping the per-plan deploy above** (passes a–e, unchanged) over the manifest's
+**looping the per-plan deploy above** (passes a-f) over the manifest's
 milestones in build order, adding only the outer loop. Each milestone's description
 gains one canonical `build order: milestone X of N` line (the cross-milestone
 position the driver reads to build the roadmap in sequence), ridden inside pass (d)'s
 REPLACE-form PATCH so it stays idempotent: the count never grows. The single-plan
-path is the **N=1** case, byte-for-byte unchanged; a mid-loop failure stops and
+path is the **N=1** case; a mid-loop failure stops and
 reports, deletes nothing, and a re-run resumes (already-deployed milestones adopted
-by exact title, the rest deployed). That resume is now short-circuited for
+by exact title, the rest deployed). That resume is short-circuited for
 already-fully-deployed milestones by a per-run deploy checkpoint
 (`docs/create-deploy-sequence.md` → "The deploy checkpoint (resume short-circuit,
 roadmap-only)").
 
-After the write sequence (a–e), `create` runs a
-top-level **Step 4: the driver handoff**. It is **not** a GitHub write and is **not** part of the pass-(d)
+After the write sequence (a-f), `create` runs a
+top-level Step 4: the driver handoff. It is **not** a GitHub write and is not part of the pass-(d)
 idempotent-re-run guarantee. It is a post-deploy skill invocation; see
 [The create → driver handoff](#the-create--driver-handoff).
 
@@ -336,8 +336,7 @@ deployed. This is a **post-deploy skill invocation, not a GitHub write**: it
 authors nothing on GitHub; it kicks off the driver. Because it is not a write, it
 is **not** part of the pass-(d) idempotent-re-run guarantee: re-running `create`
 after a handoff fired would **re-offer** (or, under `"auto"`, re-fire) the handoff,
-not no-op. It is modelled as `create`'s top-level **Step 4**, run after the pass
-a–e write sequence, not as a sixth write pass.
+not no-op. It is modelled as `create`'s top-level **Step 4**, run after passes a-f.
 
 The `autoHandoff` own-key (default `"prompt"`) governs it: `"prompt"`
 asks first, `"auto"` kicks off immediately, `"off"` never offers. Three gates must
@@ -384,7 +383,7 @@ The feeder's quality bar *is* the driver's entry gate: every issue it drafts is
 authored to pass the driver's `triage-reviewer` (and `design-reviewer` for UI
 issues) clean (`GAPS: none`). One shared definition of "well-formed," never a
 second drifting copy (`SPEC.md` §5). But the feeder runs **no** reviewer gate of its
-own: it **DRAFTS** issues that **TARGET** that bar; the driver's own triage is the
+own: it drafts issues that target that bar; the driver's own triage is the
 **single automated entry gate**, run once after `create` when the driver picks the
 milestone up. Between them stands the human, who reviews the plan file before
 `create` deploys.
@@ -410,8 +409,8 @@ dropped from the emitted milestone (`plan` Step 5 drop pass).
 |---|---|---|
 | Plan | `/milestone-feeder:plan <brief>` | Full procedure, Steps 0–5; stops at the plan file. **No GitHub writes.** |
 | Create | `/milestone-feeder:create <brief>` | Deploys the approved plan: ensures the labels, creates the milestone + issues (and an epic comment for a GitHub-epic brief). Runs `plan` first only when no plan file exists. |
-| Update | `/milestone-feeder:update <brief>` | Reconcile a refreshed plan onto an **existing** milestone (matched by exact title): patch gapped bodies, fill missing edges, re-render the Wave order, showing the diff before it writes. **Never closes/deletes**; a live issue absent from the plan is flagged for your decision; a clean milestone is a true no-op (writes nothing). |
-| Remediate | `/milestone-feeder:remediate <issue-number>` | Correct one issue body against the driver's recorded `🔴 Triage` findings, editing the named text **in place**, showing the diff before it writes. **Never appends a correction section**, never touches labels; a finding needing a product or architecture call stays parked; an already-corrected issue is a true no-op (writes nothing). See [The remediation path](#the-remediation-path). |
+| Update | `/milestone-feeder:update <brief>` | Reconcile a refreshed plan onto an existing milestone (matched by exact title): patch gapped bodies, fill missing edges, re-render the Wave order, showing the diff before it writes. **Never closes/deletes**; a live issue absent from the plan is flagged for your decision; a clean milestone is a true no-op (writes nothing). |
+| Remediate | `/milestone-feeder:remediate <issue-number>` | Correct one issue body against the driver's recorded `🔴 Triage` findings, editing the named text in place, showing the diff before it writes. **Never appends a correction section**, never touches labels; a finding needing a product or architecture call stays parked; an already-corrected issue is a true no-op (writes nothing). See [The remediation path](#the-remediation-path). |
 
 **Authoring-autonomy boundary.** The feeder makes design/implementation calls
 grounded in your project's standing docs or a stated repo convention, and cites

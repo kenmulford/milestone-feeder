@@ -3,8 +3,8 @@
 # check-vocabulary.sh: the vocabulary-purge and em-dash gate.
 #
 # What this checks, in plain terms:
-#   Two categories ride one `git grep` over the live, committed consumer
-#   surface, so a pull request that reintroduces either one fails.
+#   Three categories ride `git grep` over the live, committed consumer
+#   surface, so a pull request that reintroduces any one fails.
 #
 #   Category 1, retired vocabulary. v0.3.0 renamed the plugin's whole surface
 #   (docs/specs/v0.3.0-humanize-the-surface.md (## 11. Verification)). The old
@@ -16,6 +16,19 @@
 #   it. This gate is that ban's backstop: it fails the moment a stray U+2014
 #   reaches the scanned surface. It does not police WHICH replacement an author
 #   picked, because the ban's construction table and rank are a human call.
+#
+#   Category 3, two regressions of the prompt-surface repair
+#   (docs/briefs/2026-10-19-prompt-audit.md (## 1. Issue bodies are written from
+#   a file in `update`) and (## 5. Current behavior only, no version history)).
+#   An issue-body write passes `--body-file`, never an inline `--body` string.
+#   The prompt surface states the current rule, so the build-history phrases
+#   HISTORY_PATTERN names stay out. Both scans cover one stated set, the same
+#   set the emphasis gate in scripts/validate-plugin-structure.py covers:
+#   skills/*/SKILL.md, agents/*.md, .project/*.md, and the top-level docs/*.md.
+#   docs/briefs/** and docs/specs/** are excluded: they record the history.
+#   Category 2 alone is wider (the whole tree minus its excluded pathspecs)
+#   because the retired words and the em dash must not reach any shipped file,
+#   scripts/emit-notice.json included.
 #
 # Authoritative definition:
 #   Category 1 is SPEC-owned. Tokens (case-insensitive): decompose,
@@ -31,6 +44,9 @@
 #   own definition the way scripts/check-contract-strings.sh (Authoritative
 #   definition) hosts the two contract strings. Widening it is a change to this
 #   header and to .project/conventions.md (## Em-dash ban) together.
+#
+#   Category 3 is owned HERE too: its two patterns are BODY_PATTERN and
+#   HISTORY_PATTERN below, copied from the brief's acceptance greps.
 #
 #   This file names the character in prose as "em dash (U+2014)" and never
 #   reproduces the glyph, so it carries no U+2014 byte of its own, whatever its
@@ -113,12 +129,7 @@ PATTERN="${VOCAB_PATTERN}|${EMDASH}"
 #
 # Every row quotes a source this ban cannot reach, so recasting it would turn
 # the quote into a misquote:
-#   rows 1 and 2  docs/specs/v0.3.1-driver-handoff.md, an excluded pathspec.
-#   rows 3 and 4  the milestone-driver plugin's
-#                 skills/solve-milestone/trello-sync.md (Conv 7's checklist
-#                 item format and Conv 1's failure-log format). A separate
-#                 repo, carrying no em-dash ban, so neither source will ever
-#                 follow a recast.
+#   both rows  docs/specs/v0.3.1-driver-handoff.md, an excluded pathspec.
 # Recorded as carve-out 3 at .project/conventions.md (## Em-dash ban).
 #
 # By SPAN, never by line and never by file. A seventh pathspec exclusion would
@@ -128,8 +139,6 @@ PATTERN="${VOCAB_PATTERN}|${EMDASH}"
 ALLOWLIST_ROWS=(
   "docs/create-deploy-sequence.md|The deploy receipt ${EMDASH} a stable handle for rename"
   "docs/create-deploy-sequence.md|\`<n>\` ${EMDASH} the deploy receipt"
-  "docs/create-deploy-sequence.md|#<n> ${EMDASH} <issue title>"
-  "docs/create-deploy-sequence.md|Trello: <operation> skipped ${EMDASH} <error>"
 )
 
 # --- check 1: the allowlist itself has not rotted ---------------------------
@@ -206,7 +215,7 @@ fi
 # --no-color is load-bearing, not cosmetic. A developer with `color.ui` or
 # `color.grep` set to `always` gets ANSI escapes wrapped around the path field
 # and around every match, so `${match%%:*}` below yields a decorated path that
-# matches no ALLOWLIST_ROWS file, no span is stripped, and all four sanctioned
+# matches no ALLOWLIST_ROWS file, no span is stripped, and both sanctioned
 # quotes report as violations on an unmodified tree. Verified: with
 # `color.ui=always` and no --no-color, this gate exits 1 on a clean checkout.
 # CI is unaffected (no color config, not a TTY), which makes it precisely the
@@ -286,12 +295,52 @@ while IFS= read -r match; do
   fi
 done <<< "${MATCHES}"
 
+# --- check 3: the body-flag and history-phrase scans -------------------------
+#
+# Two fixed-scope scans, each its own `git grep` because their patterns differ.
+# Both scans take the one stated set: skills/*/SKILL.md, agents/*.md,
+# .project/*.md, and the top-level docs/*.md (`:(glob)docs/*.md` stops at the
+# top level, so docs/briefs/** and docs/specs/** are never scanned). A grep
+# error (exit >1) fails closed like check 2.
+SCAN_PATHSPECS=(':(glob)skills/*/SKILL.md' ':(glob)agents/*.md' ':(glob).project/*.md' ':(glob)docs/*.md')
+
+# The inline-body forms: `--body` followed by a space and any word (quoted,
+# `$var`, or bare), `--body=`, `-b` followed by a space and a quote or `$`, and
+# `--body` or `-b` ending a line on a `\` continuation. `--body-file` never
+# matches: a space, `=`, or end of line must follow `--body`.
+BODY_PATTERN='--body([[:space:]]+[^[:space:]]|=)|(^|[[:space:]`(])-b ["'"'"'$]|(--body|(^|[[:space:]`(])-b)[[:space:]]*\\$'
+# Case-sensitive, like the brief's acceptance grep. The history forms only:
+# `(new logic`, `(new twin`, `(acceptance criterion:`, and `relocated out of` /
+# `relocated byte-for-byte` are the old parenthetical and heading framings. The
+# bare words stay legal: a `logic` label, "acceptance criterion: empty state".
+HISTORY_PATTERN='unchanged by this refactor|\((new logic|new twin|acceptance criterion:)|new twin pair|[Aa]s v0\.[0-9]|the v0\.[0-9.]+ (path|apply)|[Ee]xactly as today|How each acceptance criterion|[Rr]elocated (out of|byte-for-byte)|byte-unchanged|[Uu]nchanged from today'
+
+set +e
+BODY_HITS="$(git grep --no-color -EInH -e "${BODY_PATTERN}" -- \
+  "${SCAN_PATHSPECS[@]}")"
+body_status=$?
+HISTORY_HITS="$(git grep --no-color -EInH -e "${HISTORY_PATTERN}" -- \
+  "${SCAN_PATHSPECS[@]}")"
+history_status=$?
+set -e
+
+for scan_status in "${body_status}" "${history_status}"; do
+  case "${scan_status}" in
+    0|1) ;;
+    *)
+      echo "ERROR: 'git grep' failed (exit ${scan_status}). Scan unreliable; failing closed." >&2
+      exit 2
+      ;;
+  esac
+done
+
 # --- report -----------------------------------------------------------------
 
-if [ -z "${vocab_hits}" ] && [ -z "${mark_hits}" ]; then
-  echo "PASS: no retired v0.3.0 vocabulary and no em dash on the live plugin surface."
+if [ -z "${vocab_hits}" ] && [ -z "${mark_hits}" ] && [ -z "${BODY_HITS}" ] && [ -z "${HISTORY_HITS}" ]; then
+  echo "PASS: no retired v0.3.0 vocabulary, no em dash, no inline issue-body flag, and no build-history phrase on the live plugin surface."
   echo "      (tokens checked: decompose, substrateDir, selfCheck, --apply)"
   echo "      (character checked: em dash U+2014; ${#ALLOWLIST_ROWS[@]} quoted spans allowlisted)"
+  echo "      (flags checked: ${BODY_PATTERN}; phrases checked: ${HISTORY_PATTERN})"
   exit 0
 fi
 
@@ -319,6 +368,26 @@ if [ -n "${mark_hits}" ]; then
   echo "      that same convention, in the same change." >&2
   echo >&2
   printf '%s' "${mark_hits}" >&2
+  echo >&2
+fi
+
+if [ -n "${BODY_HITS}" ]; then
+  echo "FAIL: an inline issue-body flag reached the prompt surface." >&2
+  echo "      Write the body to a file and pass it with --body-file; for the" >&2
+  echo "      issue write sequence use scripts/deploy-write-sequence.sh" >&2
+  echo "      (create-issues, apply-bodies, apply-body)." >&2
+  echo >&2
+  printf '%s\n' "${BODY_HITS}" >&2
+  echo >&2
+fi
+
+if [ -n "${HISTORY_HITS}" ]; then
+  echo "FAIL: a build-history phrase reached the prompt surface." >&2
+  echo "      State the current rule; do not narrate what changed or what the" >&2
+  echo "      version before did (docs/briefs/2026-10-19-prompt-audit.md," >&2
+  echo "      ## 5. Current behavior only, no version history)." >&2
+  echo >&2
+  printf '%s\n' "${HISTORY_HITS}" >&2
   echo >&2
 fi
 

@@ -14,7 +14,7 @@ The dispatching `plan` skill provides:
 
 - **The brief**: normalized, what to build and why, in product terms.
 - **The resolved project-docs digest**: the filled `.project/<doc>.md#<section>` slices `plan` assembled in Step 0, holding the project's design defaults, format conventions, naming, and the patterns to mirror. Read those rather than walking `.project/` yourself; verify every citation against the live repo per the Rigor gate below, and grep for whatever the digest does not cover.
-- **The resolved implied-surfaces reference**: `docs/implied-surfaces.md` plus any project-local overlay, handed in like the digest. It is the reasoning prompt clause 8 consults; absent or empty makes that consult a no-op, and you break the brief down exactly as today.
+- **The resolved implied-surfaces reference**: `docs/implied-surfaces.md` plus any project-local overlay, handed in like the digest. It is the reasoning prompt clause 8 consults; absent or empty makes that consult a no-op.
 - **The resolved shared profile keys**: the values for `sourceGlobs`, `uiSurfaceGlobs`, and `integrationBranch`, from the driver config.
 - **Sizing guidance**: `issueSize` when the profile carries it, else clause 1's sizing rules.
 
@@ -38,21 +38,21 @@ A candidate breakdown satisfying every clause below:
 
 **5. UI-vs-logic + risk hint.** Pre-classify each candidate `surface: ui | logic` (UI = it touches a `uiSurfaceGlobs` path or carries a visible/interactive affordance) and attach a `risk: light | heavy` hint. Default `heavy` when unsure.
 
-**6. LOCAL TAGS, not GitHub numbers.** Candidates carry local tags (`#A`, `#B`, `#C`), never GitHub issue numbers. Edges and Waves reference the same tags.
+**6. Local tags, not GitHub numbers.** Candidates carry local tags (`#A`, `#B`, `#C`), never GitHub issue numbers. Edges and Waves reference the same tags.
 
-**7. Multi-milestone guardrail.** The feeder stays _one brief → one milestone_, but signals when a brief reads as several: **distinct phased deliverables** or **release boundaries**, or a breakdown **large/heavy enough** (many candidates and/or several `risk:heavy` items) to read as more than one milestone's worth of work _and_ a **clean dependency seam** exists to split on. The size/heaviness judgment is qualitative, no numeric cutoff; a large/heavy breakdown with no clean seam stays `none`.
+**7. Multi-milestone guardrail.** The feeder stays _one brief → one milestone_, but signals when a brief reads as several: distinct phased deliverables or release boundaries, or a breakdown large/heavy enough (many candidates and/or several `risk:heavy` items) to read as more than one milestone's worth of work _and_ a clean dependency seam exists to split on. The size/heaviness judgment is qualitative, no numeric cutoff; a large/heavy breakdown with no clean seam stays `none`.
 
-When either trigger fires, raise `SCOPE_SPANS_MULTIPLE_MILESTONES` with a proposed split: each candidate milestone named, with the candidate LOCAL TAGS (never GitHub numbers, clause 6) under it. The split strictly partitions `CANDIDATES`: every tag in exactly one milestone, none unassigned, none duplicated, two or more milestones named. A single bucket, or a single coherent release, is the literal `none`.
+When either trigger fires, raise `SCOPE_SPANS_MULTIPLE_MILESTONES` with a proposed split: each candidate milestone named, with the candidate local tags (never GitHub numbers, clause 6) under it. The split strictly partitions `CANDIDATES`: every tag in exactly one milestone, none unassigned, none duplicated, two or more milestones named. A single bucket, or a single coherent release, is the literal `none`.
 
 Detection and a proposed split only: never version the milestones, order them, or produce a full N-milestone breakdown. Full multi-milestone support lives in `agents/roadmap-splitter.md`, which supersedes this clause. `plan`'s advisory surfacing consumes the block downstream (`docs/specs/v0.3.1-driver-handoff.md` §6, §5).
 
 **8. Implied companion surfaces: consult, then sort.** For each named capability or new entity the brief invokes, consult the implied-surfaces reference (`docs/implied-surfaces.md` plus any project-local overlay) for the standard companion surfaces it implies, then sort each with clause 2's grounded-vs-gap judgment:
 
-- A **conventional surface** (a standard companion with a conventional default, e.g. email → a delivery-failure log, a Users entity → reset-password) is proposed as a default-in candidate labeled **`implied - review / trim / augment`**: it rides `CANDIDATES` with `disposition: implied`, its sketch carrying that instruction plus the cluster it came from, and lands in a plan the human approves before any issue exists. This holds even when the companion reuses infrastructure the app already has: reuse is not grounds to absorb it as grounded design on the consuming issue instead (distinct from the Dedupe rule below, which covers a companion already authored as a candidate here, not infrastructure that predates it).
+- A **conventional surface** (a standard companion with a conventional default, e.g. email → a delivery-failure log, a Users entity → reset-password) is proposed as a default-in candidate labeled `implied - review / trim / augment`: it rides `CANDIDATES` with `disposition: implied`, its sketch carrying that instruction plus the cluster it came from, and lands in a plan the human approves before any issue exists. This holds even when the companion reuses infrastructure the app already has: reuse is not grounds to absorb it as grounded design on the consuming issue instead (distinct from the Dedupe rule below, which covers a companion already authored as a candidate here, not infrastructure that predates it).
 - A **genuine product-call** (no conventional default, e.g. email → a suppression policy) is parked via `PRODUCT_GAPS`.
 - A companion groundable in neither a convention nor a real product decision is not emitted as implied: it goes to `PRODUCT_GAPS` or is dropped.
 
-Apply the reference's three triggers: the **new-entity baseline cluster** (list / detail / create / edit / delete / states / permissions / audit, `#new-entity-baseline`) per entity, never bundled into bare pages; **named capabilities** concept-matched, not keyword-matched (`#named-capabilities`), so "let admins message members" is the messaging capability even when "email" never appears; **cross-cutting** concerns (search / filter / sort, background jobs) once at the app level (`#cross-cutting`), not per entity.
+Apply the reference's three triggers: the new-entity baseline cluster (list / detail / create / edit / delete / states / permissions / audit, `#new-entity-baseline`) per entity, never bundled into bare pages; named capabilities concept-matched, not keyword-matched (`#named-capabilities`), so "let admins message members" is the messaging capability even when "email" never appears; cross-cutting concerns (search / filter / sort, background jobs) once at the app level (`#cross-cutting`), not per entity.
 
 **Dedupe:** a companion a candidate you have written already covers is not double-emitted. States (empty / loading / error / unauthorized) are considered so none is overlooked, but land as acceptance criteria inside their own screen issue (`agents/issue-author.md` Completeness clause), never as standalone candidates. Fanned-out surfaces reuse clause 1's ~1-PR sizing. An absent or empty reference makes this clause a no-op.
 
@@ -64,9 +64,9 @@ Apply the reference's three triggers: the **new-entity baseline cluster** (list 
 - A layer you cannot ground in a stated layering convention is not assigned: the candidate carries no `layer` field, and ordering falls back to clause 3 and clause 11 edges.
 - A project whose standing docs state no layering convention gets no `layer` field, no layer edge, and the order clauses 3 and 11 produce.
 
-**10. Cross-candidate invariants: resolve once, then transcribe.** A directive that must hold across two or more candidates (a page size, a sort order, a date format, an ID or naming rule) is resolved ONCE here and returned in `INVARIANTS`, never left for each candidate to re-derive.
+**10. Cross-candidate invariants: resolve once, then transcribe.** A directive that must hold across two or more candidates (a page size, a sort order, a date format, an ID or naming rule) is resolved once here and returned in `INVARIANTS`, never left for each candidate to re-derive.
 
-- Record each one as an `INVARIANTS` entry carrying `key` (a short stable name), `value` (the directive VERBATIM, literal values intact), `citation` (the project-docs ref, the recorded brief line, or a sibling `path (anchor)` or `file:line`, per the Rigor gate), and `applies_to` (the two or more candidate tags it binds).
+- Record each one as an `INVARIANTS` entry carrying `key` (a short stable name), `value` (the directive verbatim, literal values intact), `citation` (the project-docs ref, the recorded brief line, or a sibling `path (anchor)` or `file:line`, per the Rigor gate), and `applies_to` (the two or more candidate tags it binds).
 - Transcribe `value`, never paraphrase it: a directive naming a literal keeps that literal.
 - `applies_to` draws its tags from `CANDIDATES` as returned, the full set, never the reduced set the Step 3.5 pre-park and Step 5 drop pass leave.
 - A directive binding exactly one candidate is never emitted here: it stays that candidate's own design, grounded in its sketch under clause 2.
@@ -74,7 +74,7 @@ Apply the reference's three triggers: the **new-entity baseline cluster** (list 
 - A directive you cannot ground in the recorded brief line, the project docs, or an established repo convention is not an invariant: it is a clause 2 call.
 - A breakdown in which no directive binds two or more candidates returns the literal `none`.
 
-**11. Shared-file ordering.** Each candidate's optional `edits:` field lists the EXISTING repo files it modifies, every path verified to exist; a file the candidate introduces is clause 3's and is never listed. Two candidates whose lists intersect get one ordering edge naming every shared path, `#B after #A - edits: <path>[, <path>]`, emitted pairwise over each overlapping pair:
+**11. Shared-file ordering.** Each candidate's optional `edits:` field lists the existing repo files it modifies, every path verified to exist; a file the candidate introduces is clause 3's and is never listed. Two candidates whose lists intersect get one ordering edge naming every shared path, `#B after #A - edits: <path>[, <path>]`, emitted pairwise over each overlapping pair:
 
 - **One edge per pair.** A clause 3 or clause 9 edge already relating the pair, in either direction, orders it: no `after` edge for that pair, and no `after` edge ever points against the order clauses 3 and 9 set.
 - **Direction.** Sort the candidates by clause 3 and clause 9 edges alone first. The candidate in the earlier Wave of that sort goes first; within one Wave, the smaller `edits:` list, then the earlier-assigned tag (`#A` before `#B`, `#Z` before `#AA`). Every `after` edge derives from that one order, so the graph stays acyclic.
@@ -146,9 +146,9 @@ INVARIANTS:
 
 Dispatched again, only when the brief gained items after your first return (`docs/incremental-replan.md`, the detection rule).
 
-**Receive instead:** the prior `CANDIDATES`, `EDGES`, and `WAVES` (reconstructed from the prior plan file), only the ADDED brief items, and the same Step-0 grounding already resolved. Never re-resolved.
+**Receive instead:** the prior `CANDIDATES`, `EDGES`, and `WAVES` (reconstructed from the prior plan file), only the added brief items, and the same Step-0 grounding already resolved. Never re-resolved.
 
-**Return instead:** only NEW `CANDIDATES` and new `EDGES` (an edge may name an existing tag), plus `PRODUCT_GAPS` scoped to the added items. Omit `WAVES`: `plan` recomputes it over the merged edges (clause 4).
+**Return instead:** only new `CANDIDATES` and new `EDGES` (an edge may name an existing tag), plus `PRODUCT_GAPS` scoped to the added items. Omit `WAVES`: `plan` recomputes it over the merged edges (clause 4).
 
 **Never rewrite an existing candidate.** A prior tag, title, or sketch is read-only context, transcribed nowhere, altered nowhere. New candidates continue the prior tag sequence (`#E` handed in → next new tag `#F`).
 
@@ -177,11 +177,11 @@ The GitHub prose contract is defined once at `agents/issue-author.md` `## Prose 
 
 It binds exactly two of your slots: the `sketch` field and the `<reason>` clause inside each `EDGES` entry, both defined in the return block above and both riding downstream into GitHub text (`skills/plan/SKILL.md (Brief each with)` hands the sketch to the issue-author). It does not bind `title`, `surface`, `risk`, `layer`, or `edits`: one-liners, enums, and a path list, carrying no prose. Nor a clause 10 `value`: a `value` stays byte-identical, and no cut pass rewrites it. Nor a clause 11 `after` edge's `<reason>`, which is its path list: it stays byte-identical too, never cut and never replaced by a citation. Where a sketch carries clause 8's literal `implied - review / trim / augment` directive, that directive stays byte-identical.
 
-`## Communication style` below governs your return's structure: which block you emit, the `CANDIDATES` / `EDGES` / `WAVES` / `PRODUCT_GAPS` shape, the `#A` / `#B` tag convention, and the enum values.
+`## Communication style` below governs your return's structure: which block you emit, the `CANDIDATES` / `EDGES` / `WAVES` / `PRODUCT_GAPS` / `SCOPE_SPANS_MULTIPLE_MILESTONES` / `INVARIANTS` shape, the `#A` / `#B` tag convention, and the enum values.
 
 ## Communication style
 
-Defined once at `docs/style-contracts.md#communication-style`. The structured block you return is the `CANDIDATES` / `EDGES` / `WAVES` / `PRODUCT_GAPS` block above.
+Defined once at `docs/style-contracts.md#communication-style`. The structured block you return is the `CANDIDATES` / `EDGES` / `WAVES` / `PRODUCT_GAPS` / `SCOPE_SPANS_MULTIPLE_MILESTONES` / `INVARIANTS` block above.
 
 Local tags throughout (`#A`, `#B`), never GitHub numbers.
 

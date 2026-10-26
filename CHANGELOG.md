@@ -3,6 +3,45 @@
 Release notes for milestone-feeder. Each tagged release is also published on the
 [GitHub Releases page](https://github.com/kenmulford/milestone-feeder/releases).
 
+## v1.0.2: prompt-surface repair
+
+**Theme:** The feeder's skills, agents and the docs they load state current behavior only, every issue body is written from a file, every citation resolves to the passage it names, and bold and caps mark only the clause that gates behavior. CI now fails on an inline issue-body flag, a build-history phrase, or a line that breaks the emphasis register.
+
+### ✨ Prompt-surface repair
+
+| Issue | PR | What |
+|---|---|---|
+| #529 Apply the emphasis register to update | #545 | `skills/update/SKILL.md` keeps one bold run per line, on the gating clause, and lowercases caps used for emphasis. Version set to 1.0.2. |
+| #530 Apply the emphasis register to create and its deploy sequence | #545 | Same register in `skills/create/SKILL.md` and `docs/create-deploy-sequence.md`. |
+| #531 Apply the emphasis register to remediate | #545 | Same register in `skills/remediate/SKILL.md`; `ERROR-AND-STOP` reads `error-and-stop`, matching `update`. |
+| #532 Apply the emphasis register to setup | #545 | Same register in `skills/setup/SKILL.md`; glob literals stay as written. |
+| #533 Apply the emphasis register to build-roadmap | #545 | Same register in `skills/build-roadmap/SKILL.md`. |
+| #534 Write every issue body in update from a file | #545 | Every issue-body and report write in `update`, `create` and the deploy doc uses `--body-file`, so a multi-line body never passes through shell quoting. |
+| #535 Correct the stale hook, deploy, and update facts in the docs | #545 | The hook docs say the source-edit deny binds the main thread and the feeder's own agents while a non-feeder subagent passes. The architecture write order lists passes a-f. `update` creates missing issues and deletes none. `create` deploys every roadmap milestone in one run. |
+| #536 Apply the emphasis register to plan and the docs it loads | #545 | Same register in `skills/plan/SKILL.md` and its four docs. |
+| #537 Resolve the five cross-file contradictions | #545 | `plan`'s first single-brief run passes neither version parameter. `plan`, `create`, `update` and `remediate` all auto-invoke setup. The architect lists all six return keys. The remediator may add only the template's Design section. |
+| #538 State current behavior only in the skills, architect, and update-reconcile doc | #545 | Version-history framing in `plan`, `update`, `create` and the architect is restated as the current rule; the `update-reconcile-parent` headings drop their parentheticals. |
+| #539 Repoint citations to the files that hold the content | #545 | Pass (b) citations point at `docs/create-deploy-sequence.md`; `create`'s own-key citation points at `docs/profile-schema.md (## Own keys)`. |
+| #540 Correct the profile, scenario, carve-out, and audit-count facts | #545 | The profile schema names the three keys without a default and says `sourceGlobs` fails open; the scenario list matches `tests/scenarios`; the never-claims audit drops its dated counts. |
+| #541 State current behavior only in the deploy and contract docs | #545 | Seven deploy and contract docs state the current rule; the "How each acceptance criterion is met" tables are gone. |
+| #542 State current behavior only in the grounding, style docs, and .project | #545 | The grounding, style and `.project` docs state their rules in present tense. |
+| #543 Apply the emphasis register to the agents and .project | #545 | Same register in `agents/*.md` and `.project/*.md`; the pinned contract fragments are unchanged. |
+| none (simplify pass and milestone-end review) | #545 | `deploy-write-sequence apply-body <n> <body-file>` (bash and PowerShell) prints the live-to-new diff, then edits from the same file. It makes no edit when the bodies match after normalizing line endings, a BOM and trailing newlines, and it exits 3 without writing when no diff tool exists. `update` and `remediate` call it through `${CLAUDE_PLUGIN_ROOT}`. `update` rewrites plan slugs to live numbers before comparing bodies, so a cross-referencing issue no longer looks drifted. The register now covers every top-level doc. |
+
+### Consumer notes (upgrading from v1.0.1)
+
+- **No schema changes** to `.milestone-config/feeder.json` or `.milestone-config/driver.json`.
+- `update` no longer rewrites an issue whose body differs from the plan only in slug references or line endings.
+- `update` and `remediate` patch issue bodies through `apply-body`, which prints the diff before each edit.
+
+### ⚖️ Post-run audit trail
+
+Judgment-call PRs: none.
+
+- New CI checks: `check-vocabulary.sh` fails on inline issue-body flags and the brief's history phrases; `validate-plugin-structure.py` fails on two bold runs on a line or a listed caps word outside code. All of them scan `skills/*/SKILL.md`, `agents/*.md`, `.project/*.md` and the top-level `docs/*.md`. All-caps words outside the brief's list are not checked.
+- Ceilings lowered: `docs/create-deploy-sequence.md` 12100 to 11350, `docs/update-reconcile-parent.md` 2450 to 2250, `docs/profile-schema.md` 2400 to 2350, `docs/roadmap-fan-out.md` 2450 to 2400. None raised.
+- `tests/RESULTS.md` still cites `skills/plan/SKILL.md ("treat every candidate as **logic**")`, which matches nothing; it predates this release.
+
 ## v1.0.1: runnable site search
 
 **Theme:** The `Sites searched:` line an issue records is now one runnable `grep -rnE` command, so milestone-driver triage re-runs the search byte for byte instead of searching again. A search that is not exhaustive says so with a `partial:` marker.

@@ -21,15 +21,14 @@ same mechanism `docs/one-time-notices.md:14-17` and
 | [`## GitHub prose style`](#github-prose-style) | The **human-facing prose an agent authors**: issue bodies, milestone descriptions, parent-issue narrative, and the roadmap change-rationale a human reads at the split confirmation. Checkbox bullets and `- Key: value` one-liners; zero tables. | `agents/issue-author.md` `## Prose style`, the single definition. |
 | [`## Communication style`](#communication-style) | The **wrapper an agent returns to its caller**: which block it emits and the enum/tag structure inside it. | This file, [below](#communication-style). |
 
-The first two read as contradictory only because neither used to say which
-surface it governs. `## Output style` mandates tables because a terminal
+The first two do not conflict: each governs its own surface. `## Output style` mandates tables because a terminal
 report is scanned; the GitHub prose contract forbids them because an issue
 body is parsed by the driver's triage and read in a browser
 (`agents/issue-author.md (§4 issue-body template)`). Both are right for their own surface.
 
 ## Output style
 
-Be concise: report status and outcomes flatly, no wall-of-text. Present steps, gates, lists, and options as **tables**, not inline prose. Mark anything that needs a human with 🔴. **Plain English.** Write every response, document, and GitHub issue, milestone, comment, and PR body in plain, concise English. Never include hypothesis, conjecture, or defensive text. (Mirrors [`## Communication style`](#communication-style) below, the agents' twin of this contract.)
+Be concise: report status and outcomes flatly, no wall-of-text. Present steps, gates, lists, and options as tables, not inline prose. Mark anything that needs a human with 🔴. **Plain English.** Write every response, document, and GitHub issue, milestone, comment, and PR body in plain, concise English. Never include hypothesis, conjecture, or defensive text. (Mirrors [`## Communication style`](#communication-style) below, the agents' twin of this contract.)
 
 **Who this binds:** `skills/build-roadmap/SKILL.md`, `skills/plan/SKILL.md`,
 `skills/setup/SKILL.md`, `skills/create/SKILL.md`, `skills/update/SKILL.md`,
