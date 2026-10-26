@@ -14,10 +14,9 @@ Re-run the audit at any time:
 grep -rniE '\bnever\b|\balways\b' skills/*/SKILL.md
 ```
 
-`remediate` arrived with issue #343, after the classification below was made. Its
-claims are recorded in its own `## Non-negotiables` and backed by the Step-4
-string checks; they are in scope for the next re-run of this audit and are not
-individually classified here.
+`remediate`'s claims are not individually classified here: they are recorded in
+its own `## Non-negotiables`, backed by the Step-4 string checks, and in scope
+for the next run of this audit.
 
 ## Finding
 
@@ -49,19 +48,16 @@ honest deliverable is this claim-to-backing map plus the residual note below, no
 ## The residual (class 5) and its caveat
 
 The class-5 claims are the only ones whose backing is behavioral rather than deterministic.
-**Update (2026-07-06):** four class-5 fixtures were executed against the installed plugin with
-the real agents dispatched (`tests/RESULTS.md` run record). Three load-bearing claims are now
-**demonstrated** on the current pipeline: never-invents-scope (02, PASS), resolve-and-cite-not-
-over-park (03, PASS), and directive-consistency-at-scale (06, PASS **on 2026-07-06, then FAIL on the 2026-08-13 re-run against the v0.14.0 tree, so it is currently unbacked**). The implied-surfaces claim
-graded **PARTIAL on both its runs** (12), **and neither PARTIAL is uncontested**: each run's
-cause matches a `FAIL if` bullet on one reading, and `tests/RESULTS.md` records both readings
-rather than settling either, so treat 12 as asserted, not backed. On 2026-07-06 the parking
-and anti-fixation behavior held, but companion surfaces that already exist as app-wide infra
-were absorbed as grounded rather than marked `implied` (tracked as #284). The 2026-08-13
-re-run, with the real agents against the installed plugin at `0.13.2`, **confirms that cause
-closed** and rests its PARTIAL on a different one: a park cascade dropped three implied
-candidates and their dropped stubs carry no implied marker. The remaining class-5 fixtures
-have not been run, so those claims stay
+Four class-5 fixtures were executed against the installed plugin with the real agents
+dispatched. Backing per fixture: never-invents-scope (02, PASS) and resolve-and-cite-not-
+over-park (03, PASS) are demonstrated (`tests/RESULTS.md#Run record: 2026-07-06 (installed plugin, real agents)`).
+Directive-consistency-at-scale (06) is FAIL against the v0.14.0 tree, so it is unbacked
+(`tests/RESULTS.md#Run record: 2026-08-13`). The implied-surfaces claim (12) is PARTIAL on
+both runs and each PARTIAL is contested, so it is asserted, not backed. Its open cause is a
+park cascade that dropped three implied candidates, and their stubs carry no implied marker.
+The other cause, companion surfaces that already exist as app-wide infra absorbed as grounded
+rather than marked `implied` (#284), is closed per the 2026-08-13 run at `0.13.2`. The
+remaining class-5 fixtures are unrun, so those claims stay
 "scenario-*asserted*", not "scenario-*demonstrated*".
 
 This is honest as written for two reasons:
@@ -77,8 +73,6 @@ persisted original brief. It is already self-disclosing (it states its own fallb
 brief text genuinely cannot be captured, omit the section rather than inventing one"), so it
 reads as a directive with a stated failure mode, not an enforced guarantee.
 
-**Follow-up (done 2026-07-06):** scenarios 02 / 03 / 06 / 12 were run against the installed
-plugin and verdicts recorded in `tests/RESULTS.md` (brief item 4a). This upgraded three class-5
-claims from asserted to demonstrated and surfaced the implied-surfaces PARTIAL (#284). The
+**Follow-up:** scenarios 02 / 03 / 06 / 12 have verdicts in `tests/RESULTS.md` (brief item 4a). The
 remaining class-5 fixtures (and the eight unrun scenarios generally) are the next candidates for
 the same treatment when budget allows.

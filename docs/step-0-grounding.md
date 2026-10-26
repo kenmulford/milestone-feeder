@@ -47,7 +47,7 @@ Immediately after resolving the global reference (§3), read the optional projec
 
 The global reference is the FLOOR, never reduced; the merge is **purely additive with NO removal path**. A deletion attempt is therefore a no-op by construction (there is simply no delete operation), and an empty / add-nothing overlay yields merged == global. Per-run trimming of a surface a given milestone does not want stays the plan REVIEW's job (Step 7's implied-surfaces review prompt; `docs/implied-surfaces.md` → "Project-local overlay" → *How it merges*: "the plan review's job"), not a config-level delete.
 
-Specific degrade. An absent overlay → the global reference is used UNCHANGED, which is not an error and carries NO notice (most projects ship no overlay, the common case). An unreadable / malformed / wrong-shape overlay → **fall back to the global reference unchanged, best-effort skip, never aborting the run** (the overlay's own "Malformed input is skipped, never grounded on" contract). A non-blocking notice MAY surface the skip, but it must not gate. The overlay's discovery path (how existing users learn the overlay exists: the `setup` mention and the one-time `plan` / `update` notice) is owned elsewhere (already on develop), not this step; Step 0 only resolves + merges the overlay.
+Specific degrade. An absent overlay → the global reference is used UNCHANGED, which is not an error and carries NO notice (most projects ship no overlay, the common case). An unreadable / malformed / wrong-shape overlay → **fall back to the global reference unchanged, best-effort skip, never aborting the run** (the overlay's own "Malformed input is skipped, never grounded on" contract). A non-blocking notice MAY surface the skip, but it must not gate. The overlay's discovery path (how existing users learn the overlay exists: the `setup` mention and the one-time `plan` / `update` notice) is owned elsewhere, not this step; Step 0 only resolves + merges the overlay.
 
 ## 5. The consumer issue-template
 
@@ -58,7 +58,7 @@ Specific degrade. An absent overlay → the global reference is used UNCHANGED, 
 | Rung | Condition | Result |
 |---|---|---|
 | **1** | `agentIssueTemplate` set in the driver config and the file it names is readable | Resolve that template and hand it in. |
-| **2** | Exactly one selectable template in the directory | Resolve that template and hand it in (today's rule, unchanged). |
+| **2** | Exactly one selectable template in the directory | Resolve that template and hand it in. |
 | **3** | Zero, or two-plus with no usable key | Hand in nothing: the author uses its built-in default. |
 | **4** | *(always)* | Absence never blocks issue creation. |
 
@@ -68,7 +68,7 @@ Specific degrade. An absent overlay → the global reference is used UNCHANGED, 
 
 🔴 **`agentIssueTemplate` is not a fourth shared key: do not promote it.** The canonical consumer-facing shared set is exactly three: `sourceGlobs`, `uiSurfaceGlobs`, `integrationBranch` (`SPEC.md` §7, `docs/profile-schema.md` §2, restated at `skills/plan/SKILL.md` Step 0). That triple is a documented contract and stays three. Rung 1 is a targeted read inside this section's own resolution: nothing else in the feeder consumes it and it is never carried downstream in the `resolved` bundle as a shared key. A later reader "tidying" this by adding it to the shared triple would break that contract; the correct shape is the one recorded here.
 
-**Rung 1 degrades INTO rung 2, never into an error.** The key absent, unreadable, or naming a file that does not exist → fall straight through to rung 2, which is exactly today's behavior. So the rung is inert until `milestone-bootstrapper` records the key: a repo carrying no `agentIssueTemplate` resolves byte-for-byte as it does today. No error, no park, no gate (rung 4).
+**Rung 1 degrades INTO rung 2, never into an error.** The key absent, unreadable, or naming a file that does not exist → fall straight through to rung 2. So the rung is inert until `milestone-bootstrapper` records the key: a repo carrying no `agentIssueTemplate` resolves by the rung 2 count. No error, no park, no gate (rung 4).
 
 **Rung 1 preserves every non-goal.** It adds no classification, no bug-vs-change distinction, no new architect enum, and no plan-file change. It names a template repo-wide; it does not choose one per issue.
 
