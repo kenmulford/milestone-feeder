@@ -112,7 +112,7 @@ The plan file records the Source brief reference (`inline` \| `file:<path>` \| `
 
 | Brief form (from the plan file's Source brief reference) | Where the report goes |
 |---|---|
-| **GitHub epic issue** (`epic #<n>` recorded) | Post the report as a comment on the epic issue: `gh issue comment <epicIssueNumber> --body "<report>"`. |
+| **GitHub epic issue** (`epic #<n>` recorded) | Post the report as a comment on the epic issue: `gh issue comment <epicIssueNumber> --body-file <tmp>`, with `<tmp>` holding the report. |
 | **File path / inline text** (no epic) | Write / keep the local file `.milestone-feeder/needs-product-input-<slug>.md` and PRINT a notice that the report is local (no epic issue to comment on). |
 
 Before writing the local report, ensure the scratch dir self-ignores (it normally already does: `plan` wrote the plan file under `.milestone-feeder/` and ensured `.milestone-feeder/.gitignore` contains `*`; `skills/plan/SKILL.md` Step 7): create `.milestone-feeder/` if absent and ensure `.milestone-feeder/.gitignore` contains a single `*` line, so the report is git-invisible in the consumer repo with zero user setup.

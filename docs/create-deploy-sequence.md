@@ -340,7 +340,7 @@ For each surviving issue, **in Wave order** (the plan file's Wave order):
 | On adopt, title match? | Action |
 |---|---|
 | **Yes**: an open issue with the same title already exists | Reuse its number, do not create a duplicate. Map `slug → #<existing-n>`. Its body is left as-is (see body policy below). |
-| **No** (or this is the create path) | Create: `gh issue create --title "<title>" --body "<the §4 ISSUE_BODY from the plan file, verbatim>" --milestone "<milestone-title>" --label <ui\|logic>`, appending ` --label <risk:light\|risk:heavy>` only when the plan file records a risk label (absent-risk branch below). Capture the returned number. Map `slug → #<new-n>`. |
+| **No** (or this is the create path) | Create: `gh issue create --title "<title>" --body-file <tmp> --milestone "<milestone-title>" --label <ui\|logic>` (`<tmp>` holds the §4 ISSUE_BODY from the plan file, verbatim), appending ` --label <risk:light\|risk:heavy>` only when the plan file records a risk label (absent-risk branch below). Capture the returned number. Map `slug → #<new-n>`. |
 
 Apply each issue's **labels exactly as recorded in the plan file** (its `ui`/`logic` label, plus its `risk:*` label when the plan records one, Step 2). Accumulate the full slug→`#n` map across every surviving issue (created or reused). The body here still carries the local slug references from the plan file; they are rewritten in the second pass (d), once the full map exists. The twin passes it with `--body-file`, which `gh issue create` accepts alongside `--body`: identical bytes on GitHub, and no shell-quoting path for a multi-line body.
 
