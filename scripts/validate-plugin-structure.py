@@ -692,9 +692,8 @@ FILE_WORD_CEILINGS: dict[str, int] = {
     # PR. `## Output style` and `## Communication style` each gained the
     # plain-English rule. 817 words times 1.05 is 857.85, which rounds up to 900.
     "docs/style-contracts.md": 900,
-    # 2450 words times 1.05 is 2572.5, which rounds up to 2600. The recorded
-    # 2450 stands instead, because the never-up rule outranks the formula.
-    "docs/update-reconcile-parent.md": 2450,
+    # 2149 words times 1.05 is 2256.45, which rounds up to 2300.
+    "docs/update-reconcile-parent.md": 2300,
     "docs/version-ladder.md": 1300,
 }
 AGENT_DESCRIPTION_WORD_CEILING = 150

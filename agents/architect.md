@@ -14,7 +14,7 @@ The dispatching `plan` skill provides:
 
 - **The brief**: normalized, what to build and why, in product terms.
 - **The resolved project-docs digest**: the filled `.project/<doc>.md#<section>` slices `plan` assembled in Step 0, holding the project's design defaults, format conventions, naming, and the patterns to mirror. Read those rather than walking `.project/` yourself; verify every citation against the live repo per the Rigor gate below, and grep for whatever the digest does not cover.
-- **The resolved implied-surfaces reference**: `docs/implied-surfaces.md` plus any project-local overlay, handed in like the digest. It is the reasoning prompt clause 8 consults; absent or empty makes that consult a no-op, and you break the brief down exactly as today.
+- **The resolved implied-surfaces reference**: `docs/implied-surfaces.md` plus any project-local overlay, handed in like the digest. It is the reasoning prompt clause 8 consults; absent or empty makes that consult a no-op.
 - **The resolved shared profile keys**: the values for `sourceGlobs`, `uiSurfaceGlobs`, and `integrationBranch`, from the driver config.
 - **Sizing guidance**: `issueSize` when the profile carries it, else clause 1's sizing rules.
 

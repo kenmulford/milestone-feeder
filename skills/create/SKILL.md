@@ -95,7 +95,7 @@ The plan file is the **load-bearing build artifact**: `create` reads it and writ
 
 ### Step 3: Deploy (the write sequence, in this fixed order)
 
-Deploy the plan file's recorded issue set to GitHub in this **fixed pass order** (the v0.2.0 apply write-sequence, preserved verbatim; only the *source* of the bodies / labels / waves / title changed: `create` reads them from the plan file, regenerating nothing; `docs/specs/v0.3.0-humanize-the-surface.md` §3, §4). Passes a–d make those writes through the script twin `scripts/deploy-write-sequence.sh` / `.ps1` (its entry point named per pass below); the judgment stays here. Full mechanics for passes a–d (the invocation, the job-file shape, the create-or-adopt table, the deploy-receipt back-write, the slug→`#n` map, and the substring-safe rewrite rule) live in `docs/create-deploy-sequence.md` → "Step 3: deploy write-sequence (passes a-d)", each entry point's own contract in the twin's header:
+Deploy the plan file's recorded issue set to GitHub in this **fixed pass order** (`create` reads the bodies, labels, waves, and title from the plan file and regenerates nothing; `docs/specs/v0.3.0-humanize-the-surface.md` §3, §4). Passes a–d make those writes through the script twin `scripts/deploy-write-sequence.sh` / `.ps1` (its entry point named per pass below); the judgment stays here. Full mechanics for passes a–d (the invocation, the job-file shape, the create-or-adopt table, the deploy-receipt back-write, the slug→`#n` map, and the substring-safe rewrite rule) live in `docs/create-deploy-sequence.md` → "Step 3: deploy write-sequence (passes a-d)", each entry point's own contract in the twin's header:
 
 | Pass | What it does |
 |---|---|

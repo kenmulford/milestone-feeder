@@ -37,23 +37,23 @@ $parentBefore = pwsh -NoProfile -File "$env:CLAUDE_PLUGIN_ROOT/scripts/update-re
 | **4** | `diff-gate` | `<parent> <body-file> <live-body-file>` | `compare`TAB`same`\|`differ`, then `patch`TAB`skipped`\|`patched` |
 | **5** | `detect-removed` | `<live-body-file> <number> [<number> ...]` | one `dropped`TAB`<number>` row per milestone the re-plan dropped; nothing when none was |
 
-## Preliminary: read the manifest's own prior receipt (new twin)
+## Preliminary: read the manifest's own prior receipt
 
 Before step 1 begins, read whatever the manifest already carries at its `Parent issue (GitHub): #<n>` header line (`docs/roadmap-manifest-format.md`): `read-receipt "<manifest>"`, captured as `$parent_before` (bash) / `$parentBefore` (PowerShell). A plain, side-effect-free read, and the sole gate on steps 3, 4, and 5: it says only whether a live parent body already exists to compare against. Step 3's `resolve-or-create` re-examines this same line as its own first branch, so this never substitutes for that resolution.
 
 The capture is EMPTY when there is no receipt yet (a brand-new roadmap, or one `create` has not deployed the parent for) and when the value is malformed (a hand-edited manifest), the same absent-means-absent guard `update`'s Step 3.0 milestone-receipt read uses (`skills/update/SKILL.md` Step 3.0).
 
-## Step 1: gather every milestone's number (reused by reference, unchanged)
+## Step 1: gather every milestone's number
 
 Reuse the twin pair's `gather-numbers` entry point, `create`'s own step 2, "Gather every deployed milestone's number, in build order", exactly as written (`docs/create-deploy-sequence.md` "Step 1R" -> "The md-epic parent-issue pass" step 2): for each manifest entry it reads that milestone's own `Milestone number (GitHub): <n>` receipt from its recorded `Plan file:` path, falling back to the exact-title lookup when the receipt is absent. Its output IS the `numbers` array.
 
 **Failure semantics, inherited unchanged.** If both the receipt and the title lookup fail to resolve a number for some milestone (it was added to the roadmap re-plan but has not itself been independently deployed yet, via a separate `create`/`update` run against its own plan file), STOP this pass right here: report which milestone could not be resolved, and do not touch the parent issue at all. A milestone dropped from the CURRENT manifest is simply not iterated here at all (it no longer has an entry), so it never blocks this step; see step 5 for how its removal is detected and flagged instead.
 
-## Step 2: render the body (reused by reference, unchanged)
+## Step 2: render the body
 
 Reuse the twin pair's `render-body` entry point, `create`'s own step 3, "Render the body", exactly as written (same file, same section): the manifest's reviewed `Parent intro:` line, then the ```` ```md-epic-order ```` fenced block with one `number: <n>` line per milestone gathered in step 1 above, in build order. Redirect its output into a temp file to dodge the backtick hazards documented there, through that section's Invocation block (on PowerShell the capture form is a child process, or the file lands empty), and call that file `$bodyfile` (bash) / `$bodyFile` (PowerShell).
 
-## Step 3: resolve or create the parent (reused by reference, unchanged)
+## Step 3: resolve or create the parent
 
 Reuse the twin pair's `resolve-or-create` entry point, `create`'s own step 4, "Resolve the parent (create-or-adopt), then create it or REPLACE-PATCH it", exactly as written (same file, same section): receipt present, adopt directly; absent, an open `md-epic`-labeled issue with the exact `Parent title:` text, adopt that; no match, create. Capture the resolved/created number as `$parent`, with the `created`/`adopted` field step 7 gates on.
 
@@ -61,7 +61,7 @@ Reuse the twin pair's `resolve-or-create` entry point, `create`'s own step 4, "R
 
 **The one exception to "`update` never creates."** `update`'s own Non-negotiables say it never creates a *milestone* (Step 3b: milestone-not-found is a terminal error). The parent issue is not a milestone; `create`'s own contract for it is create-or-adopt, and `update` reuses that contract whole. This is the one object `update` gains the ability to originate; it still never creates a milestone.
 
-## Step 4: diff-gate the body write (new logic, the fix this issue's advisory called for)
+## Step 4: diff-gate the body write
 
 `create`'s own pass PATCHes the body unconditionally on every adopt (`docs/create-deploy-sequence.md` "Step 1R" -> "The md-epic parent-issue pass" step 4), correct for a first-time deploy but wrong for a reconcile: an unconditional PATCH would fire on every single `update` run even when nothing about the roadmap changed, which contradicts the "idempotent re-run performs zero additional parent-reconcile writes" acceptance criterion. `update` therefore wraps the SAME REPLACE-form rewrite in a diff-gate:
 
@@ -74,7 +74,7 @@ Reuse the twin pair's `resolve-or-create` entry point, `create`'s own step 4, "R
 
 Both sides of the comparison, and the saved live body, have their carriage returns stripped and their trailing newlines removed, so the two twins compare and save identical bytes. A body differing from the render only in line endings therefore counts as unchanged and costs zero writes.
 
-## Step 5: detect a removed milestone (new logic)
+## Step 5: detect a removed milestone
 
 Reuse the SAME live body step 4 fetched, through the file it saved (only meaningful when `$parent_before` was present; a brand-new parent has no prior state, so nothing can have been "removed" from it). `detect-removed <live-body-file> <number> [<number> ...]` parses that body's OLD `number: <n>` lines (the block as it stood before this run) and diffs them against step 1's freshly gathered numbers, passed in build order.
 
@@ -82,13 +82,13 @@ It prints one `dropped`TAB`<n>` row per number the old block carried that the cu
 
 A removed milestone needs no other action: its entry is already absent from the freshly rendered block (step 2 renders from the current manifest only), and `update` issues no unlink call, no close call, and no delete call for it or its issues, ever. This mirrors `update`'s existing "On GitHub, NOT in plan" convention for a live object no longer in the plan (`skills/update/SKILL.md` Step 4's reconcile table, and its Non-negotiables' "NEVER closes, NEVER deletes" line): flag it in the report (below) and take no other action.
 
-## Step 6: link the current milestones' issues as sub-issues of the parent (reused by reference, unchanged)
+## Step 6: link the current milestones' issues as sub-issues of the parent
 
 Reuse the twin pair's `link-sub-issues` entry point, the ENTIRE linking pass, exactly as written (`docs/create-deploy-sequence.md` "Step 1R" -> "The sub-issue-linking pass"): the once-per-parent already-linked fetch, the per-milestone Wave-ordered children, the nested-epic refusal, the per-child link plus re-assert, the 100-sub-issue cap warning, and the end-of-pass linked/failed/skipped report. Run it over the CURRENT manifest's milestones (step 1's gathered set), in build order, on every `update` run against this roadmap, not only when a milestone was added. It prints rows and decides nothing: that pass's row table maps them to notices and the report.
 
-No new logic is needed to single out "the newly added milestone": that pass's own once-per-parent fetch and its already-linked skip make every already-linked milestone's issues a no-op automatically. A milestone genuinely new to the roadmap is the only one whose issues this actually links.
+Singling out "the newly added milestone" takes no extra step: that pass's own once-per-parent fetch and its already-linked skip make every already-linked milestone's issues a no-op automatically. A milestone genuinely new to the roadmap is the only one whose issues this actually links.
 
-## Step 7: write the manifest receipt (reused by reference, unchanged)
+## Step 7: write the manifest receipt
 
 Only on a genuinely new parent (step 3's create branch, `$parent_before` was absent AND no title match was found either). Reuse the twin pair's `write-receipt` entry point, `create`'s own step 5, the idempotent read-modify-write onto the roadmap manifest's `Parent issue (GitHub): #<n>` line, exactly as written (same file, same section).
 
@@ -99,18 +99,5 @@ Route through `update`'s existing Step 5 report mechanism (`skills/update/SKILL.
 ## Failure semantics
 
 No new failure handling is added: a `gh` error in the gather (step 1), the resolve-or-create (step 3), or the diff-gate's live-body read or PATCH (step 4) exits non-zero naming that call on stderr, and any per-child link failure (step 6) surfaces as a row; each stops that step, reports what already completed and what remains, and deletes nothing. A re-run resumes safely: the gather retries receipt-then-title per milestone, the parent resolve retries receipt-then-title-then-create, the diff-gate re-reads the receipt and re-compares fresh, and the linking pass's already-linked check means nothing already linked is re-attempted.
-
-## How each acceptance criterion is met
-
-| Criterion | Where it is satisfied |
-|---|---|
-| Reorder: block rewritten in place | Steps 1 to 4: the render (step 2) always reflects the manifest's CURRENT order; the diff-gate (step 4) PATCHes when the live body differs. |
-| Added milestone: linked (reuses #246) | Step 6, run over the current milestone set every time; #246's own already-linked check does the rest. |
-| Removed milestone: entry removed, links left, flagged, never deleted | Step 5 (detection and flag) plus step 2's render (the entry is simply not re-emitted). No unlink/close/delete call exists anywhere in this pass. |
-| Single-milestone update byte-unchanged | "The gate" above: absent manifest, this whole pass never runs. |
-| Idempotent re-run, zero additional parent-reconcile writes | Step 1 is read-only; step 4's diff-gate no-ops when the body matches; step 6's already-linked check no-ops per child; step 7 only fires on a genuinely new parent. |
-| Failure path stops, reports, deletes nothing | "Failure semantics" above: no step adds a new failure handler, and no step deletes. |
-| No second definition | Steps 1, 2, 3, 6, and 7 all point at the `md-epic-parent` twin's existing entry points by reference; only the gate, the preliminary receipt read, the diff-gate (step 4), and the removed-milestone detection (step 5) are new, and none of them re-authors a block-render, a parent create-or-adopt, or a sub-issue-linking mechanic. |
-| bash + PowerShell 7+ twins | Every `gh` form above runs through one of the two twin pairs, each of which ships both. |
 
 **Honest bound.** The removed-milestone detection (step 5) trusts the parent's live body to still carry the `md-epic-order` block this pass itself last wrote. If a human hand-edits the parent issue's body directly on GitHub between runs (deleting a `number:` line by hand, for instance), the next run reads that edited state as "removed" even though the roadmap manifest itself never dropped that milestone, and the diff-gate (step 4) would PATCH over the hand edit on the very next run that changes anything else. This is the same class of stated limitation `update`'s existing stable-title assumption already carries (`skills/update/SKILL.md` "## IDEMPOTENCY" -> "Honest bound"): edit the brief/plan (here, the roadmap), not the GitHub object directly.

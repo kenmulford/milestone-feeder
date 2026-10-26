@@ -22,7 +22,7 @@ This procedure has two parts: a once-per-run outer boundary (Step 0) and a calla
 
 - **Step 0 is the once-per-run outer boundary**: read config, auto-invoke `setup` when `feeder.json` is absent, self-heal the scratch-ignore, print the one-time notices, resolve the shared keys, and assemble the grounding digest. It runs exactly once per run and is not part of the inner routine; everything it resolves is handed *into* the routine and is never re-resolved per invocation.
 - **Steps 1–7 are the single-milestone inner routine**: a named, callable, parameterized sub-procedure (its contract is stated just below Step 0, before Step 1). It plans exactly one milestone and returns one plan file (plus a needs-input report when anything parked).
-- **The single-brief path is the default and is unchanged: it invokes the inner routine exactly once**, with the whole brief as the lone brief-slice and its sole build-order position, and nothing about the emitted plan file changes on that `none`-signal path. The oversized-brief roadmap route is added separately at the front-door, Step 3.6, acts only when the architect raises the multi-milestone signal, and ships its own one-time discovery notice (Step 0) per `SPEC.md` §3.1.
+- **The single-brief path invokes the inner routine exactly once**, with the whole brief as the lone brief-slice and its sole build-order position, and nothing about the emitted plan file changes on that `none`-signal path. The oversized-brief roadmap route is added separately at the front-door, Step 3.6, acts only when the architect raises the multi-milestone signal, and ships its own one-time discovery notice (Step 0) per `SPEC.md` §3.1.
 
 ### Step 0: Read config + project docs (best-effort), once-per-run outer boundary
 
@@ -74,7 +74,7 @@ The roadmap fan-out (Step 3.7) supplies two optional parameters, and an incremen
 
 **Returns:** one plan file at `.milestone-feeder/plan-<slug>.md` (Step 7), plus the needs-product-input report at `.milestone-feeder/needs-product-input-<slug>.md` when anything parked. Every in-routine failure exit is part of the routine and surfaces to the caller unchanged: the Step 2 product-gap STOP and the product-gap parks (the Step 3.5 pre-park and any Step 4 issue-author `PRODUCT_GAP` return) fire from inside the routine, not from the boundary. A `briefSlice` that yields zero surviving buildable issues (the parked/dropped path) still routes entirely through the routine and emits the empty/parked plan-file markers and needs-product-input report.
 
-The routine body is Steps 1, 2, 3, 3.5, 4, 5, 7 (exactly as written below). **Steps 3.6 (front-door routing) and 3.7 (the roadmap fan-out) are outer, run-level orchestration. They are not part of this per-milestone routine** (like Step 0): a dispatched per-milestone inner routine runs Steps 1 → 2 → 3 → 3.5 → 4 → 5 → 7 and never re-enters Step 3.6 or Step 3.7, so the fan-out cannot recurse into itself. (Step 5.1's ADOPT branch (`docs/version-ladder.md`) and Step 7's `assignedSlug` branch are the optional-parameter seams the fan-out drives; they live inside the routine.) The body is otherwise unchanged by this refactor.
+The routine body is Steps 1, 2, 3, 3.5, 4, 5, 7 (exactly as written below). **Steps 3.6 (front-door routing) and 3.7 (the roadmap fan-out) are outer, run-level orchestration. They are not part of this per-milestone routine** (like Step 0): a dispatched per-milestone inner routine runs Steps 1 → 2 → 3 → 3.5 → 4 → 5 → 7 and never re-enters Step 3.6 or Step 3.7, so the fan-out cannot recurse into itself. (Step 5.1's ADOPT branch (`docs/version-ladder.md`) and Step 7's `assignedSlug` branch are the optional-parameter seams the fan-out drives; they live inside the routine.)
 
 ### Step 1: Ingest the brief (inner routine: begins)
 
@@ -160,7 +160,7 @@ This is the front-door size/scope check. It runs after the architect's structura
 
 | Captured signal | Front-door action |
 |---|---|
-| **`none`** (single coherent release) | Do not route. Fall straight through to Step 4 on the whole brief (the single-milestone pipeline, unchanged). No `build-roadmap` invocation, no advisory change, no new prompt. |
+| **`none`** (single coherent release) | Do not route. Fall straight through to Step 4 on the whole brief (the single-milestone pipeline). No `build-roadmap` invocation, no advisory change, no new prompt. |
 | **Raised** (≥2 milestones forming a strict partition of `CANDIDATES`) | Route into `build-roadmap` (the internal skill at `skills/build-roadmap/SKILL.md`). See below. |
 
 The oversized route. Invoke the `build-roadmap` skill: a Claude Code skill invocation, the same way `create` runs `plan` first (`skills/create/SKILL.md` Step 1: the Absent row runs `plan` first); there is no bash/pwsh form for the invocation itself. Hand it exactly the inputs its Step 0 expects (`skills/build-roadmap/SKILL.md` Step 0: "Receive the inputs from `plan`"), **all already in hand. Re-resolve nothing** (the resolve-once boundary, `skills/plan/SKILL.md:23`):
@@ -183,7 +183,7 @@ The oversized route. Invoke the `build-roadmap` skill: a Claude Code skill invoc
 
 **Boundary: Step 3.7 is outer, run-level orchestration. It is not part of the per-milestone inner routine** (like Step 0 and Step 3.6). It runs once per run on the main thread and dispatches the inner routine per milestone; a dispatched inner routine runs Steps 1, 2, 3, 3.5, 4, 5, 7 and never re-enters Step 3.6 or Step 3.7 (no recursion). Its only seams INTO the routine are the two optional parameters (`preResolvedVersion`, `assignedSlug`) consumed by Step 5.1's (`docs/version-ladder.md`) and Step 7's ADOPT branches.
 
-This is the roadmap branch. It runs only when Step 3.6 set `roadmapRouteTaken` = true (a confirmed manifest path). On every other Step-3.6 outcome (signal `none`, degrade, decline, single-milestone-after-all) `roadmapRouteTaken` is false, this step is skipped, and control has already fallen through to Step 4 on the whole brief (the single-milestone pipeline unchanged). **The fan-out lives only here; the normal-sized-brief path never reaches it** (acceptance criterion: disabled/edge state, single-milestone planning is unchanged).
+This is the roadmap branch. It runs only when Step 3.6 set `roadmapRouteTaken` = true (a confirmed manifest path). On every other Step-3.6 outcome (signal `none`, degrade, decline, single-milestone-after-all) `roadmapRouteTaken` is false, this step is skipped, and control has already fallen through to Step 4 on the whole brief (the single-milestone pipeline). **The fan-out lives only here; the normal-sized-brief path never reaches it**, so single-milestone planning is skipped past this step.
 
 **On the roadmap path this step IS the planning for the brief.** It plans every milestone the confirmed roadmap names and then returns control. It does not fall through to Step 4 (the single-milestone Steps 4–7 do not run for the whole brief; that supersession is already recorded at Step 3.6).
 
