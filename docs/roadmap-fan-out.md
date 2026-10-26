@@ -50,7 +50,7 @@ For each milestone, derive its plan-file `<slug>` from its goal by the same dete
 
 ## 3.7.e: Dispatch the inner routine once per milestone (pinned topology, cap-4 rolling window)
 
-**Reuse the `skills/plan/SKILL.md` Step-4 author fan-out's cap-4 rolling window** across the milestone-planning dispatches. This is the same window as `skills/plan/SKILL.md` Step 4 ("Step 4: Dispatch issue-author per candidate"; mirrors the driver's worker fan-out, `milestone-driver` plugin `skills/solve-milestone/SKILL.md` Phase 1 step 2); M = 0 already returned at 3.7.a. Await all dispatches before 3.7.f (the barrier).
+**Reuse the `skills/plan/SKILL.md` Step-4 author fan-out's cap-4 rolling window** across the milestone-planning dispatches. This is the same window as `skills/plan/SKILL.md` Step 4, which mirrors the driver's worker fan-out (`milestone-driver` plugin `skills/solve-milestone/parallel-waves.md` Phase 1 step 3, `maxParallelWorkers`, default 4); M = 0 already returned at 3.7.a. Await all dispatches before 3.7.f (the barrier).
 
 The pinned topology (3.7.b) selects **only the dispatch LEVEL**; both topologies yield identical N plan files and the same build-order metadata:
 

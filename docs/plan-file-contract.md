@@ -30,7 +30,7 @@ This is the shared reference for the plan file's fields and output templates: th
 Milestone title (exact): <the exact milestone title (carries the resolved semver INSIDE the string); create/update resolve the milestone by THIS string. SURFACED for the user to confirm/override before `create`; on an infer rung it carries the reference version verbatim. Adjust the patch/minor/major bump on this line>
 Version provenance: <explicit | declaration | inferred from <tag/milestone> | prompted>
 Source brief: <inline | file:<path> | epic #<n>>
-Milestone number (GitHub): <n>   # OPTIONAL sibling header line: carried forward verbatim from a prior plan file if present; omitted on first plan (create writes it post-deploy, skills/create/SKILL.md Step 3 pass (b))
+Milestone number (GitHub): <n>   # OPTIONAL sibling header line: carried forward verbatim from a prior plan file if present; omitted on first plan (create writes it post-deploy, docs/create-deploy-sequence.md (Write the deploy receipt (the concluding action of pass b)))
 
 ## Original brief
 <The full brief text this plan run received, persisted verbatim and multi-line: every

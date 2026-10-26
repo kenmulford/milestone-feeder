@@ -27,7 +27,7 @@ Say this to the user before doing any work. Pick the line that matches the resol
 
 Read `.milestone-config/feeder.json`. **Absent → invoke `milestone-feeder:setup`** (it bootstraps the profile, aligns the label taxonomy, and returns control), then continue: the user does not re-run the command (`skills/setup/SKILL.md` Phase 5). `create` reads the same own-keys as `plan` (`skills/plan/SKILL.md` Step 0: `projectDocs`, `architectAgent`, `issueAuthorAgent`, `issueSize`); on the found path it consumes none of them (it deploys the recorded plan and regenerates nothing), and on the run-`plan`-first fallback `plan` itself consumes them. The only configuration `create` itself needs is GitHub write access (the `gh` surface in the passes below).
 
-**`create` additionally reads its own `autoHandoff` key** (Step 4: the driver handoff). This is the one own-key `create` consumes on both paths (it is not a `plan` key). Extract it with its bundled default, same absent-means-default discipline as the `plan` key-extraction table (`skills/plan/SKILL.md` Step 0; `docs/profile-schema.md`):
+**`create` additionally reads its own `autoHandoff` key** (Step 4: the driver handoff). This is the one own-key `create` consumes on both paths (it is not a `plan` key). Extract it with its bundled default, same absent-means-default discipline as every own key (`docs/profile-schema.md (## Own keys)`):
 
 | Key | Default | Use |
 |---|---|---|
