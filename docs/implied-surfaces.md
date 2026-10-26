@@ -9,7 +9,7 @@ deactivate, reset-password, a delivery-failure log) omits them by oversight.
 
 **Read this as a reasoning prompt, not a checklist to run.** It is a *floor*, a
 robust start, never a ceiling. When the architect consults it, the review that
-follows asks you, out loud: *"this is a starting set for YOUR app - what's
+follows asks you, out loud: *"this is a starting set for your app - what's
 missing?"* Adding the two or three surfaces a curated list can't know about is a
 built-in step here, not something you're left to remember on your own.
 

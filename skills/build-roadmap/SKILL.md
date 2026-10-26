@@ -1,7 +1,7 @@
 ---
 name: build-roadmap
 description: >-
-  This skill is INTERNAL: it is invoked by the `plan` skill when it detects an oversized whole-app brief that spans several releases, never by a user command. It dispatches the `milestone-feeder:roadmap-splitter` agent once for a build-ordered partition, surfaces the proposed split for the user to confirm / merge / split / reorder / reject, and on confirmation writes a roadmap manifest to `.milestone-feeder/roadmap-<slug>.md` and returns control plus that path to `plan`.
+  This skill is internal: it is invoked by the `plan` skill when it detects an oversized whole-app brief that spans several releases, never by a user command. It dispatches the `milestone-feeder:roadmap-splitter` agent once for a build-ordered partition, surfaces the proposed split for the user to confirm / merge / split / reorder / reject, and on confirmation writes a roadmap manifest to `.milestone-feeder/roadmap-<slug>.md` and returns control plus that path to `plan`.
 ---
 
 # build-roadmap: oversized brief → confirmed milestone roadmap
@@ -81,7 +81,7 @@ Step 2's multi-milestone route guarantees `parent_title`/`parent_intro` are pres
 | Parent title | <parent_title> |
 | Parent intro | <parent_intro> |
 
-**Surface the proposed roadmap for the user to confirm BEFORE writing anything**: mirror `plan`'s surface-for-confirm (`skills/plan/SKILL.md` Step 7, "Surface the resolved identity for confirm/override"; `.project/design-philosophy.md#One-way doors`: a one-way door is surfaced for sign-off, never silently finalized). Present the proposal as a table, one row per milestone:
+**Surface the proposed roadmap for the user to confirm before writing anything**: mirror `plan`'s surface-for-confirm (`skills/plan/SKILL.md` Step 7, "Surface the resolved identity for confirm/override"; `.project/design-philosophy.md#One-way doors`: a one-way door is surfaced for sign-off, never silently finalized). Present the proposal as a table, one row per milestone:
 
 | # | Milestone | Brief slice | Build-order position | Change-rationale |
 |---|---|---|---|---|
@@ -101,7 +101,7 @@ The same three choices govern `parent_title`/`parent_intro` too: Confirm records
 
 ### Step 4: Write the roadmap manifest (on confirmation) and return control
 
-**Make the scratch git-invisible from the first write (zero user setup).** `.milestone-feeder/` is pure per-run scratch with no tracked config of its own. Before writing any file under `.milestone-feeder/`, FIRST ensure the directory self-ignores: create `.milestone-feeder/` if absent, and ensure `.milestone-feeder/.gitignore` exists containing a single `*` line, which makes the whole folder (and the `.gitignore` itself) invisible to `git status` in any consumer repo, without touching the consumer's root `.gitignore` (`.project/environment.md#Data stores`: scratch under `.milestone-feeder/`, gitignored via a `*` drop on first write). This is the same first-write self-ignore `plan` uses (`skills/plan/SKILL.md` Step 7, "Make the scratch git-invisible from the first write"):
+**Make the scratch git-invisible from the first write (zero user setup).** `.milestone-feeder/` is pure per-run scratch with no tracked config of its own. Before writing any file under `.milestone-feeder/`, first ensure the directory self-ignores: create `.milestone-feeder/` if absent, and ensure `.milestone-feeder/.gitignore` exists containing a single `*` line, which makes the whole folder (and the `.gitignore` itself) invisible to `git status` in any consumer repo, without touching the consumer's root `.gitignore` (`.project/environment.md#Data stores`: scratch under `.milestone-feeder/`, gitignored via a `*` drop on first write). This is the same first-write self-ignore `plan` uses (`skills/plan/SKILL.md` Step 7, "Make the scratch git-invisible from the first write"):
 
 ```bash
 # bash: ensure the scratch dir self-ignores BEFORE the first write under it.
@@ -140,8 +140,8 @@ Defined once at `docs/style-contracts.md#output-style`: read it there; it is not
 - **The roadmap-splitter is dispatched exactly once, read-only against provided text.** It returns the `ROADMAP` block and this skill consumes it; the splitter opens no GitHub artifact of its own.
 - **Surface for confirm, never silently finalize.** The proposed roadmap is always surfaced for the user to confirm / merge / split / reorder / reject before any write. On edits, the manifest records the user-confirmed roadmap (edits applied), re-verified as a strict partition; on reject, no manifest is written.
 - **Fewer than two milestones is the single-milestone state, not an error.** Write no manifest, tell the user, and return so `plan` proceeds with its existing single-milestone pipeline unchanged.
-- **A failed dispatch, a malformed return, or a non-partition split writes NO partial or corrupt manifest.** The failure is surfaced, not swallowed; control does not advance on a failed split or a failed scratch-write.
-- **The manifest persists the FULL original brief** delimited by the paired `## Original brief` … `## End original brief` markers: a multi-line section robust to briefs containing their own `## ` headings (a consumer reads strictly between the markers), and a durable record of the whole-app brief this roadmap was built from. The manifest is the cross-milestone build artifact, and this skill is its owner.
-- **Each milestone entry reserves a `Plan file:` field, written PENDING.** `build-roadmap` plans no milestone, so it cannot know the disambiguated `assignedSlug` that names each plan file: it leaves the field empty. The roadmap planning fan-out (`plan` Step 3.7) populates it with `.milestone-feeder/plan-<assignedSlug>.md` after it plans that milestone; that recorded path is the handle `create`'s deploy-loop reads (`skills/create/SKILL.md` Step 1R), never a name-derived slug.
+- **A failed dispatch, a malformed return, or a non-partition split writes no partial or corrupt manifest.** The failure is surfaced, not swallowed; control does not advance on a failed split or a failed scratch-write.
+- **The manifest persists the full original brief** delimited by the paired `## Original brief` … `## End original brief` markers: a multi-line section robust to briefs containing their own `## ` headings (a consumer reads strictly between the markers), and a durable record of the whole-app brief this roadmap was built from. The manifest is the cross-milestone build artifact, and this skill is its owner.
+- **Each milestone entry reserves a `Plan file:` field, written pending.** `build-roadmap` plans no milestone, so it cannot know the disambiguated `assignedSlug` that names each plan file: it leaves the field empty. The roadmap planning fan-out (`plan` Step 3.7) populates it with `.milestone-feeder/plan-<assignedSlug>.md` after it plans that milestone; that recorded path is the handle `create`'s deploy-loop reads (`skills/create/SKILL.md` Step 1R), never a name-derived slug.
 - **Scratch is git-invisible from the first write**: `.milestone-feeder/.gitignore` is ensured to contain a single `*` before the first write under `.milestone-feeder/`, as bash + PowerShell 7+ twins.
-- **`build-roadmap` writes NO GitHub state and authors no code.** Its entire output is one local scratch manifest. No milestone is created, no issue is opened, no label is applied, no PR is opened, no branch is touched. The downstream `plan` → `create` pipeline is the only thing that writes GitHub state.
+- **`build-roadmap` writes no GitHub state and authors no code.** Its entire output is one local scratch manifest. No milestone is created, no issue is opened, no label is applied, no PR is opened, no branch is touched. The downstream `plan` → `create` pipeline is the only thing that writes GitHub state.

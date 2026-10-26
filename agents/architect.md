@@ -38,11 +38,11 @@ A candidate breakdown satisfying every clause below:
 
 **5. UI-vs-logic + risk hint.** Pre-classify each candidate `surface: ui | logic` (UI = it touches a `uiSurfaceGlobs` path or carries a visible/interactive affordance) and attach a `risk: light | heavy` hint. Default `heavy` when unsure.
 
-**6. LOCAL TAGS, not GitHub numbers.** Candidates carry local tags (`#A`, `#B`, `#C`), never GitHub issue numbers. Edges and Waves reference the same tags.
+**6. Local tags, not GitHub numbers.** Candidates carry local tags (`#A`, `#B`, `#C`), never GitHub issue numbers. Edges and Waves reference the same tags.
 
 **7. Multi-milestone guardrail.** The feeder stays _one brief → one milestone_, but signals when a brief reads as several: distinct phased deliverables or release boundaries, or a breakdown large/heavy enough (many candidates and/or several `risk:heavy` items) to read as more than one milestone's worth of work _and_ a clean dependency seam exists to split on. The size/heaviness judgment is qualitative, no numeric cutoff; a large/heavy breakdown with no clean seam stays `none`.
 
-When either trigger fires, raise `SCOPE_SPANS_MULTIPLE_MILESTONES` with a proposed split: each candidate milestone named, with the candidate LOCAL TAGS (never GitHub numbers, clause 6) under it. The split strictly partitions `CANDIDATES`: every tag in exactly one milestone, none unassigned, none duplicated, two or more milestones named. A single bucket, or a single coherent release, is the literal `none`.
+When either trigger fires, raise `SCOPE_SPANS_MULTIPLE_MILESTONES` with a proposed split: each candidate milestone named, with the candidate local tags (never GitHub numbers, clause 6) under it. The split strictly partitions `CANDIDATES`: every tag in exactly one milestone, none unassigned, none duplicated, two or more milestones named. A single bucket, or a single coherent release, is the literal `none`.
 
 Detection and a proposed split only: never version the milestones, order them, or produce a full N-milestone breakdown. Full multi-milestone support lives in `agents/roadmap-splitter.md`, which supersedes this clause. `plan`'s advisory surfacing consumes the block downstream (`docs/specs/v0.3.1-driver-handoff.md` §6, §5).
 
@@ -66,7 +66,7 @@ Apply the reference's three triggers: the new-entity baseline cluster (list / de
 
 **10. Cross-candidate invariants: resolve once, then transcribe.** A directive that must hold across two or more candidates (a page size, a sort order, a date format, an ID or naming rule) is resolved once here and returned in `INVARIANTS`, never left for each candidate to re-derive.
 
-- Record each one as an `INVARIANTS` entry carrying `key` (a short stable name), `value` (the directive VERBATIM, literal values intact), `citation` (the project-docs ref, the recorded brief line, or a sibling `path (anchor)` or `file:line`, per the Rigor gate), and `applies_to` (the two or more candidate tags it binds).
+- Record each one as an `INVARIANTS` entry carrying `key` (a short stable name), `value` (the directive verbatim, literal values intact), `citation` (the project-docs ref, the recorded brief line, or a sibling `path (anchor)` or `file:line`, per the Rigor gate), and `applies_to` (the two or more candidate tags it binds).
 - Transcribe `value`, never paraphrase it: a directive naming a literal keeps that literal.
 - `applies_to` draws its tags from `CANDIDATES` as returned, the full set, never the reduced set the Step 3.5 pre-park and Step 5 drop pass leave.
 - A directive binding exactly one candidate is never emitted here: it stays that candidate's own design, grounded in its sketch under clause 2.
@@ -74,7 +74,7 @@ Apply the reference's three triggers: the new-entity baseline cluster (list / de
 - A directive you cannot ground in the recorded brief line, the project docs, or an established repo convention is not an invariant: it is a clause 2 call.
 - A breakdown in which no directive binds two or more candidates returns the literal `none`.
 
-**11. Shared-file ordering.** Each candidate's optional `edits:` field lists the EXISTING repo files it modifies, every path verified to exist; a file the candidate introduces is clause 3's and is never listed. Two candidates whose lists intersect get one ordering edge naming every shared path, `#B after #A - edits: <path>[, <path>]`, emitted pairwise over each overlapping pair:
+**11. Shared-file ordering.** Each candidate's optional `edits:` field lists the existing repo files it modifies, every path verified to exist; a file the candidate introduces is clause 3's and is never listed. Two candidates whose lists intersect get one ordering edge naming every shared path, `#B after #A - edits: <path>[, <path>]`, emitted pairwise over each overlapping pair:
 
 - **One edge per pair.** A clause 3 or clause 9 edge already relating the pair, in either direction, orders it: no `after` edge for that pair, and no `after` edge ever points against the order clauses 3 and 9 set.
 - **Direction.** Sort the candidates by clause 3 and clause 9 edges alone first. The candidate in the earlier Wave of that sort goes first; within one Wave, the smaller `edits:` list, then the earlier-assigned tag (`#A` before `#B`, `#Z` before `#AA`). Every `after` edge derives from that one order, so the graph stays acyclic.
@@ -146,9 +146,9 @@ INVARIANTS:
 
 Dispatched again, only when the brief gained items after your first return (`docs/incremental-replan.md`, the detection rule).
 
-**Receive instead:** the prior `CANDIDATES`, `EDGES`, and `WAVES` (reconstructed from the prior plan file), only the ADDED brief items, and the same Step-0 grounding already resolved. Never re-resolved.
+**Receive instead:** the prior `CANDIDATES`, `EDGES`, and `WAVES` (reconstructed from the prior plan file), only the added brief items, and the same Step-0 grounding already resolved. Never re-resolved.
 
-**Return instead:** only NEW `CANDIDATES` and new `EDGES` (an edge may name an existing tag), plus `PRODUCT_GAPS` scoped to the added items. Omit `WAVES`: `plan` recomputes it over the merged edges (clause 4).
+**Return instead:** only new `CANDIDATES` and new `EDGES` (an edge may name an existing tag), plus `PRODUCT_GAPS` scoped to the added items. Omit `WAVES`: `plan` recomputes it over the merged edges (clause 4).
 
 **Never rewrite an existing candidate.** A prior tag, title, or sketch is read-only context, transcribed nowhere, altered nowhere. New candidates continue the prior tag sequence (`#E` handed in → next new tag `#F`).
 

@@ -76,7 +76,7 @@ step.
 
 - **Marker:** none (gated on file-absence, not a marker).
 - **Skills:** plan
-- **Trigger:** file-absence only (`[ ! -f ]` / `-not (Test-Path ...)`). Create-only, NOT marker-gated.
+- **Trigger:** file-absence only (`[ ! -f ]` / `-not (Test-Path ...)`). Create-only, not marker-gated.
 - **Legacy-fallback:** none.
 - **Writes:** the nested `.milestone-config/.gitignore`.
 - **Safety:** best-effort; never clobbers a user-edited file; a failed self-heal never aborts the run.
@@ -98,7 +98,7 @@ worktrees/
 
 - **Marker:** `.milestone-config/.runtime/legacy-blanket-notice`.
 - **Skills:** plan
-- **Trigger:** a root `.gitignore` blanket for `.milestone-config` is detected AND the per-clone marker is absent.
+- **Trigger:** a root `.gitignore` blanket for `.milestone-config` is detected and the per-clone marker is absent.
 - **Legacy-fallback:** none.
 - **Writes:** the `.runtime/` directory and the marker. Read-only on the root `.gitignore`: it never auto-edits it.
 - **Safety:** best-effort; a failed detect or marker write never aborts the run.
@@ -123,7 +123,7 @@ worktrees/
 
 - **Marker:** `.milestone-config/.runtime/bootstrap-nudge-notice`.
 - **Skills:** plan
-- **Trigger:** the repo is un-bootstrapped (the resolved `projectDocs` path is absent or has no readable files, OR `.milestone-config/driver.json` is missing) AND the per-clone marker is absent.
+- **Trigger:** the repo is un-bootstrapped (the resolved `projectDocs` path is absent or has no readable files, or `.milestone-config/driver.json` is missing) and the per-clone marker is absent.
 - **Legacy-fallback:** none.
 - **Writes:** the `.runtime/` directory and the marker. Read-only: it never runs the bootstrapper and never writes `projectDocs` / `.project/` or `driver.json`.
 - **Safety:** best-effort; a failed resolve, detect, or marker write never aborts the run.
@@ -170,7 +170,7 @@ worktrees/
 
 - **Marker:** `.milestone-config/.runtime/implied-surfaces-notice`, shared verbatim text and shared marker across both skills below, so the notice shows at most once per clone across both.
 - **Skills:** plan, update
-- **Trigger:** the overlay `.milestone-config/implied-surfaces.md` is absent AND the per-clone marker is absent.
+- **Trigger:** the overlay `.milestone-config/implied-surfaces.md` is absent and the per-clone marker is absent.
 - **Legacy-fallback:** none.
 - **Writes:** the `.runtime/` directory and the marker. Read-only: it never writes the overlay.
 - **Safety:** best-effort; a failed detect, notice, or marker write never aborts the run.

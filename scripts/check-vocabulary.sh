@@ -3,8 +3,8 @@
 # check-vocabulary.sh: the vocabulary-purge and em-dash gate.
 #
 # What this checks, in plain terms:
-#   Two categories ride one `git grep` over the live, committed consumer
-#   surface, so a pull request that reintroduces either one fails.
+#   Three categories ride `git grep` over the live, committed consumer
+#   surface, so a pull request that reintroduces any one fails.
 #
 #   Category 1, retired vocabulary. v0.3.0 renamed the plugin's whole surface
 #   (docs/specs/v0.3.0-humanize-the-surface.md (## 11. Verification)). The old
@@ -16,6 +16,16 @@
 #   it. This gate is that ban's backstop: it fails the moment a stray U+2014
 #   reaches the scanned surface. It does not police WHICH replacement an author
 #   picked, because the ban's construction table and rank are a human call.
+#
+#   Category 3, two regressions of the prompt-surface repair
+#   (docs/briefs/2026-10-19-prompt-audit.md (## 1. Issue bodies are written from
+#   a file in `update`) and (## 5. Current behavior only, no version history)).
+#   An issue-body write passes `--body-file`, never an inline `--body` string
+#   (scanned in skills/, agents/, the top-level docs/*.md, and .project/). The
+#   prompt surface states the current rule, so the build-history phrases HISTORY_PATTERN names stay
+#   out (scanned in skills/, agents/, the top-level docs/*.md, and .project/).
+#   docs/briefs/** and docs/specs/** are excluded: they record the history. A
+#   present-tense use of one of these words is recast, never allowlisted.
 #
 # Authoritative definition:
 #   Category 1 is SPEC-owned. Tokens (case-insensitive): decompose,
@@ -31,6 +41,9 @@
 #   own definition the way scripts/check-contract-strings.sh (Authoritative
 #   definition) hosts the two contract strings. Widening it is a change to this
 #   header and to .project/conventions.md (## Em-dash ban) together.
+#
+#   Category 3 is owned HERE too: its two patterns are BODY_PATTERN and
+#   HISTORY_PATTERN below, copied from the brief's acceptance greps.
 #
 #   This file names the character in prose as "em dash (U+2014)" and never
 #   reproduces the glyph, so it carries no U+2014 byte of its own, whatever its
@@ -279,12 +292,44 @@ while IFS= read -r match; do
   fi
 done <<< "${MATCHES}"
 
+# --- check 3: the body-flag and history-phrase scans -------------------------
+#
+# Two fixed-scope scans, each its own `git grep` because their patterns differ.
+# `:(glob)docs/*.md` matches the top-level docs only, so docs/briefs/** and
+# docs/specs/** (the history records) are never scanned. A grep error (exit >1)
+# fails closed like check 2.
+
+# The inline-body forms: `--body "`, `--body '`, `--body=`, `--body $...`, and
+# `-b "` / `-b '`. `--body-file` never matches: a space or `=` must follow.
+BODY_PATTERN='--body( ["'"'"'$]|=)|(^|[[:space:]`(])-b ["'"'"']'
+HISTORY_PATTERN='unchanged by this refactor|acceptance criterion:|new logic|new twin|as v0\.[0-9]|the v0\.[0-9.]+ (path|apply)|exactly as today|How each acceptance criterion|relocated|byte-unchanged|unchanged from today'
+
+set +e
+BODY_HITS="$(git grep --no-color -EInH -e "${BODY_PATTERN}" -- \
+  'skills' 'agents' ':(glob)docs/*.md' '.project')"
+body_status=$?
+HISTORY_HITS="$(git grep --no-color -EIinH -e "${HISTORY_PATTERN}" -- \
+  'skills' 'agents' ':(glob)docs/*.md' '.project')"
+history_status=$?
+set -e
+
+for scan_status in "${body_status}" "${history_status}"; do
+  case "${scan_status}" in
+    0|1) ;;
+    *)
+      echo "ERROR: 'git grep' failed (exit ${scan_status}). Scan unreliable; failing closed." >&2
+      exit 2
+      ;;
+  esac
+done
+
 # --- report -----------------------------------------------------------------
 
-if [ -z "${vocab_hits}" ] && [ -z "${mark_hits}" ]; then
-  echo "PASS: no retired v0.3.0 vocabulary and no em dash on the live plugin surface."
+if [ -z "${vocab_hits}" ] && [ -z "${mark_hits}" ] && [ -z "${BODY_HITS}" ] && [ -z "${HISTORY_HITS}" ]; then
+  echo "PASS: no retired v0.3.0 vocabulary, no em dash, no inline issue-body flag, and no build-history phrase on the live plugin surface."
   echo "      (tokens checked: decompose, substrateDir, selfCheck, --apply)"
   echo "      (character checked: em dash U+2014; ${#ALLOWLIST_ROWS[@]} quoted spans allowlisted)"
+  echo "      (flags checked: ${BODY_PATTERN}; phrases checked: ${HISTORY_PATTERN})"
   exit 0
 fi
 
@@ -312,6 +357,26 @@ if [ -n "${mark_hits}" ]; then
   echo "      that same convention, in the same change." >&2
   echo >&2
   printf '%s' "${mark_hits}" >&2
+  echo >&2
+fi
+
+if [ -n "${BODY_HITS}" ]; then
+  echo "FAIL: an inline issue-body flag reached the prompt surface." >&2
+  echo "      Write the body to a file and pass it with --body-file; for the" >&2
+  echo "      issue write sequence use scripts/deploy-write-sequence.sh" >&2
+  echo "      (create-issues, apply-bodies, apply-body)." >&2
+  echo >&2
+  printf '%s\n' "${BODY_HITS}" >&2
+  echo >&2
+fi
+
+if [ -n "${HISTORY_HITS}" ]; then
+  echo "FAIL: a build-history phrase reached the prompt surface." >&2
+  echo "      State the current rule; do not narrate what changed or what the" >&2
+  echo "      version before did (docs/briefs/2026-10-19-prompt-audit.md," >&2
+  echo "      ## 5. Current behavior only, no version history)." >&2
+  echo >&2
+  printf '%s\n' "${HISTORY_HITS}" >&2
   echo >&2
 fi
 

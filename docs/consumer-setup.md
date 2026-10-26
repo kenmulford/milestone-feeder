@@ -14,7 +14,7 @@ or from a marketplace once published). Confirm it is enabled with `/plugin`.
 | Plugin | Status | Why |
 |---|---|---|
 | [`superpowers`](https://github.com/anthropics/claude-code) | **Required** | A hard dependency: a required prerequisite you install yourself (not auto-installed; see `README.md`). The plan pipeline depends on it. |
-| `milestone-driver` | **Optional** | The feeder drafts every issue to pass the driver's triage clean, and on a clean run `create` can hand the milestone straight to the driver to start building (and, if the driver is set up with Trello, mirror the milestone onto your board). **Absent → the feeder still plans and deploys**; you run the driver later (or not at all). |
+| `milestone-driver` | Optional | The feeder drafts every issue to pass the driver's triage clean, and on a clean run `create` can hand the milestone straight to the driver to start building (and, if the driver is set up with Trello, mirror the milestone onto your board). **Absent → the feeder still plans and deploys**; you run the driver later (or not at all). |
 
 **The `milestone-driver` soft dependency.** The feeder writes issues meant to be
 built by `milestone-driver`, so it drafts every issue to pass the driver's triage
@@ -140,7 +140,7 @@ that happens:
 | Stage | What happens |
 |---|---|
 | Propose the split | `plan` carves your brief into a build-ordered set of milestones (each roughly one release) and shows you the proposed split. |
-| Confirm it (your call) | You **confirm** it, **merge** two milestones, **split** one, **reorder** them, or **reject** the split. One decision, up front, before anything is planned or written. Reject, and `plan` falls back to planning your brief as a single milestone. |
+| Confirm it (your call) | You confirm it, merge two milestones, split one, reorder them, or reject the split. One decision, up front, before anything is planned or written. Reject, and `plan` falls back to planning your brief as a single milestone. |
 | Plan them all | Once you confirm, `plan` plans **every** milestone in the roadmap (in parallel), each to its own plan file, in build order. |
 | Deploy in order | `create` deploys the milestones **in build order**, recording each one's position (`milestone X of N`) so the driver builds them in sequence. |
 | Tie them together | This same deploy also opens one parent issue that ties the milestones together, in build order, so `milestone-driver` builds them in sequence on its own. This is default behavior on the roadmap path: there is no new setting to turn it on. |
@@ -162,7 +162,7 @@ consults a built-in reference of these companions and proposes the conventional 
 into your plan, each marked `[implied - review / trim / augment]` so you can keep it,
 trim it, or add the ones it missed. That all happens **before any issue is
 created**. It also asks
-you, out loud, "this is a starting set for YOUR app - what's missing?", because a
+you, out loud, "this is a starting set for your app - what's missing?", because a
 built-in list can't know your domain. (A real product call with no obvious default
 isn't guessed: it's set aside for your decision, exactly like any other product
 gap.)
@@ -191,9 +191,9 @@ fully autonomous creation. End to end:
 
 | Step | Command | What happens |
 |---|---|---|
-| 1. Plan | `/milestone-feeder:plan <brief>` | Runs the full pipeline and stops at a **plan file** (`.milestone-feeder/plan-<slug>.md`). **No GitHub state is written**: no milestone, no issue, no label, no comment. |
+| 1. Plan | `/milestone-feeder:plan <brief>` | Runs the full pipeline and stops at a plan file (`.milestone-feeder/plan-<slug>.md`). **No GitHub state is written**: no milestone, no issue, no label, no comment. |
 | 2. Review | *(read the plan file)* | Read the milestone description (Wave order), every surviving issue body, and the "needs product input" report. Resolve any parked product gaps and re-run the plan until it is right. |
-| 3. Create | `/milestone-feeder:create <brief>` | Deploys **exactly the plan you approved**. Reads the plan file (running `plan` first only if none exists yet), then creates the GitHub artifacts: ensures the four labels, **creates-or-adopts the milestone by title** (reopening it if closed, never deleting), opens each surviving issue, rewrites the slug references to real issue numbers in the issue bodies and the milestone description, and files the needs-product-input report (a comment on the epic for a GitHub-epic brief, else a local file). On a **clean** run, if `milestone-driver` is installed, `create` can then **offer to hand the milestone straight to the driver to start building**. See the handoff note below. |
+| 3. Create | `/milestone-feeder:create <brief>` | Deploys **exactly the plan you approved**. Reads the plan file (running `plan` first only if none exists yet), then creates the GitHub artifacts: ensures the four labels, creates-or-adopts the milestone by title (reopening it if closed, never deleting), opens each surviving issue, rewrites the slug references to real issue numbers in the issue bodies and the milestone description, and files the needs-product-input report (a comment on the epic for a GitHub-epic brief, else a local file). On a clean run, if `milestone-driver` is installed, `create` can then offer to hand the milestone straight to the driver to start building. See the handoff note below. |
 
 `create` is **idempotent on re-run**: it adopts the existing milestone and matches
 issues by exact title, so re-running reuses what exists rather than duplicating it.
@@ -237,7 +237,7 @@ refresh the plan file, then `update` reconciles it against the live milestone
 | Step | Command | What happens |
 |---|---|---|
 | 1. Refresh the plan | `/milestone-feeder:plan <brief>` | Re-runs the pipeline on your edited brief and refreshes the plan file. Because the plan going in is always drafted to the driver's triage bar, reconciling it inherently repairs any issue that drifted from spec. **No GitHub writes.** |
-| 2. Update | `/milestone-feeder:update <brief>` | Resolves the existing milestone by title, then reconciles the refreshed plan against its live issues (matched by exact title): creates an issue in the plan but not on GitHub, patches a live body whose plan differs (**showing the diff first**), adds new dependency edges and re-renders the Wave order. A live issue **not** in the refreshed plan is **flagged for your decision**. Never auto-closed. Nothing differs → a **true no-op**. |
+| 2. Update | `/milestone-feeder:update <brief>` | Resolves the existing milestone by title, then reconciles the refreshed plan against its live issues (matched by exact title): creates an issue in the plan but not on GitHub, patches a live body whose plan differs (**showing the diff first**), adds new dependency edges and re-renders the Wave order. A live issue not in the refreshed plan is flagged for your decision. Never auto-closed. Nothing differs → a true no-op. |
 
 `update` **never closes and never deletes**: a live issue absent from your
 refreshed plan is flagged in the report, not auto-closed (closing is your call). It

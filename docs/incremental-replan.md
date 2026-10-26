@@ -47,7 +47,7 @@ its `Depends on #<n>` lines and the `## Waves` block already carry them.
 - **Step 4 dispatches `issue-author` only for the new candidates.** A prior
   candidate's issue body is carried forward from the prior plan file verbatim,
   never re-authored.
-- **Step 5.1 ADOPTS the prior plan's title + provenance**: `plan` sets
+- **Step 5.1 adopts the prior plan's title + provenance**: `plan` sets
   `preResolvedVersion` to the prior plan file's `Milestone title (exact)` and
   `Version provenance` values, so the ADOPT branch (`docs/version-ladder.md`)
   runs instead of the ladder and the milestone identity `create` may already

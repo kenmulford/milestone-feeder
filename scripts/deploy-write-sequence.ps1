@@ -127,6 +127,22 @@
 #            failure is named on stderr and the loop still finishes, so one bad
 #            body never strands the rest); 5 when the map is INCOMPLETE.
 #
+#   apply-body <number> <body-file>
+#     does   Writes ONE existing issue's body from a file, announce-then-write.
+#            Reads the live body (`gh issue view <number> --json body --jq
+#            .body`) into a temporary file, prints a unified diff of live
+#            against the file (`git diff --no-index`, because Windows ships no
+#            `diff`), then runs `gh issue edit <number> --body-file
+#            <body-file>`. Line endings (CRLF read as LF) and trailing newlines
+#            are ignored in the comparison, so a body that differs only there is
+#            not edited. Equal bodies: no edit, no diff. No slug rewrite: the
+#            file is the final body.
+#     out    The unified diff, then one TAB row: <number><TAB>edited or
+#            <number><TAB>unchanged.
+#     exit   0 (including unchanged); 2 on a usage problem or a missing file;
+#            3 when the live read or the edit failed, or `git` is absent so no
+#            diff can be shown (named on stderr; nothing is written).
+#
 #   patch-description <number> <map-file> <description-file>
 #     does   Rewrites the Wave-order description through the same rule and
 #            PATCHes it onto the milestone (the REPLACE form: the PATCH
@@ -243,6 +259,7 @@ function Show-Usage {
         '  create-issues <job-file>',
         '  rewrite-slugs <map-file> <text-file>',
         '  apply-bodies <job-file> <map-file>',
+        '  apply-body <number> <body-file>',
         '  patch-description <number> <map-file> <description-file>'
     )
     foreach ($l in $lines) { [Console]::Error.WriteLine($l) }
@@ -633,6 +650,69 @@ function Invoke-ApplyBodies {
     return $status
 }
 
+function Invoke-ApplyBody {
+    param([string]$Number, [string]$BodyFile)
+    if ($Number -notmatch '^[0-9]+$') { Show-Usage; return 2 }
+    if (-not $BodyFile) { Show-Usage; return 2 }
+    if (-not (Test-InputFile $BodyFile)) { return 2 }
+    if (-not (Test-Gh)) { return 3 }
+
+    # The live body is read raw (not line-split), so both sides compare by the
+    # bash twin's rule: CRLF read as LF, trailing newlines dropped.
+    $psi = New-Object System.Diagnostics.ProcessStartInfo
+    $psi.FileName = 'gh'
+    $psi.Arguments = "issue view $Number --json body --jq .body"
+    $psi.UseShellExecute = $false
+    $psi.RedirectStandardOutput = $true
+    $psi.RedirectStandardError = $true
+    $psi.RedirectStandardInput = $true
+    $psi.StandardOutputEncoding = New-Object System.Text.UTF8Encoding($false)
+    $liveText = $null
+    try {
+        $proc = [System.Diagnostics.Process]::Start($psi)
+        # stdin closes at once so an auth prompt gets EOF instead of waiting;
+        # stderr drains asynchronously so a full buffer cannot block stdout.
+        $proc.StandardInput.Close()
+        $errTask = $proc.StandardError.ReadToEndAsync()
+        $liveText = $proc.StandardOutput.ReadToEnd()
+        $proc.WaitForExit()
+        [void]$errTask.Result
+        if ($proc.ExitCode -ne 0) { $liveText = $null }
+    } catch {
+        $liveText = $null
+    }
+    if ($null -eq $liveText) {
+        Write-Err "could not read the live body of #$Number; nothing was written"
+        return 3
+    }
+    $newText = [System.IO.File]::ReadAllText($BodyFile)
+    $liveNorm = ($liveText -replace "`r`n", "`n") -replace "`n+$", ''
+    $newNorm = ($newText -replace "`r`n", "`n") -replace "`n+$", ''
+    if ($liveNorm -ceq $newNorm) {
+        Write-Row "$Number`tunchanged"
+        return 0
+    }
+    # Announce-then-write: with no way to show the diff, nothing is written.
+    if (-not (Get-Command git -ErrorAction SilentlyContinue)) {
+        Write-Err 'git is not on PATH, so the diff cannot be shown; nothing was written'
+        return 3
+    }
+    $liveFile = [System.IO.Path]::GetTempFileName()
+    try {
+        Write-Utf8NoBom $liveFile $liveText
+        foreach ($d in @(git diff --no-index --no-color -- $liveFile $BodyFile)) { Write-Row ([string]$d) }
+    } finally {
+        Remove-Item -LiteralPath $liveFile -Force -ErrorAction SilentlyContinue
+    }
+    gh issue edit $Number --body-file $BodyFile *> $null
+    if ($LASTEXITCODE -eq 0) {
+        Write-Row "$Number`tedited"
+        return 0
+    }
+    Write-Err "gh issue edit failed for #$Number; its body is unchanged"
+    return 3
+}
+
 function Invoke-PatchDescription {
     param([string]$Number, [string]$MapFile, [string]$DescFile)
     if ($Number -notmatch '^[0-9]+$') { Show-Usage; return 2 }
@@ -674,6 +754,7 @@ switch -CaseSensitive ($sub) {
     'create-issues' { $result = Invoke-CreateIssues $a0 }
     'rewrite-slugs' { $result = Invoke-RewriteSlugs $a0 $a1 }
     'apply-bodies' { $result = Invoke-ApplyBodies $a0 $a1 }
+    'apply-body' { $result = Invoke-ApplyBody $a0 $a1 }
     'patch-description' { $result = Invoke-PatchDescription $a0 $a1 $a2 }
     default { Show-Usage; $result = 2 }
 }

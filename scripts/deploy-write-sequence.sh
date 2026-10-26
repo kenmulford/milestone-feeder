@@ -125,6 +125,21 @@
 #            failure is named on stderr and the loop still finishes, so one bad
 #            body never strands the rest); 5 when the map is INCOMPLETE.
 #
+#   apply-body <number> <body-file>
+#     does   Writes ONE existing issue's body from a file, announce-then-write.
+#            Reads the live body (`gh issue view <number> --json body --jq
+#            .body`) into a temporary file, prints `diff -u` of live against
+#            the file, then runs `gh issue edit <number> --body-file
+#            <body-file>`. Line endings (CRLF read as LF) and trailing newlines
+#            are ignored in the comparison, so a body that differs only there is
+#            not edited. Equal bodies: no edit, no diff. No slug rewrite: the
+#            file is the final body.
+#     out    The unified diff, then one TAB row: <number><TAB>edited or
+#            <number><TAB>unchanged.
+#     exit   0 (including unchanged); 2 on a usage problem or a missing file;
+#            3 when the live read or the edit failed, or `diff` is not on PATH
+#            and the bodies differ (named on stderr; nothing is written).
+#
 #   patch-description <number> <map-file> <description-file>
 #     does   Rewrites the Wave-order description through the same rule and
 #            PATCHes it onto the milestone (the REPLACE form: the PATCH
@@ -226,6 +241,7 @@ usage: deploy-write-sequence.sh <subcommand> [args]
   create-issues <job-file>
   rewrite-slugs <map-file> <text-file>
   apply-bodies <job-file> <map-file>
+  apply-body <number> <body-file>
   patch-description <number> <map-file> <description-file>
 USAGE
 }
@@ -547,6 +563,46 @@ cmd_apply_bodies() {
   return $status
 }
 
+# Strips a trailing CR from every line, so a CRLF body compares equal to its LF
+# twin. awk adds a final newline, which the `$(...)` callers drop.
+norm_eol() {
+  awk '{ sub(/\r$/, "") } 1' "$1"
+}
+
+APPLY_LIVE=""
+
+cmd_apply_body() {
+  local number="$1" bodyfile="$2"
+  case "$number" in '' | *[!0-9]*) usage; return 2 ;; esac
+  [ -n "$bodyfile" ] || { usage; return 2; }
+  require_file "$bodyfile" || return 2
+  require_gh || return 3
+
+  APPLY_LIVE="$(mktemp)" || { say_err "could not create a temporary file"; return 3; }
+  trap 'rm -f "$APPLY_LIVE" 2>/dev/null' EXIT
+  if ! gh issue view "$number" --json body --jq .body </dev/null > "$APPLY_LIVE" 2>/dev/null; then
+    say_err "could not read the live body of #$number; nothing was written"
+    return 3
+  fi
+  # `$(...)` drops trailing newlines on both sides: `--jq .body` appends one to
+  # the live body, and a body file may or may not end with one.
+  if [ "$(norm_eol "$APPLY_LIVE")" = "$(norm_eol "$bodyfile")" ]; then
+    printf '%s\tunchanged\n' "$number"
+    return 0
+  fi
+  command -v diff >/dev/null 2>&1 || {
+    say_err "diff is not on PATH, so the diff cannot be shown; nothing was written"
+    return 3
+  }
+  diff -u "$APPLY_LIVE" "$bodyfile"
+  if gh issue edit "$number" --body-file "$bodyfile" </dev/null >/dev/null 2>&1; then
+    printf '%s\tedited\n' "$number"
+    return 0
+  fi
+  say_err "gh issue edit failed for #$number; its body is unchanged"
+  return 3
+}
+
 cmd_patch_description() {
   local number="$1" mapfile="$2" descfile="$3" rc tmp desc
   case "$number" in '' | *[!0-9]*) usage; return 2 ;; esac
@@ -579,6 +635,7 @@ case "$sub" in
   create-issues)     cmd_create_issues "$@" ;;
   rewrite-slugs)     cmd_rewrite_slugs "$@" ;;
   apply-bodies)      cmd_apply_bodies "$@" ;;
+  apply-body)        cmd_apply_body "$@" ;;
   patch-description) cmd_patch_description "$@" ;;
   *)                 usage; exit 2 ;;
 esac

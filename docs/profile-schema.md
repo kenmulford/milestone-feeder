@@ -29,12 +29,9 @@ CI.
 Keep it thin and consumer-driven, the same discipline as the driver: **new keys
 are added only when a real consumer needs them, never speculatively**
 (`SPEC.md` §7). Nearly every own-key has a bundled default, so a profile may omit
-any key it does not override; an empty `{}` is valid (defaults apply where they exist). Three
-keys have **no** bundled default: `versioning`, `issueSize`, and `sourceGlobs`. For
-`versioning`, absent is a distinct "infer-or-ask" state, not a default value (see its
-per-key note). The only
-key the feeder's own repo must carry is the self-protection `sourceGlobs` (so the
-`no-source-edit` hook has a primary source to read).
+any key it does not override. An empty `{}` is valid; the only key the feeder's own
+repo must carry is the self-protection `sourceGlobs` (so the `no-source-edit` hook has
+a primary source to read).
 
 ## Own keys
 
@@ -121,7 +118,7 @@ unrecognized value** (anything that is not exactly `"semver"` or `"none"`) is
 treated as absent: `plan` falls back to infer-or-ask and never errors on the key.
 
 **`sourceGlobs` (self-protection).** The paths the feeder's `no-source-edit` hook
-guards in the feeder's **own** repo. This is **semantically distinct** from the
+guards in the feeder's own repo. This is **semantically distinct** from the
 consumer's shared `sourceGlobs` (which the feeder reads from the driver config
 when planning a target repo). Its presence in `feeder.json` is justified by
 the dogfood consumer (the feeder protecting its own source) under the
@@ -154,7 +151,7 @@ declares its source paths only in `driver.json` is still guarded.
 ### 2. The consumer-facing shared keys
 
 The consumer-facing shared keys (`uiSurfaceGlobs`, `integrationBranch`, and the
-**consumer's** `sourceGlobs`) are **read from the driver config, not duplicated**
+consumer's `sourceGlobs`) are **read from the driver config, not duplicated**
 into `feeder.json`. The feeder reads these from the driver config when planning
 a target repo. They resolve in this order:
 
@@ -187,10 +184,10 @@ duplicating a Trello key of its own (the same "read from the driver config, not
 duplicated into `feeder.json`" discipline as the keys above). When
 `integrations.trello` is **absent** from the driver profile (or no driver profile
 resolves), `create` does nothing new: a **silent no-op**, the GitHub deploy
-result byte-unchanged, so a driver-less or Trello-less repo is unchanged.
+result identical, so a driver-less or Trello-less repo is unchanged.
 
 The card mechanics, target list, auth, and the best-effort / never-gating
-behavior are the **driver's**: this pass mirrors them **by reference**, it does
+behavior are the driver's: this pass mirrors them **by reference**, it does
 not restate them. See milestone-driver's `skills/solve-milestone/trello-sync.md`
 (Conventions 1–7) and the `integrations.trello` rows of its
 [`docs/profile-schema.md`](https://github.com/kenmulford/milestone-driver/blob/main/docs/profile-schema.md)
@@ -238,7 +235,7 @@ project can extend that reference with an **optional project-local overlay**.
 
 The overlay is **not a `feeder.json` own-key**: there is no key in the table above
 that points at it, and there is nothing to set in the profile for it. It is a
-separate **markdown file**, discovered by a **fixed path**, a sibling of
+separate markdown file, discovered by a **fixed path**, a sibling of
 `feeder.json` in the suite config directory:
 
 ```
@@ -256,8 +253,8 @@ capability per `##` heading, its implied surfaces listed beneath
 (`docs/implied-surfaces.md` → "Project-local overlay").
 
 **How it merges: additive only.** `plan` Step 0 resolves the overlay and merges it
-into the bundled reference **additively**: an overlay can **add** a capability the
-global reference doesn't carry and **extend** an existing capability with surfaces
+into the bundled reference additively: an overlay can add a capability the
+global reference doesn't carry and extend an existing capability with surfaces
 specific to your project, but it can **never remove** a surface the global reference
 defines. Dropping a surface you don't want for a given milestone is the **plan
 review's** job (a per-run "trim this line before approving" call), not a standing
