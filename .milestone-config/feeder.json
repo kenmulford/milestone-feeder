@@ -1,3 +1,4 @@
 {
-  "sourceGlobs": ["skills/**", "agents/**", "hooks/**"]
+  "sourceGlobs": ["skills/**", "agents/**", "hooks/**"],
+  "autoHandoff": "auto"
 }

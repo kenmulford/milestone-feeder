@@ -9,18 +9,18 @@ headings stable: they are citation anchors.
 
 ## Runtime & frameworks
 The platform/runtime and primary frameworks, with versions. (Mirror these into milestone-driver `nonNegotiables` where they're hard constraints.)
-Claude Code plugin: markdown **skills** (frontmatter triggers) + markdown **agents** + **hooks** shipped as cross-platform **bash (`jq`) and PowerShell 7+** twins, BOM-free, LF line endings. No compiled runtime. Hard dependency: the `superpowers` plugin, now a required prerequisite the user installs themselves (no longer auto-declared in `.claude-plugin/plugin.json`; see `README.md`). The plugin version lives only in `.claude-plugin/plugin.json`. Mirror into `milestone-driver` `nonNegotiables` (already present): "Claude Code plugin: markdown skills + bash-first/pwsh-fallback hooks"; "Cross-platform: bash (jq) and PowerShell 7+". (Grounded in `.claude-plugin/plugin.json`; `.milestone-config/driver.json` nonNegotiables; `.gitattributes`; stack detection.)
+Claude Code plugin: markdown skills (frontmatter triggers) + markdown agents + hooks shipped as cross-platform bash (`jq`) and PowerShell 7+ twins, BOM-free, LF line endings. No compiled runtime. Hard dependency: the `superpowers` plugin, a required prerequisite the user installs themselves; `.claude-plugin/plugin.json` does not declare it (see `README.md`). The plugin version lives only in `.claude-plugin/plugin.json`. Mirror into `milestone-driver` `nonNegotiables` (already present): "Claude Code plugin: markdown skills + bash-first/pwsh-fallback hooks"; "Cross-platform: bash (jq) and PowerShell 7+". (Grounded in `.claude-plugin/plugin.json`; `.milestone-config/driver.json` nonNegotiables; `.gitattributes`; stack detection.)
 
 ## Approved libraries (by purpose)
 One approved choice per purpose, so a redundant alternative is easy to spot.
 
 | Purpose | Library | Notes |
 |---|---|---|
-| GitHub writes/reads | `gh` (GitHub CLI) | `gh label/issue/api`: the only way the feeder touches GitHub (`docs/consumer-setup.md` Before you start). |
+| GitHub writes/reads | `gh` (GitHub CLI) | `gh label/issue/api`: the only way the feeder touches GitHub (`README.md (## Before you start)`). |
 | JSON parsing in hooks | `jq` (bash path) | The bash hook form; the PowerShell 7+ twin uses native `ConvertFrom-Json`. |
 | Cross-platform shell | bash + PowerShell 7+ | Every hook/script ships as a twin (`.sh` + `.ps1`) via the `run-hook.cmd` polyglot launcher. |
 | Build engine (optional) | `milestone-driver` plugin | The builder whose triage bar the feeder drafts to; also the optional `create` build-handoff target. Absent → the feeder still plans and deploys. |
-| Plan pipeline dependency | `superpowers` plugin | Hard dependency: a required prerequisite the user installs themselves (no longer manifest-declared; see `README.md`). |
+| Plan pipeline dependency | `superpowers` plugin | Hard dependency: a required prerequisite the user installs themselves; `.claude-plugin/plugin.json` does not declare it (see `README.md`). |
 
 ## Adding a dependency (the gate)
 A new dependency is a PAUSE, not an autonomous call. Record what it buys, its license / OSS status, and why nothing approved suffices; a human approves before it's added.
