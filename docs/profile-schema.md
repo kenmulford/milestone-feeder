@@ -29,17 +29,18 @@ CI.
 Keep it thin and consumer-driven, the same discipline as the driver: **new keys
 are added only when a real consumer needs them, never speculatively**
 (`SPEC.md` §7). Nearly every own-key has a bundled default, so a profile may omit
-any key it does not override; an empty `{}` is valid (defaults apply where they exist). The one
-exception is `versioning`, which has **no** bundled default: absent is a distinct
-"infer-or-ask" state, not a default value (see its per-key note). The only
+any key it does not override; an empty `{}` is valid (defaults apply where they exist). Three
+keys have **no** bundled default: `versioning`, `issueSize`, and `sourceGlobs`. For
+`versioning`, absent is a distinct "infer-or-ask" state, not a default value (see its
+per-key note). The only
 key the feeder's own repo must carry is the self-protection `sourceGlobs` (so the
 `no-source-edit` hook has a primary source to read).
 
 ## Own keys
 
 These keys are owned by the feeder and resolved from `feeder.json`. All are
-optional in the file. Every key except `versioning` has a bundled default;
-`versioning` has none: absent is its own "infer-or-ask" state (see its note).
+optional in the file. Keys without a bundled default: `versioning`, `issueSize`, `sourceGlobs`.
+`versioning` absent is its own "infer-or-ask" state (see its note).
 
 | Key | Type | Default | Purpose |
 |---|---|---|---|
@@ -49,7 +50,7 @@ optional in the file. Every key except `versioning` has a bundled default;
 | `issueAuthorAgent` | string | `milestone-feeder:issue-author` | Override the authoring agent (default-filled). |
 | `issueSize` | string | *(none)* | Optional natural-language sizing rule (e.g. "≤1 PR, ≤1 new screen"). |
 | `versioning` | `"semver" \| "none"` | *(none)* | Whether this project is semver-versioned. Drives milestone-version resolution at plan time. Three-way (see note). |
-| `sourceGlobs` | string[] | `["skills/**","agents/**","hooks/**"]` | **Self-protection only**, the paths the feeder's own `no-source-edit` hook guards in the feeder's *own* repo. Distinct from the consumer's shared `sourceGlobs`. Resolution chain below. |
+| `sourceGlobs` | string[] | *(none: the hook fails open)* | **Self-protection only**, the paths the feeder's own `no-source-edit` hook guards in the feeder's *own* repo. Distinct from the consumer's shared `sourceGlobs`. Resolution chain below. |
 
 ### Per-key notes
 
@@ -113,7 +114,7 @@ semver-versioned?*) with a three-way contract (grounded in
 - **Absent** = unknown: `plan` infers from repo signals (existing milestone
   titles, then git tags), and only asks when nothing is inferable.
 
-Unlike every other own-key, `versioning` has **no bundled default**: absent is a
+`versioning` has **no bundled default**: absent is a
 distinct documented state, *not* a default value. So it follows the
 [absent-means-default discipline](#absent-means-default-discipline) the same way:
 when it is skipped, it is **omitted** from the profile (never written as a

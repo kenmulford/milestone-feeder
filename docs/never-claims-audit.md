@@ -14,10 +14,6 @@ Re-run the audit at any time:
 grep -rniE '\bnever\b|\balways\b' skills/*/SKILL.md
 ```
 
-As re-measured on 2026-08-18, that returns 195 occurrences across 138 lines
-(lines carrying "never": plan 41, update 26, remediate 24, create 17,
-build-roadmap 11, setup 9).
-
 `remediate` arrived with issue #343, after the classification below was made. Its
 claims are recorded in its own `## Non-negotiables` and backed by the Step-4
 string checks; they are in scope for the next re-run of this audit and are not

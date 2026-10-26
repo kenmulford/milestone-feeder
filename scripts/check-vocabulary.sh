@@ -113,12 +113,7 @@ PATTERN="${VOCAB_PATTERN}|${EMDASH}"
 #
 # Every row quotes a source this ban cannot reach, so recasting it would turn
 # the quote into a misquote:
-#   rows 1 and 2  docs/specs/v0.3.1-driver-handoff.md, an excluded pathspec.
-#   rows 3 and 4  the milestone-driver plugin's
-#                 skills/solve-milestone/trello-sync.md (Conv 7's checklist
-#                 item format and Conv 1's failure-log format). A separate
-#                 repo, carrying no em-dash ban, so neither source will ever
-#                 follow a recast.
+#   both rows  docs/specs/v0.3.1-driver-handoff.md, an excluded pathspec.
 # Recorded as carve-out 3 at .project/conventions.md (## Em-dash ban).
 #
 # By SPAN, never by line and never by file. A seventh pathspec exclusion would
@@ -128,8 +123,6 @@ PATTERN="${VOCAB_PATTERN}|${EMDASH}"
 ALLOWLIST_ROWS=(
   "docs/create-deploy-sequence.md|The deploy receipt ${EMDASH} a stable handle for rename"
   "docs/create-deploy-sequence.md|\`<n>\` ${EMDASH} the deploy receipt"
-  "docs/create-deploy-sequence.md|#<n> ${EMDASH} <issue title>"
-  "docs/create-deploy-sequence.md|Trello: <operation> skipped ${EMDASH} <error>"
 )
 
 # --- check 1: the allowlist itself has not rotted ---------------------------
@@ -206,7 +199,7 @@ fi
 # --no-color is load-bearing, not cosmetic. A developer with `color.ui` or
 # `color.grep` set to `always` gets ANSI escapes wrapped around the path field
 # and around every match, so `${match%%:*}` below yields a decorated path that
-# matches no ALLOWLIST_ROWS file, no span is stripped, and all four sanctioned
+# matches no ALLOWLIST_ROWS file, no span is stripped, and both sanctioned
 # quotes report as violations on an unmodified tree. Verified: with
 # `color.ui=always` and no --no-color, this gate exits 1 on a clean checkout.
 # CI is unaffected (no color config, not a TTY), which makes it precisely the
