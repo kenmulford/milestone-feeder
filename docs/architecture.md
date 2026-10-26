@@ -27,9 +27,9 @@ The plan file is the **build artifact** (see [The plan file as build artifact](#
 | Remediate skill | `skills/remediate/SKILL.md` | The correction verb: reads one issue plus the driver's last `🔴 Triage` comment, dispatches `remediator` once, verifies each superseded span is gone, then shows the diff and patches the body. `gh issue edit <n> --body-file` is its entire write-set: no labels, no comments. `/milestone-feeder:remediate <issue-number>`. See [The remediation path](#the-remediation-path). |
 | Remediator agent | `agents/remediator.md` | Correction lens: one issue body + the driver's recorded findings → that body with each correction applied **in place**, plus the superseded-span ledger the skill verifies mechanically. Read-only; returns text, never edits the issue. A finding needing a product or architecture decision returns `NEEDS_HUMAN`. |
 | Roadmap-splitter agent | `agents/roadmap-splitter.md` | Roadmap lens: an oversized whole-app brief + standing docs → a strict, build-ordered partition into named milestones (the `ROADMAP` block). Dispatched once by `build-roadmap`. Read-only. Supersedes the architect's passive multi-milestone advisory with a real, ordered split. |
-| Hook: `no-source-edit` | `hooks/` (`hooks.json`, `run-hook.cmd`, `.sh`, `.ps1`) | `PreToolUse` (`Write`/`Edit`/`MultiEdit`/`NotebookEdit`): unconditionally deny edits to the feeder's own `sourceGlobs`. The only mechanical gate the feeder needs: it authors no code and opens no PRs. See [The mechanical gate](#the-mechanical-gate). |
+| Hook: `no-source-edit` | `hooks/` (`hooks.json`, `run-hook.cmd`, `.sh`, `.ps1`) | `PreToolUse` (`Write`/`Edit`/`MultiEdit`/`NotebookEdit`): deny edits to the feeder's own `sourceGlobs` by the main thread and the feeder's own agents; a positively identified non-feeder subagent passes. The only mechanical gate the feeder needs: it authors no code and opens no PRs. See [The mechanical gate](#the-mechanical-gate). |
 | Manifest + registration | `.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`, `hooks/hooks.json` | Plugin metadata (`superpowers` is a documented prerequisite, not a manifest dependency; see `README.md`), marketplace registration, and Claude-side hook registration. |
-| Update skill | `skills/update/SKILL.md` | Plan-driven reconcile against an existing milestone: reconcile the recorded plan onto the live milestone by patching gapped bodies, filling missing edges, and re-rendering the Wave order. `/milestone-feeder:update <brief>`. Creates and deletes no issues; a clean milestone is a no-op. Reuses `create`'s write-primitives by reference. |
+| Update skill | `skills/update/SKILL.md` | Plan-driven reconcile against an existing milestone: reconcile the recorded plan onto the live milestone by patching gapped bodies, filling missing edges, and re-rendering the Wave order. `/milestone-feeder:update <brief>`. Creates missing issues and deletes none; a clean milestone is a no-op. Reuses `create`'s write-primitives by reference. |
 | Implied-surfaces reference | `docs/implied-surfaces.md` | The stack-agnostic implied-surfaces **reasoning reference** the architect consults during breakdown: the standard companion surfaces a capability or a new entity implies, framed as a reviewable floor (a robust start, never a scope-emitting catalog). Also **defines** the project-local overlay shape (`.milestone-config/implied-surfaces.md`, additive-merge: add / extend, never delete a global surface). PR-able; shipped so the capability set grows by community PR. |
 | One-time-notices reference | `docs/one-time-notices.md` | The canonical source for eight one-time Step-0 units (a self-heal + seven notices) shared across `plan`, `create`, and `update` (each announces a self-heal one of them performed, flags a repo-state problem to fix by hand, points at a new/optional capability, or announces a behavior change), shown at most once per clone via a per-clone marker. Reference content only; the live emitter is the `scripts/emit-notice.sh` / `scripts/emit-notice.ps1` twin pair reading `scripts/emit-notice.json`, which `skills/plan/SKILL.md`, `skills/create/SKILL.md`, `skills/update/SKILL.md`, and `skills/remediate/SKILL.md` Step 0 each run under their own name (no unit's `skills` list names `remediate` today, so that call selects nothing), and `skills/setup/SKILL.md` Phase 3 runs by section id. |
 | Plan-file-contract reference | `docs/plan-file-contract.md` | The shared definition of the plan file's fields and output templates: the field table, the plan-file output template, and the needs-product-input report template that `create` and `update` parse. The three artifacts are defined there once, and `skills/plan/SKILL.md` Step 7 cites them and instantiates their scaffolds byte-exact rather than carrying a copy, so downstream skills cite one definition instead of each repeating the contract. |
@@ -120,12 +120,11 @@ default: what to build, or user-facing behavior.
 
 One `PreToolUse` hook, registered in `hooks/hooks.json` and invoked via the
 bash-first / pwsh-fallback `run-hook.cmd` launcher (fail-open). The feeder reads
-code and authors issue text; it never writes source, so the deny is
-**unconditional** (no subagent carve-out, unlike the driver's `force-subagent`).
+code and authors issue text; it never writes source, so the deny binds the main thread and the feeder's own agents (the four names in `FEEDER_OWN_AGENTS`). A subagent with an `agent_id` and a non-feeder `agent_type` passes; an `agent_id` with an empty or unknown `agent_type` is denied.
 
 | Gate | Matcher | Mechanism |
 |---|---|---|
-| `no-source-edit` | `Write` / `Edit` / `MultiEdit` / `NotebookEdit` | Unconditionally denies edits to the resolved `sourceGlobs`. Resolution: `<repo>/.milestone-config/feeder.json` first (self-protection of the feeder's own repo), then the driver config (`.milestone-config/driver.json` → root `milestone-driver.json`), else **fail-open**. `docs/**`, `.claude/**`, and `Obsidian/**` are always exempt. Escape hatch: `CLAUDE_HOOK_DISABLE_NO_SOURCE_EDIT=1`. |
+| `no-source-edit` | `Write` / `Edit` / `MultiEdit` / `NotebookEdit` | Denies the main thread and the feeder's own agents edits to the resolved `sourceGlobs`. Resolution: `<repo>/.milestone-config/feeder.json` first (self-protection of the feeder's own repo), then the driver config (`.milestone-config/driver.json` → root `milestone-driver.json`), else **fail-open**. `docs/**`, `.claude/**`, and `Obsidian/**` are always exempt. Escape hatch: `CLAUDE_HOOK_DISABLE_NO_SOURCE_EDIT=1`. |
 
 The `sourceGlobs` this gate reads is **self-protection only** (the feeder guarding
 its own repo) and is semantically distinct from the *consumer's* shared
@@ -303,6 +302,7 @@ invariant holds) performs the GitHub writes in a fixed order. Only the
 | c | **Create each gate-surviving issue** in Wave order, applying its `ui`/`logic` + `risk:*` labels; build the slug→`#n` map. On adopt, title-matched open issues are reused (no duplicate) and their bodies left as-is. |
 | d | **Second pass: rewrite slug→`#n`** (substring-safe) in each newly-created issue body and in the milestone description, then `gh issue edit`/`gh api PATCH`. Two passes are required because numbers don't exist until pass (c). |
 | e | **File the needs-product-input report**: epic comment when the brief was a GitHub epic, else a local file. |
+| f | **Mirror the milestone to Trello**: best-effort, only when the driver profile carries `integrations.trello`; a Trello failure logs one line and never fails the deploy. |
 
 Idempotent re-run relies on stable, exact, open issue titles: the adopt +
 match-by-title path reuses existing issues rather than duplicating them, and pass
@@ -310,7 +310,7 @@ match-by-title path reuses existing issues rather than duplicating them, and pas
 
 **A roadmap of N milestones (Step 1R).** When `plan`'s roadmap flow left a **roadmap
 manifest** for the brief, `create` deploys **all N** milestones in one run by
-**looping the per-plan deploy above** (passes a–e, unchanged) over the manifest's
+**looping the per-plan deploy above** (passes a-f, unchanged) over the manifest's
 milestones in build order, adding only the outer loop. Each milestone's description
 gains one canonical `build order: milestone X of N` line (the cross-milestone
 position the driver reads to build the roadmap in sequence), ridden inside pass (d)'s
@@ -322,7 +322,7 @@ already-fully-deployed milestones by a per-run deploy checkpoint
 (`docs/create-deploy-sequence.md` → "The deploy checkpoint (resume short-circuit,
 roadmap-only)").
 
-After the write sequence (a–e), `create` runs a
+After the write sequence (a-f), `create` runs a
 top-level **Step 4: the driver handoff**. It is **not** a GitHub write and is **not** part of the pass-(d)
 idempotent-re-run guarantee. It is a post-deploy skill invocation; see
 [The create → driver handoff](#the-create--driver-handoff).
@@ -336,8 +336,7 @@ deployed. This is a **post-deploy skill invocation, not a GitHub write**: it
 authors nothing on GitHub; it kicks off the driver. Because it is not a write, it
 is **not** part of the pass-(d) idempotent-re-run guarantee: re-running `create`
 after a handoff fired would **re-offer** (or, under `"auto"`, re-fire) the handoff,
-not no-op. It is modelled as `create`'s top-level **Step 4**, run after the pass
-a–e write sequence, not as a sixth write pass.
+not no-op. It is modelled as `create`'s top-level **Step 4**, run after passes a-f.
 
 The `autoHandoff` own-key (default `"prompt"`) governs it: `"prompt"`
 asks first, `"auto"` kicks off immediately, `"off"` never offers. Three gates must

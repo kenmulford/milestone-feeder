@@ -144,7 +144,6 @@ that happens:
 | Plan them all | Once you confirm, `plan` plans **every** milestone in the roadmap (in parallel), each to its own plan file, in build order. |
 | Deploy in order | `create` deploys the milestones **in build order**, recording each one's position (`milestone X of N`) so the driver builds them in sequence. |
 | Tie them together | This same deploy also opens one parent issue that ties the milestones together, in build order, so `milestone-driver` builds them in sequence on its own. This is default behavior on the roadmap path: there is no new setting to turn it on. |
-| Check coverage | As its last step, `create` reads the deployed milestones and issues back from GitHub and checks they cover **everything your original brief asked for**, surfacing a short punch-list of anything missed, covered twice, or drifted. It never edits your issues; the punch-list is yours to act on. |
 
 **A normal, single-release brief is unchanged.** The roadmap only kicks in when your
 brief reads as several releases. You get no extra step and no extra prompt
@@ -231,7 +230,7 @@ pre-handoff behavior (`create` finishes and stops), set `autoHandoff` to `"off"`
 `/milestone-feeder:update <brief>` reconciles a **refreshed plan** onto a milestone
 that **already exists**, the maintenance counterpart of `create`. Where `create`
 *builds* a milestone, `update` *reconciles* the plan against the live one,
-**creating and deleting no issues**. The flow: edit your brief, re-run `plan` to
+**creating missing issues and deleting none**. The flow: edit your brief, re-run `plan` to
 refresh the plan file, then `update` reconciles it against the live milestone
 (showing you the diff before it writes):
 
