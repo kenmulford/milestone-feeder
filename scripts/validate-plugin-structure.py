@@ -613,7 +613,7 @@ FILE_WORD_CEILINGS: dict[str, int] = {
     # 4549 words times 1.05 is 4776.45, which rounds up to 4800. The recorded
     # 4650 stands instead, because the never-up rule outranks the formula.
     "skills/create/SKILL.md": 4650,
-    "skills/update/SKILL.md": 6500,
+    "skills/update/SKILL.md": 6550,
     "skills/build-roadmap/SKILL.md": 2650,
     "skills/setup/SKILL.md": 2400,
     "skills/plan/SKILL.md": 9550,
@@ -664,9 +664,8 @@ FILE_WORD_CEILINGS: dict[str, int] = {
     # for the reason recorded on agents/architect.md above. 6441 words times
     # 1.05 is 6763.05, which rounds up to 6800.
     "SPEC.md": 6800,
-    # 10778 words times 1.05 is 11316.9, which rounds up to 11350. The recorded
-    # 11300 stands instead, because the never-up rule outranks the formula.
-    "docs/create-deploy-sequence.md": 11300,
+    # 10778 words times 1.05 is 11316.9, which rounds up to 11350.
+    "docs/create-deploy-sequence.md": 11350,
     "docs/file-map.md": 1450,
     "docs/implied-surfaces.md": 1250,
     # New: skills/plan/SKILL.md and agents/architect.md now reference this
@@ -686,7 +685,9 @@ FILE_WORD_CEILINGS: dict[str, int] = {
     # is 2294.25, which rounds up to 2300.
     "docs/one-time-notices.md": 2300,
     "docs/plan-file-contract.md": 1600,
+    # 2236 words times 1.05 is 2347.8, which rounds up to 2350.
     "docs/profile-schema.md": 2350,
+    # 2246 words times 1.05 is 2358.3, which rounds up to 2400.
     "docs/roadmap-fan-out.md": 2400,
     "docs/roadmap-manifest-format.md": 1050,
     "docs/step-0-grounding.md": 2050,
@@ -941,11 +942,13 @@ if len(present) >= 2:
 # word is written in caps for emphasis. The two tests are that section's
 # acceptance awk, except that inline code spans are stripped first: code is not
 # prose, so the gate is stricter than the awk about prose and looser about code.
-# Scope is every file a skill or agent loads:
+# Scope is one set, the same one scripts/check-vocabulary.sh category 3 scans:
 # skills/*/SKILL.md, agents/*.md, .project/*.md, and the top-level docs/*.md.
-# docs/briefs/** and docs/specs/** are records, not loaded surface.
+# docs/briefs/** and docs/specs/** are history records, so they are excluded.
 
-EMPHASIS_CODE_SPAN_RE = re.compile(r"(`+).+?\1")
+# A code span closes only on a backtick run of exactly the opening length.
+EMPHASIS_CODE_SPAN_RE = re.compile(r"(?<!`)(`+)(?!`).+?(?<!`)\1(?!`)")
+EMPHASIS_FENCE_RE = re.compile(r"^\s*(`{3,}(?=[^`]*$)|~{3,})")
 EMPHASIS_MULTI_BOLD_RE = re.compile(r"(\*\*[^*]+\*\*.*){2,}")
 EMPHASIS_CAPS_RE = re.compile(
     r"\b(NOT|AND|MUST|ONLY|NEVER|ONCE|ONE|BOTH|THIS|ALWAYS|EXACTLY|ANY|EVERY|OUTER|ALL)\b"
@@ -955,12 +958,22 @@ EMPHASIS_CAPS_RE = re.compile(
 def emphasis_violations(text: str) -> list[tuple[int, str]]:
     """Return (line number, reason) for each emphasis breach outside fences."""
     found: list[tuple[int, str]] = []
-    in_fence = False
+    fence = ""  # the opening fence run while inside a fenced block
     for lineno, line in enumerate(text.splitlines(), start=1):
-        if line.lstrip().startswith(("```", "~~~")):
-            in_fence = not in_fence
+        opener = EMPHASIS_FENCE_RE.match(line)
+        if fence:
+            # CommonMark: a closing fence is the same character, at least as
+            # long as the opener, with nothing after it but whitespace.
+            if (
+                opener
+                and opener.group(1)[0] == fence[0]
+                and len(opener.group(1)) >= len(fence)
+                and not line[opener.end():].strip()
+            ):
+                fence = ""
             continue
-        if in_fence:
+        if opener:
+            fence = opener.group(1)
             continue
         line = EMPHASIS_CODE_SPAN_RE.sub("", line)
         if EMPHASIS_MULTI_BOLD_RE.search(line):

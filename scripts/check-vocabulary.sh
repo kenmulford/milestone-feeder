@@ -20,12 +20,15 @@
 #   Category 3, two regressions of the prompt-surface repair
 #   (docs/briefs/2026-10-19-prompt-audit.md (## 1. Issue bodies are written from
 #   a file in `update`) and (## 5. Current behavior only, no version history)).
-#   An issue-body write passes `--body-file`, never an inline `--body` string
-#   (scanned in skills/, agents/, the top-level docs/*.md, and .project/). The
-#   prompt surface states the current rule, so the build-history phrases HISTORY_PATTERN names stay
-#   out (scanned in skills/, agents/, the top-level docs/*.md, and .project/).
-#   docs/briefs/** and docs/specs/** are excluded: they record the history. A
-#   present-tense use of one of these words is recast, never allowlisted.
+#   An issue-body write passes `--body-file`, never an inline `--body` string.
+#   The prompt surface states the current rule, so the build-history phrases
+#   HISTORY_PATTERN names stay out. Both scans cover one stated set, the same
+#   set the emphasis gate in scripts/validate-plugin-structure.py covers:
+#   skills/*/SKILL.md, agents/*.md, .project/*.md, and the top-level docs/*.md.
+#   docs/briefs/** and docs/specs/** are excluded: they record the history.
+#   Category 2 alone is wider (the whole tree minus its excluded pathspecs)
+#   because the retired words and the em dash must not reach any shipped file,
+#   scripts/emit-notice.json included.
 #
 # Authoritative definition:
 #   Category 1 is SPEC-owned. Tokens (case-insensitive): decompose,
@@ -295,21 +298,29 @@ done <<< "${MATCHES}"
 # --- check 3: the body-flag and history-phrase scans -------------------------
 #
 # Two fixed-scope scans, each its own `git grep` because their patterns differ.
-# `:(glob)docs/*.md` matches the top-level docs only, so docs/briefs/** and
-# docs/specs/** (the history records) are never scanned. A grep error (exit >1)
-# fails closed like check 2.
+# Both scans take the one stated set: skills/*/SKILL.md, agents/*.md,
+# .project/*.md, and the top-level docs/*.md (`:(glob)docs/*.md` stops at the
+# top level, so docs/briefs/** and docs/specs/** are never scanned). A grep
+# error (exit >1) fails closed like check 2.
+SCAN_PATHSPECS=(':(glob)skills/*/SKILL.md' ':(glob)agents/*.md' ':(glob).project/*.md' ':(glob)docs/*.md')
 
-# The inline-body forms: `--body "`, `--body '`, `--body=`, `--body $...`, and
-# `-b "` / `-b '`. `--body-file` never matches: a space or `=` must follow.
-BODY_PATTERN='--body( ["'"'"'$]|=)|(^|[[:space:]`(])-b ["'"'"']'
-HISTORY_PATTERN='unchanged by this refactor|acceptance criterion:|new logic|new twin|as v0\.[0-9]|the v0\.[0-9.]+ (path|apply)|exactly as today|How each acceptance criterion|relocated|byte-unchanged|unchanged from today'
+# The inline-body forms: `--body` followed by a space and any word (quoted,
+# `$var`, or bare), `--body=`, `-b` followed by a space and a quote or `$`, and
+# `--body` or `-b` ending a line on a `\` continuation. `--body-file` never
+# matches: a space, `=`, or end of line must follow `--body`.
+BODY_PATTERN='--body([[:space:]]+[^[:space:]]|=)|(^|[[:space:]`(])-b ["'"'"'$]|(--body|(^|[[:space:]`(])-b)[[:space:]]*\\$'
+# Case-sensitive, like the brief's acceptance grep. The history forms only:
+# `(new logic`, `(new twin`, `(acceptance criterion:`, and `relocated out of` /
+# `relocated byte-for-byte` are the old parenthetical and heading framings. The
+# bare words stay legal: a `logic` label, "acceptance criterion: empty state".
+HISTORY_PATTERN='unchanged by this refactor|\((new logic|new twin|acceptance criterion:)|new twin pair|[Aa]s v0\.[0-9]|the v0\.[0-9.]+ (path|apply)|[Ee]xactly as today|How each acceptance criterion|[Rr]elocated (out of|byte-for-byte)|byte-unchanged|[Uu]nchanged from today'
 
 set +e
 BODY_HITS="$(git grep --no-color -EInH -e "${BODY_PATTERN}" -- \
-  'skills' 'agents' ':(glob)docs/*.md' '.project')"
+  "${SCAN_PATHSPECS[@]}")"
 body_status=$?
-HISTORY_HITS="$(git grep --no-color -EIinH -e "${HISTORY_PATTERN}" -- \
-  'skills' 'agents' ':(glob)docs/*.md' '.project')"
+HISTORY_HITS="$(git grep --no-color -EInH -e "${HISTORY_PATTERN}" -- \
+  "${SCAN_PATHSPECS[@]}")"
 history_status=$?
 set -e
 

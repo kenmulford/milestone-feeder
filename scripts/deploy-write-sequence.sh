@@ -130,9 +130,9 @@
 #            Reads the live body (`gh issue view <number> --json body --jq
 #            .body`) into a temporary file, prints `diff -u` of live against
 #            the file, then runs `gh issue edit <number> --body-file
-#            <body-file>`. Line endings (CRLF read as LF) and trailing newlines
-#            are ignored in the comparison, so a body that differs only there is
-#            not edited. Equal bodies: no edit, no diff. No slug rewrite: the
+#            <body-file>`. A leading UTF-8 BOM, line endings (CRLF read as LF)
+#            and trailing newlines are ignored in the comparison, so a body that
+#            differs only there is not edited. Equal bodies: no edit, no diff. No slug rewrite: the
 #            file is the final body.
 #     out    The unified diff, then one TAB row: <number><TAB>edited or
 #            <number><TAB>unchanged.
@@ -563,10 +563,13 @@ cmd_apply_bodies() {
   return $status
 }
 
-# Strips a trailing CR from every line, so a CRLF body compares equal to its LF
-# twin. awk adds a final newline, which the `$(...)` callers drop.
+# Strips a leading UTF-8 BOM and a trailing CR from every line (a final
+# unterminated line included), so a CRLF or BOM-prefixed body compares equal to
+# its plain LF twin; GitHub bodies carry no BOM. The BOM is matched as literal
+# bytes so the result does not depend on the locale. awk adds a final newline,
+# which the `$(...)` callers drop.
 norm_eol() {
-  awk '{ sub(/\r$/, "") } 1' "$1"
+  awk -v bom="$(printf '\357\273\277')" 'NR == 1 { sub("^" bom, "") } { sub(/\r$/, "") } 1' "$1"
 }
 
 APPLY_LIVE=""

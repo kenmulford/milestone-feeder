@@ -133,9 +133,9 @@
 #            .body`) into a temporary file, prints a unified diff of live
 #            against the file (`git diff --no-index`, because Windows ships no
 #            `diff`), then runs `gh issue edit <number> --body-file
-#            <body-file>`. Line endings (CRLF read as LF) and trailing newlines
-#            are ignored in the comparison, so a body that differs only there is
-#            not edited. Equal bodies: no edit, no diff. No slug rewrite: the
+#            <body-file>`. A leading UTF-8 BOM, line endings (CRLF read as LF)
+#            and trailing newlines are ignored in the comparison, so a body that
+#            differs only there is not edited. Equal bodies: no edit, no diff. No slug rewrite: the
 #            file is the final body.
 #     out    The unified diff, then one TAB row: <number><TAB>edited or
 #            <number><TAB>unchanged.
@@ -658,7 +658,8 @@ function Invoke-ApplyBody {
     if (-not (Test-Gh)) { return 3 }
 
     # The live body is read raw (not line-split), so both sides compare by the
-    # bash twin's rule: CRLF read as LF, trailing newlines dropped.
+    # bash twin's rule: a leading BOM dropped, a CR before every line end (or at
+    # the end of the text) dropped, trailing newlines dropped.
     $psi = New-Object System.Diagnostics.ProcessStartInfo
     $psi.FileName = 'gh'
     $psi.Arguments = "issue view $Number --json body --jq .body"
@@ -686,8 +687,8 @@ function Invoke-ApplyBody {
         return 3
     }
     $newText = [System.IO.File]::ReadAllText($BodyFile)
-    $liveNorm = ($liveText -replace "`r`n", "`n") -replace "`n+$", ''
-    $newNorm = ($newText -replace "`r`n", "`n") -replace "`n+$", ''
+    $liveNorm = ($liveText.TrimStart([char]0xFEFF) -replace "`r(?=`n|\z)", '') -replace "`n+\z", ''
+    $newNorm = ($newText.TrimStart([char]0xFEFF) -replace "`r(?=`n|\z)", '') -replace "`n+\z", ''
     if ($liveNorm -ceq $newNorm) {
         Write-Row "$Number`tunchanged"
         return 0
