@@ -49,7 +49,7 @@ function Gate([string]$Name, [hashtable]$ToolInput, [int]$Expected = 2, [hashtab
 }
 # Real Codex 0.163.0 PreToolUse payloads (tests/fixtures). Codex fails open on
 # exit 2, so a Codex deny is stdout permissionDecision JSON with exit 0.
-function Codex-Gate([string]$Name, [string]$Fixture, [string]$Command, [string]$Expected, [hashtable]$Override = @{}) {
+function Codex-Gate([string]$Name, [string]$Fixture, [string]$Command, [string]$Expected, [hashtable]$Override = @{}, [switch]$AsciiOnly) {
     $payload = Get-Content "$Repository/tests/fixtures/$Fixture" -Raw | ConvertFrom-Json -AsHashtable
     $payload.cwd = $scratch
     $payload.tool_input.command = $Command
@@ -62,6 +62,9 @@ function Codex-Gate([string]$Name, [string]$Fixture, [string]$Command, [string]$
     $ok = if ($Expected -eq 'deny') {
         $result.Code -eq 0 -and $decision.hookEventName -eq 'PreToolUse' -and $decision.permissionDecision -eq 'deny' -and $decision.permissionDecisionReason -match 'milestone-feeder: edits to source'
     } else { $result.Code -eq 0 -and -not $result.Out.Trim() }
+    # Codex on Windows reads hook stdout in the console code page; non-ASCII breaks the JSON.
+    # The escaped path must still decode to the non-ASCII original, so the input survived.
+    if ($AsciiOnly -and ($result.Out -cnotmatch '^[\x00-\x7F]*$' -or -not "$($decision.permissionDecisionReason)".Contains("caf$([char]0xE9)"))) { $ok = $false }
     if ($ok) { Write-Host "PASS $Name" }
     else { $failures.Add("${Name}: expected $Expected, got exit $($result.Code), stdout [$($result.Out.Trim())], stderr [$($result.Error.Trim())]"); Write-Host "FAIL $Name" }
 }function Patch([string]$Text) { return @{ command = "*** Begin Patch`n$Text`n*** End Patch" } }
@@ -125,6 +128,7 @@ try {
     Codex-Gate 'codex child docs allowed' 'codex-pretooluse-child.json' "*** Begin Patch`n*** Add File: docs/a.md`n+x`n*** End Patch" 'allow'
     Codex-Gate 'codex named non-feeder child allowed' 'codex-pretooluse-child.json' $codexSource 'allow' @{ agent_type = 'implementer' }
     Codex-Gate 'codex named feeder child denied' 'codex-pretooluse-child.json' $codexSource 'deny' @{ agent_type = 'architect' }
+    Codex-Gate 'codex non-ascii path deny is ascii json' 'codex-pretooluse-main.json' "*** Begin Patch`n*** Add File: app/caf$([char]0xE9).rb`n+x`n*** End Patch" 'deny' -AsciiOnly
     Codex-Gate 'codex delete of hooks source denied' 'codex-pretooluse-main.json' "*** Begin Patch`n*** Delete File: hooks/gate.sh`n*** End Patch" 'deny'
     foreach ($key in @('file_path', 'notebook_path')) {
         Gate "legacy $key blocked" @{ $key = "$scratch/app/a.rb" }

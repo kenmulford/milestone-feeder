@@ -116,7 +116,8 @@ foreach ($path in $paths) {
             }
             $reason = "milestone-feeder: edits to source ('$rel') are blocked. The feeder authors no code. Set CLAUDE_HOOK_DISABLE_NO_SOURCE_EDIT=1 to override."
             if ($isCodex) {
-                @{ hookSpecificOutput = @{ hookEventName = 'PreToolUse'; permissionDecision = 'deny'; permissionDecisionReason = $reason } } | ConvertTo-Json -Compress
+                # ASCII-only: Codex on Windows reads this stdout in the console code page.
+                @{ hookSpecificOutput = @{ hookEventName = 'PreToolUse'; permissionDecision = 'deny'; permissionDecisionReason = $reason } } | ConvertTo-Json -Compress -EscapeHandling EscapeNonAscii
                 exit 0
             }
             [Console]::Error.WriteLine($reason)

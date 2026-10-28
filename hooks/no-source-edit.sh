@@ -123,7 +123,8 @@ while IFS= read -r file_path; do
       fi
       reason="milestone-feeder: edits to source ('$rel') are blocked. The feeder authors no code. Set CLAUDE_HOOK_DISABLE_NO_SOURCE_EDIT=1 to override."
       if [ "$is_codex" = "true" ]; then
-        jq -cn --arg reason "$reason" '{hookSpecificOutput: {hookEventName: "PreToolUse", permissionDecision: "deny", permissionDecisionReason: $reason}}'
+        # ASCII-only (-a): Codex on Windows reads this stdout in the console code page.
+        jq -acn --arg reason "$reason" '{hookSpecificOutput: {hookEventName: "PreToolUse", permissionDecision: "deny", permissionDecisionReason: $reason}}'
         exit 0
       fi
       echo "$reason" >&2
