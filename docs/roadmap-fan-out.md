@@ -28,7 +28,7 @@ Branch on the count N of milestone entries in the confirmed manifest before the 
 
 ## 3.7.b: Probe FIRST: pin the dispatch topology (feasibility-verification-first)
 
-**Before planning any milestone**, run a single harness probe. Dispatch one background `Agent(run_in_background: true)` whose sole task is to attempt to dispatch a trivial sub-subagent via the Agent tool and report whether that nested dispatch succeeded. Await the probe, then pin the run's dispatch topology from its result:
+**Before planning any milestone**, run a single harness probe. Dispatch one background `Agent(run_in_background: true)` whose sole task is to attempt to dispatch a trivial sub-subagent via the Agent tool and report whether that nested dispatch succeeded. On Codex the probe and its child are `spawn_agent` calls, and a missing `spawn_agent` tool or a depth-limit error is a failed nested dispatch (`skills/runtime-codex.md`, "Agent dispatch"). Await the probe, then pin the run's dispatch topology from its result:
 
 | Probe result | Pinned topology |
 |---|---|

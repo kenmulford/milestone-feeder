@@ -698,6 +698,9 @@ FILE_WORD_CEILINGS: dict[str, int] = {
     # 2136 words times 1.05 is 2242.8, which rounds up to 2250.
     "docs/update-reconcile-parent.md": 2250,
     "docs/version-ladder.md": 1300,
+    # New with Codex support: every SKILL.md points a Codex run here first.
+    # 800 words times 1.05 is 840, which rounds up to 850.
+    "skills/runtime-codex.md": 850,
 }
 AGENT_DESCRIPTION_WORD_CEILING = 150
 
@@ -1002,6 +1005,70 @@ for emphasis_md in emphasis_files:
             f"lowercase caps on ordinary words "
             f"(docs/briefs/2026-10-19-prompt-audit.md, ## 6. Emphasis register)"
         )
+
+# --- 9: Codex manifest and hook wiring ---------------------------------------
+#
+# Codex reads .codex-plugin/plugin.json and, through its `hooks` value,
+# hooks/codex-hooks.json. Neither is loaded by Claude Code, so a drifted
+# version, a dangling path, or a matcher that misses apply_patch would ship
+# silently. Checked: the manifest parses; `name`, `version` and `description`
+# equal .claude-plugin/plugin.json's; every path it references exists; the hook
+# file parses; every handler script it names exists; and the no-source-edit
+# matcher covers apply_patch, Codex's file-edit tool (shell writes are outside
+# the gate on both runtimes).
+
+codex_plugin_json = REPO_ROOT / ".codex-plugin" / "plugin.json"
+cj = load_json(codex_plugin_json)
+if cj is not None:
+    checked += 1
+    for key in ("name", "version", "description"):
+        if pj is not None and cj.get(key) != pj.get(key):
+            err(
+                codex_plugin_json,
+                f"'{key}' is {cj.get(key)!r}; .claude-plugin/plugin.json has "
+                f"{pj.get(key)!r}. Both manifests ship the same value",
+            )
+    for key in ("skills", "hooks"):
+        ref = cj.get(key)
+        if not isinstance(ref, str) or not ref.strip():
+            err(codex_plugin_json, f"missing required path key '{key}'")
+        elif not (REPO_ROOT / ref).exists():
+            err(codex_plugin_json, f"'{key}' path {ref!r} does not exist")
+    interface = cj.get("interface")
+    if not isinstance(interface, dict):
+        err(codex_plugin_json, "missing the 'interface' object")
+    else:
+        for key in ("displayName", "shortDescription", "developerName", "category"):
+            if not str(interface.get(key, "")).strip():
+                err(codex_plugin_json, f"interface is missing '{key}'")
+
+    hooks_ref = cj.get("hooks")
+    codex_hooks_json = REPO_ROOT / hooks_ref if isinstance(hooks_ref, str) else None
+    ch = load_json(codex_hooks_json) if codex_hooks_json and codex_hooks_json.is_file() else None
+    if ch is not None:
+        checked += 1
+        handler_re = re.compile(r"\$\{CLAUDE_PLUGIN_ROOT\}/([^\"\s]+)")
+        gate_matched = False
+        for event, groups in (ch.get("hooks") or {}).items():
+            for group in groups if isinstance(groups, list) else []:
+                matcher = str(group.get("matcher", ""))
+                for handler in group.get("hooks", []):
+                    for field in ("command", "commandWindows"):
+                        for ref in handler_re.findall(str(handler.get(field, ""))):
+                            if not (REPO_ROOT / ref).is_file():
+                                err(
+                                    codex_hooks_json,
+                                    f"{event} {field} names {ref!r}, which does not exist",
+                                )
+                    if "no-source-edit" in str(handler.get("command", "")):
+                        gate_matched = gate_matched or "apply_patch" in matcher.split("|")
+        if not gate_matched:
+            err(
+                codex_hooks_json,
+                "no PreToolUse no-source-edit handler whose matcher includes "
+                "'apply_patch'. apply_patch is Codex's file-edit tool, so "
+                "without it the gate never fires",
+            )
 
 # --- report -----------------------------------------------------------------
 

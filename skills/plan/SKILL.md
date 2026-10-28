@@ -4,6 +4,10 @@ description: >-
   This skill should be used when the user invokes "/milestone-feeder:plan <brief>", or asks to "plan a milestone from a brief" or "turn an idea into a reviewable plan". Turns a feature brief into a reviewable local plan file of small, well-formed candidate issues you review before `create` deploys them.
 ---
 
+If `${CLAUDE_PLUGIN_ROOT}` appears unexpanded, it is the parent of the `skills/` directory that holds this file.
+
+On Codex, read `${CLAUDE_PLUGIN_ROOT}/skills/runtime-codex.md` first: it maps this skill's tools, agent dispatches and human gates.
+
 # plan: brief → reviewable plan file
 
 Read config + project docs, ingest a brief, separate product gaps from design decisions, dispatch the architect once per brief (plus one incremental dispatch per batch of items added on a re-plan) and the issue-author per candidate, assemble the dependency graph, render the milestone description, and write a reviewable plan file. The driver's predecessor: it specifies what the driver then builds.
@@ -163,7 +167,7 @@ This is the front-door size/scope check. It runs after the architect's structura
 | **`none`** (single coherent release) | Do not route. Fall straight through to Step 4 on the whole brief (the single-milestone pipeline). No `build-roadmap` invocation, no advisory change, no new prompt. |
 | **Raised** (≥2 milestones forming a strict partition of `CANDIDATES`) | Route into `build-roadmap` (the internal skill at `skills/build-roadmap/SKILL.md`). See below. |
 
-The oversized route. Invoke the `build-roadmap` skill: a Claude Code skill invocation, the same way `create` runs `plan` first (`skills/create/SKILL.md` Step 1: the Absent row runs `plan` first); there is no bash/pwsh form for the invocation itself. Hand it exactly the inputs its Step 0 expects (`skills/build-roadmap/SKILL.md` Step 0: "Receive the inputs from `plan`"), **all already in hand. Re-resolve nothing** (the resolve-once boundary, `skills/plan/SKILL.md:23`):
+The oversized route. Invoke the `build-roadmap` skill: a skill invocation, the same way `create` runs `plan` first (`skills/create/SKILL.md` Step 1: the Absent row runs `plan` first); there is no bash/pwsh form for the invocation itself. Hand it exactly the inputs its Step 0 expects (`skills/build-roadmap/SKILL.md` Step 0: "Receive the inputs from `plan`"), **all already in hand. Re-resolve nothing** (the resolve-once boundary, `skills/plan/SKILL.md:23`):
 
 - the **oversized whole-app brief**: the Step-1 normalized brief (`{ goal, in-scope, out-of-scope, surfaces, … }`);
 - the **source-brief reference** (`inline` | `file:<path>` | `epic #<n>`) captured at Step 1;

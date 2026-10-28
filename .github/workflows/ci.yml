@@ -1,9 +1,10 @@
 name: CI
 
-# Three pull-request gates for the milestone-feeder plugin. All must pass
-# before a PR into main or develop can merge. None of the three builds
+# Five pull-request gates for the milestone-feeder plugin. All must pass
+# before a PR into main or develop can merge. None of the five builds
 # anything: this repo is a Claude Code plugin (markdown skills/agents + JSON
-# manifests), so the gates only verify the surface stays clean and loadable.
+# manifests), so the gates only verify the surface stays clean and loadable
+# and the no-source-edit hook still denies what it should.
 #
 #   1. vocabulary-purge gate:    fails if a retired v0.3.0 word or a stray em
 #                                dash (U+2014) reaches the live plugin surface.
@@ -26,10 +27,20 @@ name: CI
 #                                issue-authors into a filesystem-root `find`
 #                                (issue #483). (gate from issue #369;
 #                                hyphen canonical since issue #398).
+#   4. hook regression tests:    runs tests/hook-regressions.ps1 on both
+#                                legs (no-source-edit.sh and .ps1) over the
+#                                Claude edit payloads and Codex apply_patch
+#                                payloads.
+#   5. launcher exit-code test:  runs tests/run-hook.test.ps1 on Windows and
+#                                Ubuntu. Fails if hooks/run-hook.cmd returns
+#                                anything but its gate's exit code (0, 2, 7)
+#                                through any interpreter branch; a dropped
+#                                exit 2 makes every gate fail open.
 #
-# The three job names below ("vocabulary-purge gate", "plugin-structure check",
-# "contract-strings gate") are the required-status-check contexts to wire in
-# branch protection.
+# The job names below ("vocabulary-purge gate", "plugin-structure check",
+# "contract-strings gate", "hook regression tests", "launcher exit-code test
+# (ubuntu-latest)", "launcher exit-code test (windows-latest)") are the
+# required-status-check contexts to wire in branch protection.
 #
 # Runs on pull_request only: required status checks are evaluated on PRs, so a
 # push-triggered run would gate nothing and only add noise on the protected
@@ -77,3 +88,30 @@ jobs:
         uses: actions/checkout@v7
       - name: Scan the live surface for drifted contract strings
         run: ./scripts/check-contract-strings.sh
+
+  hook-regression-tests:
+    name: hook regression tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the code under review
+        uses: actions/checkout@v7
+      - name: Run the no-source-edit suite on the bash leg
+        shell: pwsh
+        run: ./tests/hook-regressions.ps1 -Leg sh
+      - name: Run the no-source-edit suite on the PowerShell leg
+        shell: pwsh
+        run: ./tests/hook-regressions.ps1 -Leg ps1
+
+  launcher-exit-code-test:
+    name: launcher exit-code test (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Check out the code under review
+        uses: actions/checkout@v7
+      - name: Run the run-hook.cmd exit-code test
+        shell: pwsh
+        run: ./tests/run-hook.test.ps1

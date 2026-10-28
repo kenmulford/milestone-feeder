@@ -1,5 +1,5 @@
 #!/usr/bin/env pwsh
-# milestone-feeder: no-source-edit gate (Claude PreToolUse: Write|Edit|MultiEdit|NotebookEdit)
+# milestone-feeder: no-source-edit gate (legacy edits and Codex apply_patch)
 #
 # Blocks edits to the feeder's own source globs. The feeder reads code and
 # authors issue text; it never writes source. The deny applies to the feeder's
@@ -21,8 +21,14 @@
 #          unknown/empty agent_type with an agent_id present also blocks.
 #   ALLOW  when agent_id is present AND agent_type is a positively-identified
 #          non-feeder subagent.
+# Codex limitation: a payload carrying turn_id is Codex, and Codex gives every
+# spawn_agent child a built-in agent_type, so a feeder agent and the driver's
+# implementer look alike. The gate therefore guards only the main thread on
+# Codex: any child with an agent_id passes, and the feeder's agents stay
+# read-only by the instruction in each agent body.
 #
-# Deny mechanism: exit 2 + stderr (stable across current Claude Code).
+# Deny mechanism: exit 2 + stderr on Claude Code. Codex fails open on exit 2, so
+# a Codex payload gets stdout permissionDecision "deny" JSON and exit 0 instead.
 # Deny globs: <repo>/.milestone-config/feeder.json first, then the resolved
 #   driver config (.milestone-config/driver.json -> root milestone-driver.json).
 #   First file with a non-empty sourceGlobs wins; none -> fail-open.
@@ -46,30 +52,31 @@ $raw = [Console]::In.ReadToEnd()
 if ([string]::IsNullOrWhiteSpace($raw)) { exit 0 }
 try { $hook = $raw | ConvertFrom-Json -ErrorAction Stop } catch { exit 0 }
 
-# Target file (Edit/Write/MultiEdit use file_path; NotebookEdit uses notebook_path).
+. (Join-Path $PSScriptRoot 'patch-input.ps1')
+
+# Legacy edit tools carry one path; a Codex apply_patch carries every target in
+# tool_input.command.
+$paths = [Collections.Generic.List[string]]::new()
 $filePath = $hook.tool_input.file_path
 if (-not $filePath) { $filePath = $hook.tool_input.notebook_path }
-if (-not $filePath) { exit 0 }
-$norm = ([string]$filePath) -replace '\\', '/'
+if ($filePath) { $paths.Add([string]$filePath) }
+foreach ($target in (Read-CodexPatch ([string]$hook.tool_input.command)).Paths) { $paths.Add($target) }
+if ($paths.Count -eq 0) { exit 0 }
 
 # Actor identity (see header). $hasAgentId distinguishes an absent agent_id (main
 # thread) from a present one; $agentType is a plain string so a missing/empty
 # value compares unequal to every name in $FeederOwnAgents.
 $hasAgentId = $null -ne $hook.agent_id -and "$($hook.agent_id)" -ne ''
 $agentType = [string]$hook.agent_type
+$isCodex = $null -ne $hook.PSObject.Properties['turn_id']
 
-# Always-exempt: docs, .claude config, Obsidian vaults. Source globs are gated
-# even when markdown. Case-SENSITIVE (-cmatch) to match bash's case-sensitive
-# `case` path exemptions.
-if ($norm -cmatch '/docs/')    { exit 0 }
-if ($norm -cmatch '/\.claude/'){ exit 0 }
-if ($norm -cmatch '/Obsidian/'){ exit 0 }
 
 # Resolve project dir.
 $projectDir = $hook.cwd
 if (-not $projectDir) { $projectDir = $env:CLAUDE_PROJECT_DIR }
 if (-not $projectDir) { $projectDir = (Get-Location).Path }
 $projectDir = ([string]$projectDir) -replace '\\', '/'
+$projectDir = ConvertTo-HookPath $projectDir ((Get-Location).Path -replace '\\', '/')
 
 # Resolve the deny globs: feeder.json first (self-protection of the feeder's own
 # repo), then the resolved driver config. First file with a non-empty
@@ -85,26 +92,36 @@ foreach ($cfg in @(
 }
 if (-not $globs) { exit 0 }
 
-# Repo-relative path for matching.
-$rel = $norm
-if ($norm.StartsWith("$projectDir/")) { $rel = $norm.Substring($projectDir.Length + 1) }
+# Exemptions apply to each normalized target; an exempt target cannot allow
+# later source operations in the same patch.
+foreach ($path in $paths) {
+    $norm = ConvertTo-HookPath $path $projectDir
+    if ($norm -cmatch '/(?:docs|\.claude|Obsidian)/') { continue }
+    $rel = $norm
+    if ($norm.StartsWith("$projectDir/", [StringComparison]::Ordinal)) { $rel = $norm.Substring($projectDir.Length + 1) }
 
-foreach ($g in $globs) {
-    $pattern = ([string]$g) -replace '\\', '/'
-    $pattern = $pattern -replace '\*\*', '*'   # ** -> * ; PowerShell -clike '*' already crosses '/'
-    # Case-SENSITIVE (-clike) to match bash's case-sensitive `case` glob match.
-    if (($rel -clike $pattern) -or ($norm -clike "*/$pattern")) {
-        # Source-glob match. Apply the actor gate: ALLOW only a positively-
-        # identified non-feeder subagent (agent_id present AND a non-empty
-        # agent_type that is not one of the feeder's own agents). The main thread
-        # (no agent_id), the feeder's own subagents, and any ambiguous actor
-        # (agent_id present but empty agent_type) all fall through and are
-        # BLOCKED (fail-closed).
-        if ($hasAgentId -and $agentType -ne '' -and ($FeederOwnAgents -cnotcontains $agentType)) {
-            exit 0   # positively-identified non-feeder subagent
+    foreach ($g in $globs) {
+        $pattern = ([string]$g) -replace '\\', '/'
+        $pattern = $pattern -replace '\*\*', '*'   # ** -> * ; PowerShell -clike '*' already crosses '/'
+        # Case-SENSITIVE (-clike) to match bash's case-sensitive `case` glob match.
+        if (($rel -clike $pattern) -or ($norm -clike "*/$pattern")) {
+            # Source-glob match. Apply the actor gate: ALLOW only a positively-
+            # identified non-feeder subagent (agent_id present AND a non-empty
+            # agent_type that is not one of the feeder's own agents). The main thread
+            # (no agent_id), the feeder's own subagents, and any ambiguous actor
+            # (agent_id present but empty agent_type) all fall through and are
+            # BLOCKED (fail-closed).
+            if ($hasAgentId -and $agentType -ne '' -and ($FeederOwnAgents -cnotcontains $agentType)) {
+                exit 0   # positively-identified non-feeder subagent
+            }
+            $reason = "milestone-feeder: edits to source ('$rel') are blocked. The feeder authors no code. Set CLAUDE_HOOK_DISABLE_NO_SOURCE_EDIT=1 to override."
+            if ($isCodex) {
+                @{ hookSpecificOutput = @{ hookEventName = 'PreToolUse'; permissionDecision = 'deny'; permissionDecisionReason = $reason } } | ConvertTo-Json -Compress
+                exit 0
+            }
+            [Console]::Error.WriteLine($reason)
+            exit 2
         }
-        [Console]::Error.WriteLine("milestone-feeder: edits to source ('$rel') are blocked. The feeder authors no code. Set CLAUDE_HOOK_DISABLE_NO_SOURCE_EDIT=1 to override.")
-        exit 2
     }
 }
 

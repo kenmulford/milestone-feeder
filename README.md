@@ -109,6 +109,20 @@ The whole tool is four commands: `plan`, then `create`, `update` when your idea 
 
 The very first time you run `plan` in a repo with no config, it sets up a small profile for you and then carries on: you don't re-run anything.
 
+## Codex
+
+The same four commands run in OpenAI Codex.
+
+1. Add the marketplace: `codex plugin marketplace add kenmulford/milestone-suite`
+2. Install `milestone-feeder` from `/plugins`.
+3. Trust its `no-source-edit` hook in `/hooks`. Codex skips an untrusted hook, and asks again after an update changes it.
+4. Invoke a skill by its namespaced name: `$milestone-feeder:plan myidea.md`, `$milestone-feeder:create myidea.md`, `$milestone-feeder:update myidea.md`, `$milestone-feeder:remediate 27`.
+
+Differences on Codex:
+
+- A step that waits for your answer (setup's profile questions, the roadmap split, a version for a new project, the driver handoff offer) ends the turn with a 🔴 pending line when Codex has no question tool for that turn, as under `codex exec`. Answer in your next message and the skill resumes there.
+- The hook blocks source edits by the main session. Codex gives every child agent the same built-in type, so the hook cannot tell the feeder's agents apart from other plugins' and lets every child agent through. The feeder's agents stay read-only by their own instructions.
+
 ## Before you start
 
 For us to build your milestone and issues, a few things need to be in place. Each one below comes with what breaks if it's missing.

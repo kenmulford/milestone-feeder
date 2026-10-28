@@ -4,6 +4,10 @@ description: >-
   This skill is internal: it is invoked by the `plan` skill when it detects an oversized whole-app brief that spans several releases, never by a user command. It dispatches the `milestone-feeder:roadmap-splitter` agent once for a build-ordered partition, surfaces the proposed split for the user to confirm / merge / split / reorder / reject, and on confirmation writes a roadmap manifest to `.milestone-feeder/roadmap-<slug>.md` and returns control plus that path to `plan`.
 ---
 
+If `${CLAUDE_PLUGIN_ROOT}` appears unexpanded, it is the parent of the `skills/` directory that holds this file.
+
+On Codex, read `${CLAUDE_PLUGIN_ROOT}/skills/runtime-codex.md` first: it maps this skill's tools, agent dispatches and human gates.
+
 # build-roadmap: oversized brief → confirmed milestone roadmap
 
 Turn one oversized whole-app brief into a confirmed, sequenced roadmap of milestones, without yet planning or deploying any of them. This is an internal skill: the user never invokes it directly; `plan` invokes it from its front-door route (`skills/plan/SKILL.md` Step 3.6) when it detects a brief that spans several releases. It dispatches the `milestone-feeder:roadmap-splitter` agent once to propose a strict, build-ordered partition of the brief, surfaces that proposal for the user to confirm / merge / split / reorder / reject **before writing anything**, and on confirmation writes a roadmap manifest to local scratch and returns control (plus the manifest path) to `plan`.
