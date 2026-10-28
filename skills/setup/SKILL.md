@@ -3,6 +3,10 @@ name: setup
 description: This skill should be used when "milestone-feeder:setup" is invoked directly, or auto-invoked by `plan`, `create`, `update`, or `remediate` when `.milestone-config/feeder.json` is absent. Guides an interactive first-run bootstrap that infers every profile key from repo signals, writes `.milestone-config/feeder.json`, aligns the issue-label taxonomy with the driver's, and returns control so the original task continues.
 ---
 
+If `${CLAUDE_PLUGIN_ROOT}` appears unexpanded, it is the parent of the `skills/` directory that holds this file.
+
+On Codex, read `${CLAUDE_PLUGIN_ROOT}/skills/runtime-codex.md` first: it maps this skill's tools, agent dispatches and human gates.
+
 # setup: first-run profile bootstrap
 
 Generate or repair the feeder profile through a guided, inference-first flow. Optional keys state their skip-consequence.

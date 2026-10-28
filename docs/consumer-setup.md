@@ -99,6 +99,12 @@ registered in `hooks/hooks.json`. It **loads at session start**, so restart Clau
 Code after installing or updating the plugin for the hook to take effect. No
 separate native-hook installation step is required.
 
+On Codex the same gate is registered in `hooks/codex-hooks.json` on `apply_patch`
+and checks every Add, Update, Delete and Move-to path in the patch. Codex runs it
+only after you trust it in `/hooks`, and asks again after a plugin update changes
+it. Codex limitation: it gives every `spawn_agent` child the same built-in agent
+type, so on Codex the gate guards the main thread only and any child agent passes.
+Shell-written files are outside the gate on both runtimes.
 ## 4. Provide your project docs
 
 The plan pipeline grounds its issue authoring in your project's **standing docs**:

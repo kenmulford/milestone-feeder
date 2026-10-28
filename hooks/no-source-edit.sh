@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# milestone-feeder: no-source-edit gate (Claude PreToolUse: Write|Edit|MultiEdit|NotebookEdit)
+# milestone-feeder: no-source-edit gate (legacy edits and Codex apply_patch)
 #
 # Bash parity of no-source-edit.ps1. Blocks edits to the feeder's own source
 # globs: the feeder reads code and authors issue text; it never writes source.
@@ -20,8 +20,15 @@
 #          unknown/empty agent_type with an agent_id present also blocks.
 #   ALLOW  when agent_id is non-empty AND agent_type is a positively-identified
 #          non-feeder subagent.
+# Codex limitation: a payload carrying turn_id is Codex, and Codex gives every
+# spawn_agent child a built-in agent_type, so a feeder agent and the driver's
+# implementer look alike. The gate therefore guards only the main thread on
+# Codex: any child with an agent_id passes, and the feeder's agents stay
+# read-only by the instruction in each agent body.
 #
-# Deny mechanism: exit 2 + stderr. Escape hatch: CLAUDE_HOOK_DISABLE_NO_SOURCE_EDIT=1
+# Deny mechanism: exit 2 + stderr on Claude Code. Codex fails open on exit 2, so
+# a Codex payload gets stdout permissionDecision "deny" JSON and exit 0 instead.
+# Escape hatch: CLAUDE_HOOK_DISABLE_NO_SOURCE_EDIT=1
 # Fail-open: missing jq / parse errors / unresolved sourceGlobs exit 0 so a hook
 # bug never bricks editing.
 
@@ -40,9 +47,15 @@ input="$(cat)"
 [ -z "$input" ] && exit 0
 command -v jq >/dev/null 2>&1 || exit 0
 
-file_path="$(printf '%s' "$input" | jq -r '.tool_input.file_path // .tool_input.notebook_path // empty' 2>/dev/null)"
-[ -z "$file_path" ] && exit 0
-norm="${file_path//\\//}"
+# shellcheck source=hooks/patch-input.sh
+. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/patch-input.sh"
+
+# Legacy edit tools carry one path; a Codex apply_patch carries every target in
+# tool_input.command.
+paths="$(printf '%s' "$input" | jq -r '.tool_input.file_path // .tool_input.notebook_path // empty' 2>/dev/null)"
+read_codex_patch "$(printf '%s' "$input" | jq -r '.tool_input.command // empty' 2>/dev/null)"
+for target in "${PATCH_PATHS[@]}"; do paths="${paths}${paths:+$'\n'}$target"; done
+[ -z "$paths" ] && exit 0
 
 # Actor identity (see header). An absent OR empty-string agent_id is the main
 # thread (BLOCK on a source path), matching ps1's `$hasAgentId` test; `// empty`
@@ -51,17 +64,15 @@ norm="${file_path//\\//}"
 # every name in FEEDER_OWN_AGENTS.
 agent_id="$(printf '%s' "$input" | jq -r '.agent_id // empty' 2>/dev/null)"
 agent_type="$(printf '%s' "$input" | jq -r '.agent_type // empty' 2>/dev/null)"
+agent_type="${agent_type%$'\r'}"
+is_codex="$(printf '%s' "$input" | jq -r 'has("turn_id")' 2>/dev/null)"
+is_codex="${is_codex%$'\r'}"
 
-# Always-exempt paths. Source globs are gated even when markdown.
-case "$norm" in
-  */docs/*)      exit 0 ;;
-  */.claude/*)   exit 0 ;;
-  */Obsidian/*)  exit 0 ;;
-esac
 
 project_dir="$(printf '%s' "$input" | jq -r '.cwd // empty' 2>/dev/null)"
 [ -z "$project_dir" ] && project_dir="${CLAUDE_PROJECT_DIR:-$PWD}"
 project_dir="${project_dir//\\//}"
+project_dir="$(normalize_hook_path "${project_dir%$'\r'}" "$PWD")"
 
 # Resolve the deny globs: feeder.json first (self-protection of the feeder's own
 # repo), then the resolved driver config (.milestone-config/driver.json -> root
@@ -78,38 +89,51 @@ for cfg in \
 done
 [ -z "$globs" ] && exit 0
 
-rel="$norm"
-case "$norm" in
-  "$project_dir"/*) rel="${norm#"$project_dir"/}" ;;
-esac
+# Never exit on an exempt target: every target in a patch must pass the gate.
+while IFS= read -r file_path; do
+  file_path="${file_path%$'\r'}"
+  [ -z "$file_path" ] && continue
+  norm="$(normalize_hook_path "$file_path" "$project_dir")"
+  case "$norm" in */docs/*|*/.claude/*|*/Obsidian/*) continue ;; esac
+  rel="$norm"
+  case "$norm" in "$project_dir"/*) rel="${norm#"$project_dir"/}" ;; esac
 
-while IFS= read -r g; do
-  g="${g%$'\r'}"          # strip trailing CR (jq on Windows/msys emits CRLF)
-  [ -z "$g" ] && continue
-  pat="${g//\*\*/\*}"     # ** -> * ('*' in a case glob matches across '/')
-  blocked=0
-  # shellcheck disable=SC2254
-  case "$rel"  in $pat)    blocked=1 ;; esac
-  # shellcheck disable=SC2254
-  case "$norm" in */$pat)  blocked=1 ;; esac
-  if [ "$blocked" = "1" ]; then
-    # Source-glob match. Apply the actor gate: ALLOW only a positively-identified
-    # non-feeder subagent (a non-empty agent_id AND a non-empty agent_type that is
-    # not one of the feeder's own agents). The main thread (absent OR empty
-    # agent_id), the feeder's own subagents, and any ambiguous actor (agent_id
-    # present but empty agent_type) all fall through and are BLOCKED (fail-closed).
-    if [ -n "$agent_id" ] && [ -n "$agent_type" ]; then
-      is_own_agent=0
-      for own in $FEEDER_OWN_AGENTS; do
-        [ "$agent_type" = "$own" ] && is_own_agent=1 && break
-      done
-      [ "$is_own_agent" = "0" ] && exit 0   # positively-identified non-feeder subagent
+  while IFS= read -r g; do
+    g="${g%$'\r'}"          # strip trailing CR (jq on Windows/msys emits CRLF)
+    g="${g//\\//}"
+    [ -z "$g" ] && continue
+    pat="${g//\*\*/\*}"     # ** -> * ('*' in a case glob matches across '/')
+    blocked=0
+    # shellcheck disable=SC2254
+    case "$rel"  in $pat)    blocked=1 ;; esac
+    # shellcheck disable=SC2254
+    case "$norm" in */$pat)  blocked=1 ;; esac
+    if [ "$blocked" = "1" ]; then
+      # Source-glob match. Apply the actor gate: ALLOW only a positively-identified
+      # non-feeder subagent (a non-empty agent_id AND a non-empty agent_type that is
+      # not one of the feeder's own agents). The main thread (absent OR empty
+      # agent_id), the feeder's own subagents, and any ambiguous actor (agent_id
+      # present but empty agent_type) all fall through and are BLOCKED (fail-closed).
+      if [ -n "$agent_id" ] && [ -n "$agent_type" ]; then
+        is_own_agent=0
+        for own in $FEEDER_OWN_AGENTS; do
+          [ "$agent_type" = "$own" ] && is_own_agent=1 && break
+        done
+        [ "$is_own_agent" = "0" ] && exit 0   # positively-identified non-feeder subagent
+      fi
+      reason="milestone-feeder: edits to source ('$rel') are blocked. The feeder authors no code. Set CLAUDE_HOOK_DISABLE_NO_SOURCE_EDIT=1 to override."
+      if [ "$is_codex" = "true" ]; then
+        jq -cn --arg reason "$reason" '{hookSpecificOutput: {hookEventName: "PreToolUse", permissionDecision: "deny", permissionDecisionReason: $reason}}'
+        exit 0
+      fi
+      echo "$reason" >&2
+      exit 2
     fi
-    echo "milestone-feeder: edits to source ('$rel') are blocked. The feeder authors no code. Set CLAUDE_HOOK_DISABLE_NO_SOURCE_EDIT=1 to override." >&2
-    exit 2
-  fi
-done <<EOF
+  done <<EOF
 $globs
+EOF
+done <<EOF
+$paths
 EOF
 
 exit 0

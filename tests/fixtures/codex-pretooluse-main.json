@@ -1,0 +1,14 @@
+{
+  "session_id": "01a1828f-bf2e-71a2-a4d9-802e0c8ac349",
+  "turn_id": "01a1828f-c311-7e62-8544-aeb7bd00e051",
+  "transcript_path": "<codex-home>/sessions/rollout.jsonl",
+  "cwd": "<repo>",
+  "hook_event_name": "PreToolUse",
+  "model": "gpt-6.1-sol",
+  "permission_mode": "bypassPermissions",
+  "tool_name": "apply_patch",
+  "tool_input": {
+    "command": "*** Begin Patch\n*** Add File: src/main-blocked.js\n+// x\n*** End Patch"
+  },
+  "tool_use_id": "exec-55e1412d-852b-4873-a6b8-219f6dfb904b"
+}

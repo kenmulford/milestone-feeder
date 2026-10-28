@@ -1,0 +1,18 @@
+{
+  "description": "milestone-feeder mechanical gate for Codex. no-source-edit: deny apply_patch edits to the feeder's own source globs for the main thread and the feeder's own agents; every Add, Update, Delete and Move-to target in tool_input.command is checked (globs resolved from <repo>/.milestone-config/feeder.json first, then .milestone-config/driver.json -> root milestone-driver.json, else fail-open). Claude Code reads hooks/hooks.json instead.",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "apply_patch|Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd\" no-source-edit",
+            "commandWindows": "pwsh -NoProfile -File \"${CLAUDE_PLUGIN_ROOT}/hooks/no-source-edit.ps1\"",
+            "timeout": 15
+          }
+        ]
+      }
+    ]
+  }
+}

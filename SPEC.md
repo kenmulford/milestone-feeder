@@ -1,6 +1,6 @@
 # milestone-feeder: as-built spec
 
-A Claude Code plugin that turns a feature brief into a **GitHub milestone + small, well-formed issues** that `milestone-driver` can build with no human clarification.
+A Claude Code and Codex plugin that turns a feature brief into a **GitHub milestone + small, well-formed issues** that `milestone-driver` can build with no human clarification.
 
 The live surface is verbs `plan` / `create` / `update` / `remediate` / `setup`, no flags, plan-file-as-contract, with **user-owned, versioned milestone identity** (the semver lives in the milestone title), **`update` retargeting by deploy receipt + bounded rename-in-place**, and the **whole-app roadmap**: an oversized brief is carved into a confirmed, sequenced set of milestones, planned and deployed in build order (§3.1). Config lives at `.milestone-config/feeder.json`; `.claude-plugin/plugin.json` is the single source of truth for the plugin version.
 

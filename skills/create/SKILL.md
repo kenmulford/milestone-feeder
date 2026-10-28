@@ -3,6 +3,10 @@ name: create
 description: This skill should be used when the user invokes "/milestone-feeder:create <brief>", or asks to "create the milestone", "deploy the approved plan", or "build the milestone and issues". Deploys the plan you approved to GitHub (labels, the milestone, every issue, and the build order) exactly as the plan file recorded it; it does not re-check or re-plan.
 ---
 
+If `${CLAUDE_PLUGIN_ROOT}` appears unexpanded, it is the parent of the `skills/` directory that holds this file.
+
+On Codex, read `${CLAUDE_PLUGIN_ROOT}/skills/runtime-codex.md` first: it maps this skill's tools, agent dispatches and human gates.
+
 # create: deploy the approved plan to GitHub (read-the-plan, faithful)
 
 Resolve the plan file `plan` wrote for this brief (by the same deterministic slug), then deploy **exactly it** to GitHub: ensure the labels, create-or-adopt the milestone by its exact title, open each surviving issue, rewrite the local slug references to real issue numbers, PATCH the build-order description onto the milestone, and file the needs-input report. The deploy step of the feeder pipeline: where `plan` *compiles* the plan file, `create` *deploys* it.

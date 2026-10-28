@@ -3,6 +3,10 @@ name: update
 description: This skill should be used when the user invokes "/milestone-feeder:update <brief>", or asks to "update the milestone", "my plan changed, sync it", or "reconcile my refreshed plan to the milestone". Reconciles your refreshed plan onto the existing milestone, creating any missing issue, patching any drifted body, and re-rendering the build order.
 ---
 
+If `${CLAUDE_PLUGIN_ROOT}` appears unexpanded, it is the parent of the `skills/` directory that holds this file.
+
+On Codex, read `${CLAUDE_PLUGIN_ROOT}/skills/runtime-codex.md` first: it maps this skill's tools, agent dispatches and human gates.
+
 # update: reconcile a refreshed plan onto the existing milestone
 
 Refresh the plan file `plan` wrote for this brief (by the same deterministic slug), resolve the existing milestone **by the deploy-receipt number `create` recorded, falling back to the exact title** when there is no receipt, then reconcile the plan onto that live milestone: create the issues the plan has and GitHub doesn't, patch the issues whose bodies drifted (showing the diff first), add any new dependency edge and re-render the build-order description, and flag any live issue the plan no longer carries. When the milestone was resolved by its recorded number and the plan's title has changed, `update` renames the milestone in place to the new title before reconciling (the single, bounded way `update` mutates a milestone's identity, Step 3). This is the "my plan changed" verb: where `create` *deploys* a plan onto a fresh milestone, `update` *re-deploys* a refreshed plan onto one that already exists. It absorbs the old re-vet-in-place job for free: the plan going in was drafted to pass the driver's triage clean, so reconciling it repairs whatever drifted from spec (`docs/specs/v0.3.0-humanize-the-surface.md` §5).
