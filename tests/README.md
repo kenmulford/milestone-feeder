@@ -1,13 +1,35 @@
 # tests/: milestone-feeder credibility harness
 
-This is not a unit-test suite: milestone-feeder has no executable code; its skills are
-prose procedures an agent follows. This harness measures whether those procedures, when
+The scenario harness tests prose procedures an agent follows. The plugin also ships
+executable hooks and helper scripts. This harness measures whether the procedures, when
 **executed**, actually behave the way the README and `plugin.json` description claim.
 
 **The scorecard is the metric.** Every concrete claim in the description must map to a
 scenario that demonstrates it. A claim with no passing scenario gets dialed back. The
 point is a description that is *real, tangible, and accurate*. A lighter, fully-backed
 description beats a confident, unproven one.
+
+## Hook regression tests
+
+Run the deterministic hook and launcher fixtures independently of the scenarios:
+
+```powershell
+pwsh -NoProfile -File tests/hook-regressions.ps1 -Leg ps1
+pwsh -NoProfile -File tests/hook-regressions.ps1 -Leg sh -BashPath 'C:/Program Files/Git/bin/bash.exe'
+```
+
+The runner needs PowerShell, Bash and jq. On Unix, omit `-BashPath` to resolve Bash
+from PATH. Each leg tests Claude edit payloads, Codex `apply_patch` patches,
+normalized paths, actor policy, profile fallback and launcher exits 0/2/7. The
+Codex cases load real Codex 0.163.0 `PreToolUse` payloads from `tests/fixtures/`
+(`codex-pretooluse-main.json`, `codex-pretooluse-child.json`) and expect a Codex
+deny as stdout `permissionDecision: "deny"` JSON with exit 0. The Windows launcher
+test uses the installed interpreter selected by its normal Bash-first discovery;
+Unix tests execute the polyglot shell path through Bash. The runner creates and
+removes an isolated temporary fixture. It does not run planning scenarios or GitHub
+writes. CI runs both legs on every pull request (`hook regression tests`).
+
+`pwsh -NoProfile -File tests/run-hook.test.ps1` checks that `hooks/run-hook.cmd` returns its gate's exit code (0, 2, 7) through every interpreter branch. CI runs it on Windows and Ubuntu (`launcher exit-code test`).
 
 ## The one rule that makes the metric honest
 

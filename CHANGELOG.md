@@ -3,6 +3,24 @@
 Release notes for milestone-feeder. Each tagged release is also published on the
 [GitHub Releases page](https://github.com/kenmulford/milestone-feeder/releases).
 
+## v1.1.0: Codex support
+
+**Theme:** The feeder installs and runs in OpenAI Codex as well as Claude Code, and the Windows hook launcher stops failing open.
+
+### 🔒 Security fix: the no-source-edit gate failed open on Windows (Claude Code)
+
+`hooks/run-hook.cmd` read `%ERRORLEVEL%` inside a parenthesized block, so on Windows it returned 0 for the gate's exit 2 and every source edit the gate denied went through. The launcher now exits with the gate's own code through every interpreter branch (Git bash 64/32-bit, PATH bash, PATH pwsh). `tests/run-hook.test.ps1` asserts exit 0, 2 and 7 per branch and runs in CI on Windows and Ubuntu. It fails 9 of 18 cases on the v1.0.2 launcher. Update to v1.1.0 to restore the gate on Windows.
+
+### ✨ Codex support
+
+| Area | What |
+|---|---|
+| Manifest | `.codex-plugin/plugin.json` carries the same name, version and description as `.claude-plugin/plugin.json`; CI fails when they drift, a referenced path is missing, or the Codex hook matcher misses `apply_patch`. |
+| Skills | Every `SKILL.md` resolves an unexpanded `${CLAUDE_PLUGIN_ROOT}` and points a Codex run to `skills/runtime-codex.md`: tool names, `spawn_agent` dispatch from `agents/<name>.md`, the cap-4 issue-author fan-out, the nested-dispatch probe, and fail-closed human gates. |
+| Hook | `hooks/codex-hooks.json` runs `no-source-edit` on `apply_patch` and checks every Add, Update, Delete and Move-to target. On Codex the gate denies with `permissionDecision` JSON, because Codex fails open on exit 2, and guards the main thread only. |
+| Tests | `tests/hook-regressions.ps1` runs both hook legs over Claude and captured Codex payloads, in CI on every pull request. |
+| Docs | README "Codex" section: install, hook trust, `$milestone-feeder:<skill>` invocation. |
+
 ## v1.0.2: prompt-surface repair
 
 **Theme:** The feeder's skills, agents and the docs they load state current behavior only, every issue body is written from a file, every citation resolves to the passage it names, and bold and caps mark only the clause that gates behavior. CI now fails on an inline issue-body flag, a build-history phrase, or a line that breaks the emphasis register.

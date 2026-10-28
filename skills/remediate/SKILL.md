@@ -4,6 +4,10 @@ description: >-
   This skill should be used when the user invokes "/milestone-feeder:remediate <issue-number>", or asks to "fix the issue the driver blocked", "apply the triage findings to this issue", or "turn this triage comment into a corrected issue body". Corrects one GitHub issue body against the driver's recorded triage findings, editing the text each finding names in place.
 ---
 
+If `${CLAUDE_PLUGIN_ROOT}` appears unexpanded, it is the parent of the `skills/` directory that holds this file.
+
+On Codex, read `${CLAUDE_PLUGIN_ROOT}/skills/runtime-codex.md` first: it maps this skill's tools, agent dispatches and human gates.
+
 # remediate: a driver triage Blocker → a corrected issue body
 
 Resolve one issue, take the driver's last `🔴 Triage` comment as the authoritative finding set plus every `🟢 Resolved` edit, dispatch the `remediator` agent once for a corrected body, verify mechanically that each superseded span is gone, then show the diff and patch the body. `milestone-driver:triage` posts that comment and never edits the issue body or its labels, so the findings sit there as a durable handoff with no consumer that turns them back into a buildable body; `remediate` is that consumer.
