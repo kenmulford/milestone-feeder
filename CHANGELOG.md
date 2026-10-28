@@ -3,6 +3,12 @@
 Release notes for milestone-feeder. Each tagged release is also published on the
 [GitHub Releases page](https://github.com/kenmulford/milestone-feeder/releases).
 
+## v1.1.1: Codex deny on non-ASCII paths
+
+### 🔒 Security fix: the Codex gate failed open on Windows for a non-ASCII source path
+
+Codex on Windows reads hook stdout in the console code page. A source path with a non-ASCII character (`src/café.ts`) reached the deny JSON as a raw byte, the JSON did not parse, Codex logged "PreToolUse Failed", and the edit went through. Both gate legs now escape non-ASCII characters in the deny JSON (`ConvertTo-Json -EscapeHandling EscapeNonAscii`, `jq -a`), so the output is ASCII-only. `tests/hook-regressions.ps1` asserts it on both legs. Claude Code is unaffected.
+
 ## v1.1.0: Codex support
 
 **Theme:** The feeder installs and runs in OpenAI Codex as well as Claude Code, and the Windows hook launcher stops failing open.
