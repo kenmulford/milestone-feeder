@@ -59,17 +59,23 @@ def err($m): ["2", "build-order: " + $m];
     if ($d | type) != "object" then "malformed input: not a JSON object"
     elif ($d.candidates | type) != "array" then "malformed input: candidates must be an array"
     elif any($C[]; ((type == "object") and (.tag | tagok)) | not) then "malformed input: candidate tag must match #[A-Za-z0-9_-]+"
-    elif ([$C[] | select(.edits != null and (.edits | strarr | not)) | .tag] | first) != null
-      then "malformed input: edits of \([$C[] | select(.edits != null and (.edits | strarr | not)) | .tag] | first) must be an array of strings"
-    elif ([$C | map(.tag) | . as $t | range(0; length) as $i | select($t[$i] as $v | any($t[:$i][]; . == $v)) | $t[$i]] | first) != null
-      then "malformed input: duplicate tag \([$C | map(.tag) | . as $t | range(0; length) as $i | select($t[$i] as $v | any($t[:$i][]; . == $v)) | $t[$i]] | first)"
-    elif ($d.edges != null) and (($d.edges | strarr) | not) then "malformed input: edges must be an array of strings"
-    elif ([$E[] | select(test(edgere) | not)] | first) != null
-      then "malformed input: edge is not a depends_on edge: \([$E[] | select(test(edgere) | not)] | first)"
     else
-      ($C | map(.tag)) as $tg
-      | ([$E[] | capture(edgere) | .l, .r] | map(select(inn($tg) | not)) | first) as $bad
-      | if $bad != null then "edge names a tag absent from candidates: \($bad)" else null end
+      ([$C[] | select(.edits != null and (.edits | strarr | not)) | .tag] | first) as $be
+      | if $be != null then "malformed input: edits of \($be) must be an array of strings"
+        else
+          ([$C | map(.tag) | . as $t | range(0; length) as $i | select($t[$i] as $v | any($t[:$i][]; . == $v)) | $t[$i]] | first) as $dup
+          | if $dup != null then "malformed input: duplicate tag \($dup)"
+            elif ($d.edges != null) and (($d.edges | strarr) | not) then "malformed input: edges must be an array of strings"
+            else
+              ([$E[] | select(test(edgere) | not)] | first) as $be2
+              | if $be2 != null then "malformed input: edge is not a depends_on edge: \($be2)"
+                else
+                  ($C | map(.tag)) as $tg
+                  | ([$E[] | capture(edgere) | .l, .r] | map(select(inn($tg) | not)) | first) as $bad
+                  | if $bad != null then "edge names a tag absent from candidates: \($bad)" else null end
+                end
+            end
+        end
     end
   ) as $msg
 | if $msg != null then err($msg) else
@@ -120,10 +126,6 @@ def err($m): ["2", "build-order: " + $m];
 '
 
 res=$(jq -r -R -s "$prog" < "$f" | tr -d '\r')
-if [ -z "$res" ]; then
-    printf 'build-order: malformed input: not a JSON object\n' >&2
-    exit 2
-fi
 code=${res%%$'\n'*}
 if [ "$code" = "$res" ]; then
     body=''

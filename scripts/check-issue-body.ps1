@@ -355,11 +355,17 @@ function Test-SiteCommand {
     }
 }
 
+function Get-LineLabel {
+    param([string]$Line)
+    $s = $Line.TrimStart(' ', "`t")
+    if ($s.StartsWith('- ', [StringComparison]::Ordinal) -or $s.StartsWith('* ', [StringComparison]::Ordinal)) { $s = $s.Substring(2) }
+    return $s
+}
+
 function Test-SitesSearched {
     for ($i = 0; $i -lt $script:Lines.Count; $i++) {
         if ($script:InFence[$i]) { continue }
-        $s = $script:Lines[$i].TrimStart(' ', "`t")
-        if ($s.StartsWith('- ', [StringComparison]::Ordinal) -or $s.StartsWith('* ', [StringComparison]::Ordinal)) { $s = $s.Substring(2) }
+        $s = Get-LineLabel $script:Lines[$i]
         if (-not $s.StartsWith('Sites searched:', [StringComparison]::Ordinal)) { continue }
         $spans = Get-LineSpans $script:Lines[$i]
         $cmd = ''
@@ -385,8 +391,7 @@ function Test-PlatformSource {
     if ($script:Mode -cne 'bug') { return }
     for ($i = 0; $i -lt $script:Lines.Count; $i++) {
         if ($script:InFence[$i]) { continue }
-        $s = $script:Lines[$i].TrimStart(' ', "`t")
-        if ($s.StartsWith('- ', [StringComparison]::Ordinal) -or $s.StartsWith('* ', [StringComparison]::Ordinal)) { $s = $s.Substring(2) }
+        $s = Get-LineLabel $script:Lines[$i]
         if ($s.StartsWith('Platform source:', [StringComparison]::Ordinal)) { return }
     }
     $script:Findings.Add('platform source: expected a "Platform source:" line, found none')

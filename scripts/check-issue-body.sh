@@ -37,6 +37,7 @@ IN_FENCE=()
 BODY_TEXT=""
 RL=()
 FINDINGS=()
+add_finding() { FINDINGS[${#FINDINGS[@]}]=$1; }
 NL=$'\n'
 CR=$'\r'
 BOM=$'\xef\xbb\xbf'
@@ -186,7 +187,7 @@ check_sections() {
       if [ "${IN_FENCE[$i]}" = 0 ] && [ "${LINES[$i]}" = "$h" ]; then found=1; break; fi
       i=$((i + 1))
     done
-    [ "$found" = 1 ] || FINDINGS[${#FINDINGS[@]}]="section: expected heading \"$h\", found none"
+    [ "$found" = 1 ] || add_finding "section: expected heading \"$h\", found none"
     j=$((j + 1))
   done
 }
@@ -194,15 +195,15 @@ check_sections() {
 check_invariants() {
   local count i v
   [ "$HAVE_INV" = 1 ] || return 0
-  count=$(jq -r '.|length' "$INV_FILE")
+  count=$(jq -r '.|length' "$INV_FILE" | tr -d '\r')
   i=0
   while [ "$i" -lt "$count" ]; do
     # The trailing x keeps $(...) from trimming a value's final newlines.
-    v=$(jq -j --argjson i "$i" '.[$i].value' "$INV_FILE"; printf x)
+    v=$(jq -j --argjson i "$i" '.[$i].value' "$INV_FILE" | tr -d '\r'; printf x)
     v=${v%x}
     case "$BODY_TEXT" in
       *"$v"*) ;;
-      *) FINDINGS[${#FINDINGS[@]}]="invariant: expected value \"$v\", found none" ;;
+      *) add_finding "invariant: expected value \"$v\", found none" ;;
     esac
     i=$((i + 1))
   done
@@ -237,7 +238,7 @@ resolve_citation() {
   case "$anchor" in ''|new) return 0 ;; esac
   file="$REPO_ROOT/$head"
   if [ ! -f "$file" ] || [ ! -r "$file" ]; then
-    FINDINGS[${#FINDINGS[@]}]="citation: expected 1 line matching \"$anchor\" in $head, found 0 (no readable file)"
+    add_finding "citation: expected 1 line matching \"$anchor\" in $head, found 0 (no readable file)"
     return 0
   fi
   read_file_lines "$file"
@@ -246,7 +247,7 @@ resolve_citation() {
     case "${RL[$i]}" in *"$anchor"*) hits=$((hits + 1)) ;; esac
     i=$((i + 1))
   done
-  [ "$hits" = 1 ] || FINDINGS[${#FINDINGS[@]}]="citation: expected 1 line matching \"$anchor\" in $head, found $hits"
+  [ "$hits" = 1 ] || add_finding "citation: expected 1 line matching \"$anchor\" in $head, found $hits"
 }
 
 check_citations() {
@@ -316,17 +317,17 @@ sites_one() {
   local paths=() clean=()
   case "$cmd" in
     "$prefix"*) rest=${cmd#"$prefix"} ;;
-    *) FINDINGS[${#FINDINGS[@]}]=$form; return 0 ;;
+    *) add_finding "$form"; return 0 ;;
   esac
   case "$rest" in
     *"'"*) ;;
-    *) FINDINGS[${#FINDINGS[@]}]=$form; return 0 ;;
+    *) add_finding "$form"; return 0 ;;
   esac
   pattern=${rest%%"'"*}
   after=${rest#*"'"}
   case "$after" in
     ' '*) rem=${after#?} ;;
-    *) FINDINGS[${#FINDINGS[@]}]=$form; return 0 ;;
+    *) add_finding "$form"; return 0 ;;
   esac
   while :; do
     tok=${rem%%' '*}
@@ -334,11 +335,11 @@ sites_one() {
     paths[${#paths[@]}]=$tok
     case "$rem" in *' '*) rem=${rem#*' '} ;; *) break ;; esac
   done
-  if [ -n "$bad" ]; then FINDINGS[${#FINDINGS[@]}]=$form; return 0; fi
+  if [ -n "$bad" ]; then add_finding "$form"; return 0; fi
   for p in "${paths[@]}"; do
     case "$p" in
       /*|'~'*|*..*|*'\'*|*:*)
-        FINDINGS[${#FINDINGS[@]}]="sites searched: expected a path inside the repo root, found \"$p\""
+        add_finding "sites searched: expected a path inside the repo root, found \"$p\""
         return 0
         ;;
     esac
@@ -346,18 +347,18 @@ sites_one() {
   for p in "${paths[@]}"; do
     while [ "${p%/}" != "$p" ]; do p=${p%/}; done
     if [ ! -e "$REPO_ROOT/$p" ]; then
-      FINDINGS[${#FINDINGS[@]}]="sites searched: expected an existing path, found \"$p\""
+      add_finding "sites searched: expected an existing path, found \"$p\""
       return 0
     fi
     clean[${#clean[@]}]=$p
   done
   if ! pattern_in_subset "$pattern"; then
-    FINDINGS[${#FINDINGS[@]}]="sites searched: expected a pattern in the shared ERE subset, found \"$pattern\""
+    add_finding "sites searched: expected a pattern in the shared ERE subset, found \"$pattern\""
     return 0
   fi
   grep -E -e "$pattern" </dev/null >/dev/null 2>&1
   if [ $? -eq 2 ]; then
-    FINDINGS[${#FINDINGS[@]}]="sites searched: expected a valid pattern, found \"$pattern\""
+    add_finding "sites searched: expected a valid pattern, found \"$pattern\""
     return 0
   fi
   out=$(CDPATH= cd -- "$REPO_ROOT" 2>/dev/null && grep -r -l -a -E -e "$pattern" -- "${clean[@]}" 2>/dev/null | sed 's,^\./,,' | sort -u)
@@ -367,25 +368,31 @@ sites_one() {
     tr -d '\000' < "$REPO_ROOT/$f" | cmp -s - "$REPO_ROOT/$f" || continue
     case "$BODY_TEXT" in
       *"$f"*) ;;
-      *) FINDINGS[${#FINDINGS[@]}]="sites searched: expected \"$f\" in the body, found none" ;;
+      *) add_finding "sites searched: expected \"$f\" in the body, found none" ;;
     esac
   done <<EOF
 $out
 EOF
 }
 
+# Sets LABEL to the line minus leading whitespace and one "- " or "* " bullet.
+line_label() {
+  local ws=' 	'
+  LABEL=$1
+  LABEL=${LABEL#"${LABEL%%[!$ws]*}"}
+  case "$LABEL" in
+    '- '*|'* '*) LABEL=${LABEL#??} ;;
+  esac
+}
+
 check_sites_searched() {
-  local n i s ws=' 	' cmd
+  local n i cmd
   n=${#LINES[@]}
   i=0
   while [ "$i" -lt "$n" ]; do
     if [ "${IN_FENCE[$i]}" = 0 ]; then
-      s=${LINES[$i]}
-      s=${s#"${s%%[!$ws]*}"}
-      case "$s" in
-        '- '*|'* '*) s=${s#??} ;;
-      esac
-      case "$s" in
+      line_label "${LINES[$i]}"
+      case "$LABEL" in
         'Sites searched:'*)
           line_spans "${LINES[$i]}"
           cmd=""
@@ -409,7 +416,7 @@ check_vocabulary() {
       j=0
       while [ "$j" -lt "${#words[@]}" ]; do
         if [[ ${LINES[$i]} == *"${words[$j]}"* ]]; then
-          FINDINGS[${#FINDINGS[@]}]="vocabulary: expected no \"${words[$j]}\", found it on line $((i + 1))"
+          add_finding "vocabulary: expected no \"${words[$j]}\", found it on line $((i + 1))"
         fi
         j=$((j + 1))
       done
@@ -420,24 +427,20 @@ check_vocabulary() {
 }
 
 check_platform_source() {
-  local n i s ws=' 	'
+  local n i
   [ "$MODE" = bug ] || return 0
   n=${#LINES[@]}
   i=0
   while [ "$i" -lt "$n" ]; do
     if [ "${IN_FENCE[$i]}" = 0 ]; then
-      s=${LINES[$i]}
-      s=${s#"${s%%[!$ws]*}"}
-      case "$s" in
-        '- '*|'* '*) s=${s#??} ;;
-      esac
-      case "$s" in
+      line_label "${LINES[$i]}"
+      case "$LABEL" in
         'Platform source:'*) return 0 ;;
       esac
     fi
     i=$((i + 1))
   done
-  FINDINGS[${#FINDINGS[@]}]='platform source: expected a "Platform source:" line, found none'
+  add_finding 'platform source: expected a "Platform source:" line, found none'
 }
 
 main() {
