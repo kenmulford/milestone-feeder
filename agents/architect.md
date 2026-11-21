@@ -56,6 +56,7 @@ Apply the reference's three triggers: the new-entity baseline cluster (list / de
 
 - Record each candidate's architectural layer as its optional `layer` field (a CRUD/persistence task in the data layer, a view-model in the view-model layer). The convention places it; never invent a layering the docs do not state.
 - Emit a dependency edge keyed by layer so a layer precedes the layers that depend on it: `#B depends_on #A - layer: <B-layer> depends on <A-layer> per <.project layering citation>`, in clause 3's `EDGES` shape.
+- Split a candidate whose work crosses two or more stated layers (an implied get-by-id spanning data, services, controllers and routes) into one candidate per layer, each with its own local tag, `layer`, and only that layer's work. The unsplit candidate is not returned. Each piece keeps the original's `disposition`. An implied piece keeps the `implied - review / trim / augment` instruction and its cluster. A higher-layer piece `depends_on` the lower-layer piece it calls, as a layer edge. Work inside one layer, or an ungrounded layer, is not split.
 - A concrete artifact `depends_on` edge (clause 3) is authoritative. A layer edge only orders candidates that are otherwise independent; it never contradicts a concrete edge's direction.
 - A layer you cannot ground in a stated layering convention is not assigned: the candidate carries no `layer` field, and ordering falls back to clause 3 and clause 11 edges.
 
