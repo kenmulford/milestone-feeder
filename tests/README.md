@@ -31,6 +31,8 @@ writes. CI runs both legs on every pull request (`hook regression tests`).
 
 `pwsh -NoProfile -File tests/run-hook.test.ps1` checks that `hooks/run-hook.cmd` returns its gate's exit code (0, 2, 7) through every interpreter branch. CI runs it on Windows and Ubuntu (`launcher exit-code test`).
 
+`pwsh -NoProfile -File tests/build-order.test.ps1` runs `scripts/build-order.sh` and `scripts/build-order.ps1` over every case under `tests/fixtures/build-order/` and requires each twin's stdout, stderr and exit code to equal the case's `expected.stdout`, `expected.stderr` and `expected.exit` byte for byte. CI runs it on Windows and Ubuntu (`build-order fixtures`).
+
 ## The one rule that makes the metric honest
 
 The scenario **runner never sees `expected.grader.md`**: it is **not part of the runner

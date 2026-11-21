@@ -1,7 +1,7 @@
 name: CI
 
-# Five pull-request gates for the milestone-feeder plugin. All must pass
-# before a PR into main or develop can merge. None of the five builds
+# Six pull-request gates for the milestone-feeder plugin. All must pass
+# before a PR into main or develop can merge. None of the six builds
 # anything: this repo is a Claude Code plugin (markdown skills/agents + JSON
 # manifests), so the gates only verify the surface stays clean and loadable
 # and the no-source-edit hook still denies what it should.
@@ -36,10 +36,17 @@ name: CI
 #                                anything but its gate's exit code (0, 2, 7)
 #                                through any interpreter branch; a dropped
 #                                exit 2 makes every gate fail open.
+#   6. build-order fixtures:     runs tests/build-order.test.ps1 on Windows and
+#                                Ubuntu. Fails if scripts/build-order.sh and
+#                                scripts/build-order.ps1 differ from each other
+#                                or from the expected stdout, stderr and exit
+#                                code of any case under
+#                                tests/fixtures/build-order/.
 #
 # The job names below ("vocabulary-purge gate", "plugin-structure check",
 # "contract-strings gate", "hook regression tests", "launcher exit-code test
-# (ubuntu-latest)", "launcher exit-code test (windows-latest)") are the
+# (ubuntu-latest)", "launcher exit-code test (windows-latest)", "build-order
+# fixtures (ubuntu-latest)", "build-order fixtures (windows-latest)") are the
 # required-status-check contexts to wire in branch protection.
 #
 # Runs on pull_request only: required status checks are evaluated on PRs, so a
@@ -115,3 +122,17 @@ jobs:
       - name: Run the run-hook.cmd exit-code test
         shell: pwsh
         run: ./tests/run-hook.test.ps1
+
+  build-order-fixtures:
+    name: build-order fixtures (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Check out the code under review
+        uses: actions/checkout@v7
+      - name: Run the build-order fixture test
+        shell: pwsh
+        run: ./tests/build-order.test.ps1
