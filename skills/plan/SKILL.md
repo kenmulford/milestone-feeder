@@ -136,6 +136,10 @@ Dispatch the agent named in `architectAgent` (default `milestone-feeder:architec
 
 **It returns** its structured return block (the `CANDIDATES / EDGES / PRODUCT_GAPS / SCOPE_SPANS_MULTIPLE_MILESTONES / INVARIANTS` schema) defined verbatim at `agents/architect.md` → "Structured return block"
 
+**Save the return** to `.milestone-feeder/architect-<slug>.md` before Step 3.5, after Step 7's scratch self-ignore rule. A full dispatch overwrites the file. An incremental dispatch, after the `docs/incremental-replan.md` §4 merge, appends under `## Incremental dispatch <n>` (highest existing number plus one, else `## Incremental dispatch 1`). A failed write never stops `plan`.
+
+Resume from the file when the context records this run's Step 3 save and no longer holds the block: read the whole file on the full path, or the highest-numbered `## Incremental dispatch <n>` section on the incremental path. Dispatch if the file is absent. Other runs dispatch.
+
 `EDGES` is the literal `[]` when no candidate depends on another; `PRODUCT_GAPS` is the literal `none` when the brief is fully resolvable. **Merge** any architect `PRODUCT_GAPS` into `productGaps[]` (they join the gaps found at Step 2), capturing each gap's `blocks:` tags alongside its `gap` / `why_blocked` / `brief_ref` (a `blocks:` list naming specific candidate tags drives the Step 3.5 early park; `[]` marks a gap not tied to specific named candidates, a broad product decision that names no candidates to pre-park). Step 2 gaps carry no `blocks:` list. They name no specific candidates by construction.
 
 **Capture each candidate's optional `disposition`** (`grounded` | `implied`) verbatim alongside its `tag` / `title` / `surface` / `risk` / `sketch`. Default/omitted = `grounded` (`agents/architect.md` → the optional `disposition` field). It is additive: a candidate the architect did not mark `implied` carries no `disposition`. `plan` threads this field into the Step-4 issue-author brief and renders `implied` candidates distinctly at Step 7 (below); it invents no disposition and overrides none.
