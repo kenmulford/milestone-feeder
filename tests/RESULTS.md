@@ -28,6 +28,19 @@ What each fixture asserts (the `expected.grader.md` contract, not a fresh execut
 
 `05-reviewer-backends` was **removed in v0.9.0**: its subject (the retired `reviewer` config key + reviewer backends) no longer exists.
 
+## Run record: 2026-11-21 (#560)
+
+**Tree and method.** The procedure under test is `skills/plan/SKILL.md` on `issue/560-build-order-script` (milestone tip `25a37d0` plus the #560 diff), with `plan` deriving the `after` edges and Waves through `scripts/build-order`. The installed agents (milestone-feeder `1.1.1`) predate #560, so each runner dispatched `general-purpose` proxies told to act as the branch's `agents/architect.md` and `agents/issue-author.md`, as section 06 of this file did. Method, blindness and grading match the `2026-11-21` record below. 01 and 17 were run: 01 covers the Wave render, 17 the shared-file edges.
+
+| # | Scenario | Baseline (`829ca08`) | This run | Change |
+|---|----------|----------|----------|--------|
+| 01 | clean-happy-path | ✅ PASS | ✅ PASS | same |
+| 17 | shared-file-ordering | ⚠️ PARTIAL | ⚠️ PARTIAL | same |
+
+**17's two runs.** Run 1 graded ❌ FAIL: the brief left N's value and the report's contents open, both endpoints parked at Step 3.5, and `plan` derives edges over the Step 4 set, so no `after` edge appeared. The baseline's PARTIAL came from an edge the architect emitted over the parked set. The brief now states N (`exports.maxInFlight`, default 3), the report's columns and the list order, and the key names `plan` as the edge's source. Run 2 kept all 8 candidates, derived 5 `after` edges each naming its shared path, including POST after GET on `src/routes/index.ts`, and left no Wave holding two candidates that edit one file. It stays PARTIAL because the breakdown differs from the key's: the cap default rides the service, so POST and GET never share a Wave under the concrete edges, and no telemetry candidate exists.
+
+**Redundant edge.** `scripts/build-order` suppresses an `after` edge only for a pair a direct `depends_on` edge joins, so run 2 also emitted `#D after #B` for a pair already ordered through #C. The edge agrees with the order and moves no Wave.
+
 ## Run record: 2026-11-21 (#557)
 
 **Tree and method.** The procedure under test is `skills/plan/SKILL.md` on `issue/557-plan-check-issue-body` (milestone tip `1b44dff` plus the #557 diff), with Step 4's `scripts/check-issue-body` run from that tree. The architect and issue-author were the installed registered agents (milestone-feeder `1.1.1`). Method, blindness and grading match the `2026-11-21` record below. The 13 scenarios that record ran against `829ca08` were run, not 18 to 20, which grade the bug brief.

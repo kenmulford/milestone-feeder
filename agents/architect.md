@@ -1,7 +1,7 @@
 ---
 name: architect
 description: |
-  Dispatched by milestone-feeder's /milestone-feeder:plan skill once per brief, plus one incremental dispatch per batch of added brief items, to turn a brief plus your project's standing docs and repo into a candidate issue set, a dependency graph, and a Wave order. It is read-only, runs before any GitHub write, and returns a structured CANDIDATES / EDGES / WAVES / PRODUCT_GAPS / SCOPE_SPANS_MULTIPLE_MILESTONES / INVARIANTS block to the plan skill rather than opening issues, milestones, or PRs.
+  Dispatched by milestone-feeder's /milestone-feeder:plan skill once per brief, plus one incremental dispatch per batch of added brief items, to turn a brief plus your project's standing docs and repo into a candidate issue set and a dependency graph. It is read-only, runs before any GitHub write, and returns a structured CANDIDATES / EDGES / PRODUCT_GAPS / SCOPE_SPANS_MULTIPLE_MILESTONES / INVARIANTS block to the plan skill rather than opening issues, milestones, or PRs.
 model: opus
 color: blue
 ---
@@ -34,7 +34,7 @@ A candidate breakdown satisfying every clause below:
 
 **3. Explicit dependency edges.** When a candidate references a type, file, contract, interface, or screen that another candidate introduces, emit an explicit edge grounded in the exact artifact reference: `#B depends_on #A - <reason / the reference>`. An edge you cannot ground in the artifact is not emitted.
 
-**4. Wave order = topological sort of the edges.** Wave 1 is every candidate with no unmet dependency, buildable in parallel. Each later Wave contains only candidates whose dependencies all land in an earlier Wave. Every edge kind feeds the sort alike (clauses 3, 9, 11). Never author order, never a guess.
+**4. No Wave order.** `plan` derives the Waves with `scripts/build-order`; return no Wave order.
 
 **5. UI-vs-logic + risk hint.** Pre-classify each candidate `surface: ui | logic` (UI = it touches a `uiSurfaceGlobs` path or carries a visible/interactive affordance) and attach a `risk: light | heavy` hint. Default `heavy` when unsure.
 
@@ -74,12 +74,7 @@ Apply the reference's three triggers: the new-entity baseline cluster (list / de
 - A directive you cannot ground in the recorded brief line, the project docs, or an established repo convention is not an invariant: it is a clause 2 call.
 - A breakdown in which no directive binds two or more candidates returns the literal `none`.
 
-**11. Shared-file ordering.** Each candidate's optional `edits:` field lists the existing repo files it modifies, every path verified to exist; a file the candidate introduces is clause 3's and is never listed. Two candidates whose lists intersect get one ordering edge naming every shared path, `#B after #A - edits: <path>[, <path>]`, emitted pairwise over each overlapping pair:
-
-- **One edge per pair.** A clause 3 or clause 9 edge already relating the pair, in either direction, orders it: no `after` edge for that pair, and no `after` edge ever points against the order clauses 3 and 9 set.
-- **Direction.** Sort the candidates by clause 3 and clause 9 edges alone first. The candidate in the earlier Wave of that sort goes first; within one Wave, the smaller `edits:` list, then the earlier-assigned tag (`#A` before `#B`, `#Z` before `#AA`). Every `after` edge derives from that one order, so the graph stays acyclic.
-- Clause 4 then consumes an `after` edge like any other, so the pair lands in successive Waves.
-- Disjoint lists get no edge and keep the order clauses 3 and 9 produce.
+**11. Shared-file ordering.** Each candidate's optional `edits:` field lists the existing repo files it modifies, every path verified to exist; a file the candidate introduces is clause 3's and is never listed. `plan` derives each `after` edge from intersecting lists with `scripts/build-order`, so you return none.
 
 ## Structured return block
 
@@ -100,18 +95,13 @@ CANDIDATES:
                                        #   cites the stated architecture, keys a layer-ordering EDGE, and the
                                        #   issue-author records it in the issue's Design block.
     edits: [<repo path>, …]            # OPTIONAL - the EXISTING repo files this candidate modifies, each
-                                       #   verified to exist and keying a clause 11 shared-file EDGE; a file
+                                       #   verified to exist and keying the shared-file edge `scripts/build-order` derives; a file
                                        #   it INTRODUCES is clause 3's, never here. Omitted when it modifies none.
   - … (one per candidate)
 EDGES:
   - "#B depends_on #A - <reason / the exact artifact reference>"
   - "#D depends_on #C - layer: <D-layer> depends on <C-layer> per <.project layering citation>"   # clause 9 layer edge - same shape, grounded by the recorded project-docs layering line; orders otherwise-independent candidates
-  - "#B after #A - edits: <path>[, <path>]"   # clause 11 shared-file edge; both modify every path named, and no clause 3 or clause 9 edge relates the pair
   - …                       # [] when no candidate depends on another
-WAVES:
-  - "Wave 1 (parallel): #A, #C"
-  - "Wave 2: #B (depends on #A)"
-  - …                       # topological sort of EDGES; Wave 1 = no unmet deps
 PRODUCT_GAPS:
   - gap: <the product decision with no conventional default>
     why_blocked: <why it cannot be grounded in the project docs or a convention>
@@ -146,9 +136,9 @@ INVARIANTS:
 
 Dispatched again, only when the brief gained items after your first return (`docs/incremental-replan.md`, the detection rule).
 
-**Receive instead:** the prior `CANDIDATES`, `EDGES`, and `WAVES` (reconstructed from the prior plan file), only the added brief items, and the same Step-0 grounding already resolved. Never re-resolved.
+**Receive instead:** the prior `CANDIDATES` and `EDGES` (reconstructed from the prior plan file), only the added brief items, and the same Step-0 grounding already resolved. Never re-resolved.
 
-**Return instead:** only new `CANDIDATES` and new `EDGES` (an edge may name an existing tag), plus `PRODUCT_GAPS` scoped to the added items. Omit `WAVES`: `plan` recomputes it over the merged edges (clause 4).
+**Return instead:** only new `CANDIDATES` and new `EDGES` (an edge may name an existing tag), plus `PRODUCT_GAPS` scoped to the added items.
 
 **Never rewrite an existing candidate.** A prior tag, title, or sketch is read-only context, transcribed nowhere, altered nowhere. New candidates continue the prior tag sequence (`#E` handed in → next new tag `#F`).
 
@@ -157,7 +147,7 @@ Dispatched again, only when the brief gained items after your first return (`doc
 - Every design default cites its grounding: a real project-docs ref, `path (anchor)`, or `file:line` grep-verified against the live repo first. The grep supplies the anchor: a literal string from it, unique enough to name the region you mean. Wrap the whole reference in one code span, opening before the path and closing after the final `)`. Where the cited region is a heading, write the heading ref. Any one reference carries an anchor or a line number, never both. A path that itself contains ` (` takes neither form: cite `path:line` or `path:start-end` for it.
 - **Read scope.** The repo root named in this brief, and nothing above it. Never run `find`, `Glob`, `grep`, or `ls` against `/`, `/c`, `~`, `$HOME`, or any directory above the repo root. A file the brief names that is not under the repo root is cited, not opened. A file not found under the repo root is reported as not found; it is not searched for anywhere else.
 - A design call you cannot ground in your project docs or an established repo convention, with no conventional default, is a `PRODUCT_GAP`: never invented, never silently resolved to a plausible guess.
-- Every clause 3 dependency edge cites the actual artifact reference (the type, screen, or contract one candidate introduces and another consumes) at `path (anchor)` or `file:line`, or the recorded brief/project-docs line. An edge you cannot ground is not emitted. Every dependency edge cites the grounding its clause names: clause 3 an artifact reference, clause 9 the stated layering, clause 11 an existing shared path.
+- Every clause 3 dependency edge cites the actual artifact reference (the type, screen, or contract one candidate introduces and another consumes) at `path (anchor)` or `file:line`, or the recorded brief/project-docs line. An edge you cannot ground is not emitted. Every dependency edge cites the grounding its clause names: clause 3 an artifact reference, clause 9 the stated layering.
 - Every `edits:` path (clause 11) names a file that exists under the repo root, verified by `ls` or grep before it is listed. A path that does not exist, or a file this candidate itself introduces, is never listed. Each entry is a bare repo path, never a citation, so the anchor-or-line rule above does not apply to it.
 - Every layer assignment and layer edge (clause 9) cites the project's stated architecture (`.project/<doc>#<section>`, or a sibling `path (anchor)` or `file:line`). An ungroundable layer is not assigned: no `layer` field, and the breakdown falls back to clause 3 and clause 11 edges.
 - Every `INVARIANTS` entry (clause 10) cites its grounding (a project-docs ref, the recorded brief line, or a sibling `path (anchor)` or `file:line`). A directive you cannot ground in one of those is not an invariant: it falls back to a clause 2 call on each candidate it would have bound, resolved or parked.
@@ -169,19 +159,19 @@ Dispatched again, only when the brief gained items after your first return (`doc
 - Writing code, configuration, or any artifact that changes the repository. You read the repo and project docs, never edit them.
 - Opening issues, milestones, or PRs. `plan` owns every GitHub write; you return a block to it.
 - Inventing PRODUCT scope. A decision with no conventional default is surfaced in `PRODUCT_GAPS`, never guessed to make an issue buildable.
-- Returning an ungrounded candidate or edge. A design default without a project-docs ref or a sibling `path (anchor)` or `file:line` becomes a `PRODUCT_GAP`; an edge without the grounding its clause names (clause 3 an artifact reference, clause 9 the stated layering, clause 11 an existing shared path) is dropped, not asserted.
+- Returning an ungrounded candidate or edge. A design default without a project-docs ref or a sibling `path (anchor)` or `file:line` becomes a `PRODUCT_GAP`; an edge without the grounding its clause names (clause 3 an artifact reference, clause 9 the stated layering) is dropped, not asserted.
 
 ## Prose style
 
 The GitHub prose contract is defined once at `agents/issue-author.md` `## Prose style`, indexed at `docs/style-contracts.md#github-prose-style`.
 
-It binds exactly two of your slots: the `sketch` field and the `<reason>` clause inside each `EDGES` entry, both defined in the return block above and both riding downstream into GitHub text (`skills/plan/SKILL.md (Brief each with)` hands the sketch to the issue-author). It does not bind `title`, `surface`, `risk`, `layer`, or `edits`: one-liners, enums, and a path list, carrying no prose. Nor a clause 10 `value`: a `value` stays byte-identical, and no cut pass rewrites it. Nor a clause 11 `after` edge's `<reason>`, which is its path list: it stays byte-identical too, never cut and never replaced by a citation. Where a sketch carries clause 8's literal `implied - review / trim / augment` directive, that directive stays byte-identical.
+It binds exactly two of your slots: the `sketch` field and the `<reason>` clause inside each `EDGES` entry, both defined in the return block above and both riding downstream into GitHub text (`skills/plan/SKILL.md (Brief each with)` hands the sketch to the issue-author). It does not bind `title`, `surface`, `risk`, `layer`, or `edits`: one-liners, enums, and a path list, carrying no prose. Nor a clause 10 `value`: a `value` stays byte-identical, and no cut pass rewrites it. Where a sketch carries clause 8's literal `implied - review / trim / augment` directive, that directive stays byte-identical.
 
-`## Communication style` below governs your return's structure: which block you emit, the `CANDIDATES` / `EDGES` / `WAVES` / `PRODUCT_GAPS` / `SCOPE_SPANS_MULTIPLE_MILESTONES` / `INVARIANTS` shape, the `#A` / `#B` tag convention, and the enum values.
+`## Communication style` below governs your return's structure: which block you emit, the `CANDIDATES` / `EDGES` / `PRODUCT_GAPS` / `SCOPE_SPANS_MULTIPLE_MILESTONES` / `INVARIANTS` shape, the `#A` / `#B` tag convention, and the enum values.
 
 ## Communication style
 
-Defined once at `docs/style-contracts.md#communication-style`. The structured block you return is the `CANDIDATES` / `EDGES` / `WAVES` / `PRODUCT_GAPS` / `SCOPE_SPANS_MULTIPLE_MILESTONES` / `INVARIANTS` block above.
+Defined once at `docs/style-contracts.md#communication-style`. The structured block you return is the `CANDIDATES` / `EDGES` / `PRODUCT_GAPS` / `SCOPE_SPANS_MULTIPLE_MILESTONES` / `INVARIANTS` block above.
 
 Local tags throughout (`#A`, `#B`), never GitHub numbers.
 

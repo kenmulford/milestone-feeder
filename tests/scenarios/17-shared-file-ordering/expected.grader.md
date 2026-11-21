@@ -14,8 +14,8 @@ grounded `edits:` list; two candidates whose lists intersect get an ordering edg
 any other edge, so they land in successive Waves rather than one parallel Wave; a clause 3
 or clause 9 edge already relating a pair orders it and suppresses the `after` edge; the
 `edits:` list threads through to each issue body's `Edits:` line; and a breakdown whose
-`edits:` lists are all disjoint produces the `EDGES` set and Wave order the concrete
-dependency edges alone produce.**
+`edits:` lists are all disjoint produces the edge set `plan` derives and the Wave order the
+concrete dependency edges alone produce.**
 
 This is a **plan-side, preview-only** scenario (zero GitHub writes), mirroring the
 plan-side portion of scenarios 11, 12, and 13.
@@ -50,7 +50,8 @@ defect this scenario exists to catch.
 - #C and #D both carry `src/routes/index.ts` in `edits:`, and **no** clause 3 edge relates
   the pair (neither consumes an artifact the other introduces; each depends on #B only).
   The project states no layering convention, so no clause 9 edge relates them either.
-- The architect emits exactly one ordering edge for the pair, in the `EDGES` block, in the
+- `plan` derives exactly one ordering edge for the pair, running `scripts/build-order` over the
+  Step 4 set (the architect returns no `after` edge, `agents/architect.md` clause 11), in the
   clause 11 shape. Direction: the sort over clause 3 and clause 9 edges alone puts #C and
   #D in the **same** Wave (both depend on #B, nothing else relates them), so the tie breaks
   on list size: **`#D` first**, its `edits:` list being the smaller. The reason **names the
@@ -124,14 +125,14 @@ defect this scenario exists to catch.
 - **Asserted alternate.** The **same brief** run against a project whose convention gives
   each surface its own registration file (one file per route, per-module self-registration,
   a per-migration folder scan, one file per config key), so no two candidates' `edits:`
-  lists intersect, produces the `EDGES` set and Wave order the **concrete edges alone**
+  lists intersect, produces the edge set `plan` derives and the Wave order the **concrete edges alone**
   produce, byte-for-byte:
-  - **No `after` edge is emitted.** `EDGES` carries the three named clause 3 edges, may
-    also carry the telemetry `depends_on #E` edge, and carries no clause 11 edge.
+  - **No `after` edge is emitted.** The edge set `plan` derives carries the three named clause 3
+    edges, may also carry the telemetry `depends_on #E` edge, and carries no clause 11 edge.
   - The Wave order is Wave 1 `#A, #E` · Wave 2 `#B` · **Wave 3 `#C, #D` (parallel)**: #C
     and #D are back in one Wave, because no shared file separates them.
   - Candidates still carry their `edits:` fields where they modify an existing file. The
-    byte-for-byte claim binds `EDGES` and the Wave order, never `CANDIDATES`: the field is
+    byte-for-byte claim binds the derived edge set and the Wave order, never `CANDIDATES`: the field is
     emitted; only the edge is absent.
   - No error, no fabricated overlap. This is an asserted **success** outcome, not a park
     and not a failure.

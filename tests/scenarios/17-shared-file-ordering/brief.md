@@ -1,13 +1,16 @@
 # Brief: CSV exports
 
 Let a signed-in user export a report as CSV. The user queues an export, the export runs in
-the background, and finished exports are listed back to the user. The export job is
+the background, and finished exports are listed back to the user. The report is the user's
+archive listing, one CSV row per archived item with columns `name`, `size_bytes`, `archived_at`,
+read through the existing `src/services/ArchiveService.ts` (which this feature calls, never
+modifies). The export job is
 registered in the queue manifest at `src/jobs/manifest.ts`.
 
 In scope:
 - Queue an export: `POST /exports`. The endpoint refuses a new export when the user already
-  has N exports in flight; N is a config key.
-- List a user's exports: `GET /exports`.
+  has N exports in flight; N is the config key `exports.maxInFlight`, default 3.
+- List a user's exports: `GET /exports`, newest first, no paging.
 - The background pipeline that writes the CSV file and records the export row. A finished
   export is kept for 30 days.
 - A URL-safe filename for each finished export, derived from the report title.
