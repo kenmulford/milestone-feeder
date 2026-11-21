@@ -1,0 +1,3 @@
+  - src/dir./file.md: component 'dir.' ends in a space or a dot, so Windows cannot check this path out
+  - src/file.: component 'file.' ends in a space or a dot, so Windows cannot check this path out
+  - src/trailing /file.md: component 'trailing ' ends in a space or a dot, so Windows cannot check this path out

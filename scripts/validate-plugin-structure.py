@@ -32,6 +32,10 @@ It checks:
      docs/one-time-notices.md, and this repo's own committed
      .milestone-config/.gitignore. A drifted copy is named, and so is a
      missing one (see "--- 7: nested .gitignore three-copy pin ---" below).
+  6. Windows-checkout paths (issue #575): every tracked path (from
+     `git ls-files -z`, or from `--paths-file <file>`) has no component whose
+     stem before its first dot is a reserved device name, no character from
+     <>:"|?*, and no component ending in a space or a dot.
 
 Two readers, two rules (read before "upgrading" this):
   Claude Code's frontmatter reader is tolerant: it takes everything after the
@@ -56,13 +60,16 @@ Two readers, two rules (read before "upgrading" this):
 Dependencies: Python standard library only.
 
 Run it locally from the repo root:  python3 scripts/validate-plugin-structure.py
+  --paths-file <file>: newline-separated paths read in place of `git ls-files`, for fixtures.
 Exit 0 = valid. Exit 1 = at least one structural problem (each printed).
 """
 
 from __future__ import annotations
 
+import argparse
 import json
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -1074,6 +1081,80 @@ if cj is not None:
                 "'apply_patch'. apply_patch is Codex's file-edit tool, so "
                 "without it the gate never fires",
             )
+
+# --- 10: Windows-checkout paths ---------------------------------------------
+
+WINDOWS_RESERVED_NAMES: frozenset[str] = frozenset(
+    ["CON", "PRN", "AUX", "NUL"]
+    + [f"COM{n}" for n in range(1, 10)]
+    + [f"LPT{n}" for n in range(1, 10)]
+)
+WINDOWS_FORBIDDEN_CHARS = '<>:"|?*'
+
+
+def tracked_paths(paths_file: str | None) -> list[str]:
+    """Return the tracked paths, from `paths_file` or `git ls-files -z`."""
+    if paths_file is not None:
+        try:
+            text = Path(paths_file).read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError) as exc:
+            print(
+                f"validate-plugin-structure: cannot read --paths-file "
+                f"{paths_file} ({exc})",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+        return [line for line in text.splitlines() if line]
+    try:
+        proc = subprocess.run(
+            ["git", "ls-files", "-z"],
+            cwd=REPO_ROOT,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+        )
+        failure = proc.stderr if proc.returncode != 0 else None
+    except FileNotFoundError as exc:
+        failure = str(exc)
+    if failure is not None:
+        print("validate-plugin-structure: git ls-files failed:", file=sys.stderr)
+        print(failure, file=sys.stderr, end="" if failure.endswith("\n") else "\n")
+        sys.exit(1)
+    return [entry for entry in proc.stdout.split("\0") if entry]
+
+
+def windows_path_problems(path: str) -> list[str]:
+    problems: list[str] = []
+    for comp in path.split("/"):
+        if not comp:
+            continue
+        stem = comp.split(".", 1)[0].upper()
+        if stem in WINDOWS_RESERVED_NAMES:
+            problems.append(
+                f"component {comp!r} uses the Windows reserved device name "
+                f"{stem}, so Windows cannot check this path out"
+            )
+        for ch in WINDOWS_FORBIDDEN_CHARS:
+            if ch in comp:
+                problems.append(
+                    f"component {comp!r} contains {ch!r}, a character Windows "
+                    f"forbids in a path, so Windows cannot check this path out"
+                )
+        if comp.endswith((" ", ".")):
+            problems.append(
+                f"component {comp!r} ends in a space or a dot, so Windows "
+                f"cannot check this path out"
+            )
+    return problems
+
+
+_parser = argparse.ArgumentParser(description="Validate the plugin structure.")
+_parser.add_argument("--paths-file", default=None)
+_args = _parser.parse_args()
+
+for _path in tracked_paths(_args.paths_file):
+    for _msg in windows_path_problems(_path):
+        err(REPO_ROOT / _path, _msg)
 
 # --- report -----------------------------------------------------------------
 
