@@ -37,23 +37,31 @@ function Read-Expected([string]$Path, [string]$Dir) {
     return $text.Replace('{dir}', $Dir)
 }
 
+$CitHere = [System.IO.Path]::GetFullPath((Join-Path $Here '../citations'))
 $names = [string[]](Get-ChildItem -LiteralPath $Here -Directory | ForEach-Object { $_.Name })
 [Array]::Sort($names, [StringComparer]::Ordinal)
+$citNames = [string[]](Get-ChildItem -LiteralPath $CitHere -Directory | ForEach-Object { $_.Name })
+[Array]::Sort($citNames, [StringComparer]::Ordinal)
+$work = @($names | ForEach-Object { @{ Name = $_; Label = $_; Base = $Here } }) +
+    @($citNames | ForEach-Object { @{ Name = $_; Label = "citations/$_"; Base = $CitHere } })
 $failed = $false
 
-foreach ($name in $names) {
-    $dir = (Join-Path $Here $name).Replace('\', '/')
+foreach ($row in $work) {
+    $name = $row.Name
+    $label = $row.Label
+    $base = $row.Base
+    $dir = (Join-Path $base $name).Replace('\', '/')
     $argv = [System.Collections.Generic.List[string]]::new()
-    $argText = [System.IO.File]::ReadAllText((Join-Path $Here "$name/args")).Replace("`r", '')
+    $argText = [System.IO.File]::ReadAllText((Join-Path $base "$name/args")).Replace("`r", '')
     if ($argText.Length -gt 0) {
         $rows = $argText.Split("`n")
         $count = $rows.Count
         if ($argText.EndsWith("`n", [StringComparison]::Ordinal)) { $count-- }
         for ($i = 0; $i -lt $count; $i++) { $argv.Add($rows[$i].Replace('{dir}', $dir)) }
     }
-    $wantCode = [int]([System.IO.File]::ReadAllText((Join-Path $Here "$name/expected.exit")).Trim())
-    $wantOut = Read-Expected (Join-Path $Here "$name/expected.out") '{dir}'
-    $wantErr = Read-Expected (Join-Path $Here "$name/expected.err") $dir
+    $wantCode = [int]([System.IO.File]::ReadAllText((Join-Path $base "$name/expected.exit")).Trim())
+    $wantOut = Read-Expected (Join-Path $base "$name/expected.out") '{dir}'
+    $wantErr = Read-Expected (Join-Path $base "$name/expected.err") $dir
 
     $legs = @(
         @{ Leg = 'sh'; Exe = $BashPath; Args = (@($ShTwin) + $argv.ToArray()) },
@@ -65,8 +73,8 @@ foreach ($name in $names) {
         if ($r.Code -ne $wantCode) { $diffs += "exit $($r.Code), expected $wantCode" }
         if ($r.Out.Replace("`r", '') -cne $wantOut) { $diffs += 'stdout differs' }
         if ($r.Error.Replace("`r", '') -cne $wantErr) { $diffs += 'stderr differs' }
-        if ($diffs.Count -eq 0) { Write-Output "PASS $name $($leg.Leg)" }
-        else { Write-Output "FAIL $name $($leg.Leg): $($diffs -join ', ')"; $failed = $true }
+        if ($diffs.Count -eq 0) { Write-Output "PASS $label $($leg.Leg)" }
+        else { Write-Output "FAIL $label $($leg.Leg): $($diffs -join ', ')"; $failed = $true }
     }
 }
 

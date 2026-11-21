@@ -12,9 +12,8 @@
 # Exit: 0 pass (no output), 1 findings, 2 usage or unreadable input (no check
 # runs; one stderr line).
 #
-# Stages: check_sections, check_invariants, check_vocabulary,
-# check_platform_source. The stages that need a repo read (citations, sites
-# searched) are added after check_invariants.
+# Stages, in run order: check_sections, check_invariants, check_citations,
+# check_sites_searched, check_vocabulary, check_platform_source.
 #
 # LC_ALL=C makes every comparison bytewise, so "ASCII case-insensitive" means
 # A-Z only and matches the PowerShell twin's folding. `set -e` is not set: a
@@ -209,6 +208,194 @@ check_invariants() {
   done
 }
 
+# Sets SPANS to the line's single-backtick spans, in order.
+line_spans() {
+  local rest=$1
+  SPANS=()
+  while :; do
+    case "$rest" in *'`'*) ;; *) break ;; esac
+    rest=${rest#*'`'}
+    case "$rest" in *'`'*) ;; *) break ;; esac
+    SPANS[${#SPANS[@]}]=${rest%%'`'*}
+    rest=${rest#*'`'}
+  done
+}
+
+# A span is a citation candidate only when it ends with ")" and holds " (".
+# Heading forms (a "#" or "§" in the head), an empty head or anchor, and "new"
+# are skipped without a finding.
+resolve_citation() {
+  local span=$1 head anchor file hits=0 i=0 n
+  case "$span" in *')') ;; *) return 0 ;; esac
+  case "$span" in *' ('*) ;; *) return 0 ;; esac
+  head=${span%%' ('*}
+  case "$head" in ''|*'#'*|*'§'*) return 0 ;; esac
+  anchor=${span#*' ('}
+  anchor=${anchor%')'}
+  case "$anchor" in ''|new) return 0 ;; esac
+  file="$REPO_ROOT/$head"
+  if [ ! -f "$file" ] || [ ! -r "$file" ]; then
+    FINDINGS[${#FINDINGS[@]}]="citation: expected 1 line matching \"$anchor\" in $head, found 0 (no readable file)"
+    return 0
+  fi
+  read_file_lines "$file"
+  n=${#RL[@]}
+  while [ "$i" -lt "$n" ]; do
+    case "${RL[$i]}" in *"$anchor"*) hits=$((hits + 1)) ;; esac
+    i=$((i + 1))
+  done
+  [ "$hits" = 1 ] || FINDINGS[${#FINDINGS[@]}]="citation: expected 1 line matching \"$anchor\" in $head, found $hits"
+}
+
+check_citations() {
+  local n i j
+  n=${#LINES[@]}
+  i=0
+  while [ "$i" -lt "$n" ]; do
+    if [ "${IN_FENCE[$i]}" = 0 ]; then
+      line_spans "${LINES[$i]}"
+      j=0
+      while [ "$j" -lt "${#SPANS[@]}" ]; do
+        resolve_citation "${SPANS[$j]}"
+        j=$((j + 1))
+      done
+    fi
+    i=$((i + 1))
+  done
+}
+
+# Returns 1 when the pattern holds a token outside the ERE subset that POSIX
+# and .NET read the same way.
+pattern_in_subset() {
+  local p=$1 n=${#1} i=0 c
+  while [ "$i" -lt "$n" ]; do
+    c=${p:i:1}
+    case "$c" in
+      '\')
+        case "${p:i+1:1}" in
+          '.'|'['|']'|'('|')'|'*'|'+'|'?'|'{'|'}'|'|'|'^'|'$'|'\') ;;
+          *) return 1 ;;
+        esac
+        i=$((i + 2))
+        ;;
+      '(')
+        [ "${p:i+1:1}" = '?' ] && return 1
+        i=$((i + 1))
+        ;;
+      '[')
+        i=$((i + 1))
+        [ "${p:i:1}" = '^' ] && i=$((i + 1))
+        [ "${p:i:1}" = ']' ] && i=$((i + 1))
+        while [ "$i" -lt "$n" ]; do
+          c=${p:i:1}
+          [ "$c" = ']' ] && break
+          [ "$c" = '\' ] && return 1
+          if [ "$c" = '[' ]; then
+            case "${p:i+1:1}" in ':'|'='|'.') return 1 ;; esac
+          fi
+          i=$((i + 1))
+        done
+        i=$((i + 1))
+        ;;
+      *) i=$((i + 1)) ;;
+    esac
+  done
+  return 0
+}
+
+# One finding at most per command, first failing rule wins. The command text is
+# never evaluated: the grep argument vector is built here. grep -l -a with a NUL
+# post-filter gives the file set; -r skips symlinks met while recursing, and a
+# command-line symlink is dropped by the -L test.
+sites_one() {
+  local cmd=$1 rest pattern after rem tok p out f bad=""
+  local prefix="grep -rnE '"
+  local form="sites searched: expected grep -rnE '<pattern>' <path>..., found \"$cmd\""
+  local paths=() clean=()
+  case "$cmd" in
+    "$prefix"*) rest=${cmd#"$prefix"} ;;
+    *) FINDINGS[${#FINDINGS[@]}]=$form; return 0 ;;
+  esac
+  case "$rest" in
+    *"'"*) ;;
+    *) FINDINGS[${#FINDINGS[@]}]=$form; return 0 ;;
+  esac
+  pattern=${rest%%"'"*}
+  after=${rest#*"'"}
+  case "$after" in
+    ' '*) rem=${after#?} ;;
+    *) FINDINGS[${#FINDINGS[@]}]=$form; return 0 ;;
+  esac
+  while :; do
+    tok=${rem%%' '*}
+    if [ -z "$tok" ]; then bad=1; break; fi
+    paths[${#paths[@]}]=$tok
+    case "$rem" in *' '*) rem=${rem#*' '} ;; *) break ;; esac
+  done
+  if [ -n "$bad" ]; then FINDINGS[${#FINDINGS[@]}]=$form; return 0; fi
+  for p in "${paths[@]}"; do
+    case "$p" in
+      /*|'~'*|*..*|*'\'*|*:*)
+        FINDINGS[${#FINDINGS[@]}]="sites searched: expected a path inside the repo root, found \"$p\""
+        return 0
+        ;;
+    esac
+  done
+  for p in "${paths[@]}"; do
+    while [ "${p%/}" != "$p" ]; do p=${p%/}; done
+    if [ ! -e "$REPO_ROOT/$p" ]; then
+      FINDINGS[${#FINDINGS[@]}]="sites searched: expected an existing path, found \"$p\""
+      return 0
+    fi
+    clean[${#clean[@]}]=$p
+  done
+  if ! pattern_in_subset "$pattern"; then
+    FINDINGS[${#FINDINGS[@]}]="sites searched: expected a pattern in the shared ERE subset, found \"$pattern\""
+    return 0
+  fi
+  grep -E -e "$pattern" </dev/null >/dev/null 2>&1
+  if [ $? -eq 2 ]; then
+    FINDINGS[${#FINDINGS[@]}]="sites searched: expected a valid pattern, found \"$pattern\""
+    return 0
+  fi
+  out=$(CDPATH= cd -- "$REPO_ROOT" 2>/dev/null && grep -r -l -a -E -e "$pattern" -- "${clean[@]}" 2>/dev/null | sed 's,^\./,,' | sort -u)
+  while IFS= read -r f; do
+    [ -n "$f" ] || continue
+    [ -L "$REPO_ROOT/$f" ] && continue
+    tr -d '\000' < "$REPO_ROOT/$f" | cmp -s - "$REPO_ROOT/$f" || continue
+    case "$BODY_TEXT" in
+      *"$f"*) ;;
+      *) FINDINGS[${#FINDINGS[@]}]="sites searched: expected \"$f\" in the body, found none" ;;
+    esac
+  done <<EOF
+$out
+EOF
+}
+
+check_sites_searched() {
+  local n i s ws=' 	' cmd
+  n=${#LINES[@]}
+  i=0
+  while [ "$i" -lt "$n" ]; do
+    if [ "${IN_FENCE[$i]}" = 0 ]; then
+      s=${LINES[$i]}
+      s=${s#"${s%%[!$ws]*}"}
+      case "$s" in
+        '- '*|'* '*) s=${s#??} ;;
+      esac
+      case "$s" in
+        'Sites searched:'*)
+          line_spans "${LINES[$i]}"
+          cmd=""
+          [ "${#SPANS[@]}" -gt 0 ] && cmd=${SPANS[0]}
+          sites_one "$cmd"
+          ;;
+      esac
+    fi
+    i=$((i + 1))
+  done
+}
+
 check_vocabulary() {
   local words=('comprehensive' 'robust' 'seamless' 'leverage' 'ensure that' 'in order to' 'it is important to note' 'should ideally' 'as appropriate')
   local n i j
@@ -258,6 +445,8 @@ main() {
   load_body
   check_sections
   check_invariants
+  check_citations
+  check_sites_searched
   check_vocabulary
   check_platform_source
   i=0

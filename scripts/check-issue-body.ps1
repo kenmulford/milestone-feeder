@@ -200,6 +200,169 @@ function ConvertTo-AsciiLower {
     return $sb.ToString()
 }
 
+function Get-LineSpans {
+    param([string]$Line)
+    $spans = [System.Collections.Generic.List[string]]::new()
+    $pos = 0
+    while ($true) {
+        $open = $Line.IndexOf('`', $pos, [StringComparison]::Ordinal)
+        if ($open -lt 0) { break }
+        $close = $Line.IndexOf('`', $open + 1, [StringComparison]::Ordinal)
+        if ($close -lt 0) { break }
+        $spans.Add($Line.Substring($open + 1, $close - $open - 1))
+        $pos = $close + 1
+    }
+    return , $spans
+}
+
+function Resolve-Citation {
+    param([string]$Span)
+    if (-not $Span.EndsWith(')', [StringComparison]::Ordinal)) { return }
+    $cut = $Span.IndexOf(' (', [StringComparison]::Ordinal)
+    if ($cut -lt 0) { return }
+    $head = $Span.Substring(0, $cut)
+    if ($head.Length -eq 0 -or $head.Contains('#') -or $head.Contains([string][char]0x00A7)) { return }
+    $anchor = $Span.Substring($cut + 2)
+    $anchor = $anchor.Substring(0, $anchor.Length - 1)
+    if ($anchor.Length -eq 0 -or $anchor -ceq 'new') { return }
+    $file = $script:RepoRoot + '/' + $head
+    if (-not (Test-ReadableFile $file)) {
+        $script:Findings.Add("citation: expected 1 line matching `"$anchor`" in $head, found 0 (no readable file)")
+        return
+    }
+    $hits = 0
+    foreach ($l in (Get-FileLines $file)) {
+        if ($l.IndexOf($anchor, [StringComparison]::Ordinal) -ge 0) { $hits++ }
+    }
+    if ($hits -ne 1) { $script:Findings.Add("citation: expected 1 line matching `"$anchor`" in $head, found $hits") }
+}
+
+function Test-Citations {
+    for ($i = 0; $i -lt $script:Lines.Count; $i++) {
+        if ($script:InFence[$i]) { continue }
+        foreach ($span in (Get-LineSpans $script:Lines[$i])) { Resolve-Citation $span }
+    }
+}
+
+# Returns $false when the pattern holds a token outside the ERE subset that
+# POSIX and .NET read the same way.
+function Test-PatternSubset {
+    param([string]$P)
+    $n = $P.Length
+    $i = 0
+    while ($i -lt $n) {
+        $c = $P[$i]
+        if ($c -eq '\') {
+            if ($i + 1 -ge $n) { return $false }
+            if ('.[]()*+?{}|^$\'.IndexOf($P[$i + 1]) -lt 0) { return $false }
+            $i += 2
+        }
+        elseif ($c -eq '(') {
+            if ($i + 1 -lt $n -and $P[$i + 1] -eq '?') { return $false }
+            $i++
+        }
+        elseif ($c -eq '[') {
+            $i++
+            if ($i -lt $n -and $P[$i] -eq '^') { $i++ }
+            if ($i -lt $n -and $P[$i] -eq ']') { $i++ }
+            while ($i -lt $n) {
+                $c = $P[$i]
+                if ($c -eq ']') { break }
+                if ($c -eq '\') { return $false }
+                if ($c -eq '[' -and $i + 1 -lt $n -and ':=.'.IndexOf($P[$i + 1]) -ge 0) { return $false }
+                $i++
+            }
+            $i++
+        }
+        else { $i++ }
+    }
+    return $true
+}
+
+# Walks one path the way grep -r -l -a does, minus symlinks and NUL files.
+function Get-SiteMatches {
+    param([string]$Root, [string]$Path, [regex]$Re, [System.Collections.Generic.HashSet[string]]$Into)
+    $full = $Root + '/' + $Path
+    if ([System.IO.File]::Exists($full)) { $files = @(Get-Item -LiteralPath $full -Force) }
+    else { $files = @(Get-ChildItem -LiteralPath $full -Recurse -File -Force) }
+    $rootFull = [System.IO.Path]::GetFullPath($Root)
+    foreach ($f in $files) {
+        if ($f.LinkType -or ($f.Attributes -band [System.IO.FileAttributes]::ReparsePoint)) { continue }
+        try { $bytes = [System.IO.File]::ReadAllBytes($f.FullName) } catch { continue }
+        if ([Array]::IndexOf($bytes, [byte]0) -ge 0) { continue }
+        $text = [System.Text.Encoding]::Latin1.GetString($bytes)
+        $parts = $text.Split("`n")
+        $count = $parts.Count
+        if ($text.Length -eq 0) { continue }
+        if ($text.EndsWith("`n", [StringComparison]::Ordinal)) { $count-- }
+        for ($k = 0; $k -lt $count; $k++) {
+            if ($Re.IsMatch($parts[$k])) {
+                [void]$Into.Add([System.IO.Path]::GetRelativePath($rootFull, $f.FullName).Replace('\', '/'))
+                break
+            }
+        }
+    }
+}
+
+# One finding at most per command, first failing rule wins. The command text is
+# never evaluated and no external grep runs: the host may have no bash.
+function Test-SiteCommand {
+    param([string]$Cmd)
+    $prefix = "grep -rnE '"
+    $form = "sites searched: expected grep -rnE '<pattern>' <path>..., found `"$Cmd`""
+    if (-not $Cmd.StartsWith($prefix, [StringComparison]::Ordinal)) { $script:Findings.Add($form); return }
+    $rest = $Cmd.Substring($prefix.Length)
+    $q = $rest.IndexOf("'", [StringComparison]::Ordinal)
+    if ($q -lt 0) { $script:Findings.Add($form); return }
+    $pattern = $rest.Substring(0, $q)
+    $after = $rest.Substring($q + 1)
+    if (-not $after.StartsWith(' ', [StringComparison]::Ordinal)) { $script:Findings.Add($form); return }
+    $paths = $after.Substring(1).Split(' ')
+    foreach ($p in $paths) { if ($p.Length -eq 0) { $script:Findings.Add($form); return } }
+    foreach ($p in $paths) {
+        if ($p.StartsWith('/', [StringComparison]::Ordinal) -or $p.StartsWith('~', [StringComparison]::Ordinal) -or $p.Contains('..') -or $p.Contains('\') -or $p.Contains(':')) {
+            $script:Findings.Add("sites searched: expected a path inside the repo root, found `"$p`""); return
+        }
+    }
+    $clean = [System.Collections.Generic.List[string]]::new()
+    foreach ($p in $paths) {
+        $q2 = $p.TrimEnd('/')
+        $full = $script:RepoRoot + '/' + $q2
+        if (-not ([System.IO.File]::Exists($full) -or [System.IO.Directory]::Exists($full))) {
+            $script:Findings.Add("sites searched: expected an existing path, found `"$q2`""); return
+        }
+        $clean.Add($q2)
+    }
+    if (-not (Test-PatternSubset $pattern)) {
+        $script:Findings.Add("sites searched: expected a pattern in the shared ERE subset, found `"$pattern`""); return
+    }
+    $asLatin1 = [System.Text.Encoding]::Latin1.GetString([System.Text.Encoding]::UTF8.GetBytes($pattern))
+    try { $re = [regex]::new($asLatin1, [System.Text.RegularExpressions.RegexOptions]::CultureInvariant) }
+    catch { $script:Findings.Add("sites searched: expected a valid pattern, found `"$pattern`""); return }
+    $set = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
+    foreach ($p in $clean) { Get-SiteMatches $script:RepoRoot $p $re $set }
+    $sorted = [string[]]@($set)
+    [Array]::Sort($sorted, [StringComparer]::Ordinal)
+    foreach ($f in $sorted) {
+        if ($script:BodyText.IndexOf($f, [StringComparison]::Ordinal) -lt 0) {
+            $script:Findings.Add("sites searched: expected `"$f`" in the body, found none")
+        }
+    }
+}
+
+function Test-SitesSearched {
+    for ($i = 0; $i -lt $script:Lines.Count; $i++) {
+        if ($script:InFence[$i]) { continue }
+        $s = $script:Lines[$i].TrimStart(' ', "`t")
+        if ($s.StartsWith('- ', [StringComparison]::Ordinal) -or $s.StartsWith('* ', [StringComparison]::Ordinal)) { $s = $s.Substring(2) }
+        if (-not $s.StartsWith('Sites searched:', [StringComparison]::Ordinal)) { continue }
+        $spans = Get-LineSpans $script:Lines[$i]
+        $cmd = ''
+        if ($spans.Count -gt 0) { $cmd = $spans[0] }
+        Test-SiteCommand $cmd
+    }
+}
+
 function Test-Vocabulary {
     $words = @('comprehensive', 'robust', 'seamless', 'leverage', 'ensure that', 'in order to', 'it is important to note', 'should ideally', 'as appropriate')
     for ($i = 0; $i -lt $script:Lines.Count; $i++) {
@@ -231,6 +394,8 @@ function Invoke-Main {
     Read-Body
     Test-Sections
     Test-Invariants
+    Test-Citations
+    Test-SitesSearched
     Test-Vocabulary
     Test-PlatformSource
     foreach ($f in $script:Findings) { Write-Row $f }

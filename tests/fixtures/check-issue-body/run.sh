@@ -47,9 +47,12 @@ check_leg() {
   fi
 }
 
-for d in "$HERE"/*/; do
+CIT=$(cd "$HERE/../citations" && pwd)
+
+for d in "$HERE"/*/ "$CIT"/*/; do
   d=${d%/}
   name=$(basename "$d")
+  case "$d" in "$CIT"/*) name="citations/$name" ;; esac
   argv=()
   while IFS= read -r line || [ -n "$line" ]; do
     line=${line%$'\r'}
