@@ -6,8 +6,12 @@
 # Invocation (identical on both twins):
 #   scripts/check-issue-body.ps1 <body-file> <repo-root>
 #     [--invariants <file>] [--sections <file>] [--mode plan|bug]
+#     [--edges <file>]
 #   Positional `$args` rather than a `param()` block, deliberately: the twins
 #   take the SAME argv, `--flag` spelling included.
+#
+# Stages, in run order: Test-Sections, Test-Invariants, Test-Citations,
+# Test-SitesSearched, Test-Vocabulary, Test-PlatformSource, Test-Edges.
 #
 # Output: one finding per line on stdout, in check order, then input order.
 # Exit: 0 pass (no output), 1 findings, 2 usage or unreadable input (no check
@@ -21,7 +25,7 @@
 try { [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new() } catch {}
 
 $argv = @($args)
-$script:Usage = 'usage: check-issue-body <body-file> <repo-root> [--invariants <file>] [--sections <file>] [--mode plan|bug]'
+$script:Usage = 'usage: check-issue-body <body-file> <repo-root> [--invariants <file>] [--sections <file>] [--mode plan|bug] [--edges <file>]'
 $script:BodyFile = ''
 $script:RepoRoot = ''
 $script:InvFile = ''
@@ -39,6 +43,10 @@ $script:BodyArg = ''
 $script:RepoArg = ''
 $script:InvArg = ''
 $script:SecArg = ''
+$script:EdgesFile = ''
+$script:HaveEdges = $false
+$script:EdgesArg = ''
+$script:EdgeTags = @()
 
 function Write-Err {
     param([string]$Message)
@@ -56,12 +64,13 @@ function Read-Arguments {
     $i = 0
     while ($i -lt $Argv.Count) {
         $a = $Argv[$i]
-        if ($a -ceq '--invariants' -or $a -ceq '--sections' -or $a -ceq '--mode') {
+        if ($a -ceq '--invariants' -or $a -ceq '--sections' -or $a -ceq '--mode' -or $a -ceq '--edges') {
             if ($i + 1 -ge $Argv.Count) { return 2 }
             $sawFlag = $true
             $v = $Argv[$i + 1]
             if ($a -ceq '--invariants') { if ($script:HaveInv) { return 2 }; $script:HaveInv = $true; $script:InvFile = $v }
             elseif ($a -ceq '--sections') { if ($script:HaveSec) { return 2 }; $script:HaveSec = $true; $script:SecFile = $v }
+            elseif ($a -ceq '--edges') { if ($script:HaveEdges) { return 2 }; $script:HaveEdges = $true; $script:EdgesFile = $v }
             else { if ($script:HaveMode) { return 2 }; $script:HaveMode = $true; $script:Mode = $v }
             $i += 2
         }
@@ -89,10 +98,12 @@ function Resolve-Arguments {
     $script:RepoArg = $script:RepoRoot
     $script:InvArg = $script:InvFile
     $script:SecArg = $script:SecFile
+    $script:EdgesArg = $script:EdgesFile
     if ($script:BodyFile.Length -gt 0) { $script:BodyFile = $session.GetUnresolvedProviderPathFromPSPath($script:BodyFile) }
     if ($script:RepoRoot.Length -gt 0) { $script:RepoRoot = $session.GetUnresolvedProviderPathFromPSPath($script:RepoRoot) }
     if ($script:InvFile.Length -gt 0) { $script:InvFile = $session.GetUnresolvedProviderPathFromPSPath($script:InvFile) }
     if ($script:SecFile.Length -gt 0) { $script:SecFile = $session.GetUnresolvedProviderPathFromPSPath($script:SecFile) }
+    if ($script:EdgesFile.Length -gt 0) { $script:EdgesFile = $session.GetUnresolvedProviderPathFromPSPath($script:EdgesFile) }
 }
 
 function Test-ReadableFile {
@@ -133,6 +144,18 @@ function Test-Inputs {
     }
     if ($script:HaveSec) {
         if (-not (Test-ReadableFile $script:SecFile)) { Write-Err "sections file not found: $($script:SecArg)"; return 2 }
+    }
+    if ($script:HaveEdges) {
+        if (-not (Test-ReadableFile $script:EdgesFile)) { Write-Err "edges file not found: $($script:EdgesArg)"; return 2 }
+        $tags = [System.Collections.Generic.List[string]]::new()
+        foreach ($l in (Get-FileLines $script:EdgesFile)) {
+            if ($l.Length -eq 0) { continue }
+            if (-not [regex]::IsMatch($l, '^#[A-Za-z0-9]+$', [System.Text.RegularExpressions.RegexOptions]::CultureInvariant)) {
+                Write-Err "edges file holds a line that is not a tag: $l"; return 2
+            }
+            $tags.Add($l.Substring(1))
+        }
+        $script:EdgeTags = $tags
     }
     return 0
 }
@@ -447,6 +470,71 @@ function Test-PlatformSource {
     $script:Findings.Add('platform source: expected a "Platform source:" line, found none')
 }
 
+function Test-AsciiAlnum {
+    param([char]$C)
+    return (($C -ge [char]'A' -and $C -le [char]'Z') -or ($C -ge [char]'a' -and $C -le [char]'z') -or ($C -ge [char]'0' -and $C -le [char]'9'))
+}
+
+# Returns the alphanumeric run starting at $Pos, empty when none starts there.
+function Get-AlnumRun {
+    param([string]$Text, [int]$Pos)
+    $e = $Pos
+    while ($e -lt $Text.Length -and (Test-AsciiAlnum $Text[$e])) { $e++ }
+    return $Text.Substring($Pos, $e - $Pos)
+}
+
+# Returns the alphanumeric run after the first "#" that has one, else empty.
+function Get-FirstTag {
+    param([string]$Text)
+    $pos = 0
+    while ($true) {
+        $h = $Text.IndexOf('#', $pos, [StringComparison]::Ordinal)
+        if ($h -lt 0) { return '' }
+        $run = Get-AlnumRun $Text ($h + 1)
+        if ($run.Length -gt 0) { return $run }
+        $pos = $h + 1
+    }
+}
+
+function Test-Edges {
+    if (-not $script:HaveEdges) { return }
+    $start = -1
+    $entries = [System.Collections.Generic.List[object]]::new()
+    $depPrefix = 'Depends on #'
+    for ($i = 0; $i -lt $script:Lines.Count; $i++) {
+        if ($script:InFence[$i]) { continue }
+        if ($start -lt 0) {
+            if ($script:Lines[$i] -ceq '## Dependencies') { $start = $i }
+            continue
+        }
+        if ($script:Lines[$i].StartsWith('## ', [StringComparison]::Ordinal)) { break }
+        $label = Get-LineLabel $script:Lines[$i]
+        $tag = ''
+        $kind = 'S'
+        if ($label.StartsWith($depPrefix, [StringComparison]::Ordinal)) {
+            $tag = Get-AlnumRun $label $depPrefix.Length
+            if ($tag.Length -gt 0) { $kind = 'D' }
+        }
+        if ($kind -ceq 'S') { $tag = Get-FirstTag $label }
+        if ($tag.Length -gt 0) { $entries.Add(@{ Kind = $kind; Tag = $tag; Line = $i + 1 }) }
+    }
+    $listed = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
+    foreach ($tag in $script:EdgeTags) {
+        if (-not $listed.Add($tag)) { continue }
+        $seen = $false
+        foreach ($en in $entries) { if ($en.Kind -ceq 'D' -and $en.Tag -ceq $tag) { $seen = $true } }
+        if (-not $seen) { $script:Findings.Add("edges: expected a `"Depends on #$tag`" line under `"## Dependencies`", found none") }
+    }
+    foreach ($en in $entries) {
+        if ($en.Kind -ceq 'D') {
+            if (-not $listed.Contains($en.Tag)) { $script:Findings.Add("edges: expected no `"Depends on #$($en.Tag)`" line under `"## Dependencies`", found one") }
+        }
+        else {
+            $script:Findings.Add("edges: expected no `"#$($en.Tag)`" under `"## Dependencies`" outside a `"Depends on`" line, found it on line $($en.Line)")
+        }
+    }
+}
+
 function Invoke-Main {
     if ((Read-Arguments $argv) -ne 0) { Write-Err $script:Usage; return 2 }
     Resolve-Arguments
@@ -459,6 +547,7 @@ function Invoke-Main {
     Test-SitesSearched
     Test-Vocabulary
     Test-PlatformSource
+    Test-Edges
     foreach ($f in $script:Findings) { Write-Row $f }
     if ($script:Findings.Count -eq 0) { return 0 }
     return 1

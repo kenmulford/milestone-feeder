@@ -1,1 +1,1 @@
-check-issue-body: usage: check-issue-body <body-file> <repo-root> [--invariants <file>] [--sections <file>] [--mode plan|bug]
+check-issue-body: usage: check-issue-body <body-file> <repo-root> [--invariants <file>] [--sections <file>] [--mode plan|bug] [--edges <file>]
