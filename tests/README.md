@@ -31,6 +31,8 @@ writes. CI runs both legs on every pull request (`hook regression tests`).
 
 `pwsh -NoProfile -File tests/run-hook.test.ps1` checks that `hooks/run-hook.cmd` returns its gate's exit code (0, 2, 7) through every interpreter branch. CI runs it on Windows and Ubuntu (`launcher exit-code test`).
 
+`pwsh -NoProfile -File tests/build-order.test.ps1` runs `scripts/build-order.sh` and `scripts/build-order.ps1` over every case under `tests/fixtures/build-order/` and requires each twin's stdout, stderr and exit code to equal the case's `expected.stdout`, `expected.stderr` and `expected.exit` byte for byte. CI runs it on Windows and Ubuntu (`build-order fixtures`).
+
 ## The one rule that makes the metric honest
 
 The scenario **runner never sees `expected.grader.md`**: it is **not part of the runner
@@ -94,6 +96,9 @@ tests/
     14-config-pointers/           { brief.md, project/, feeder-env.md }  + expected.grader.md
     15-prose-style/               { brief.md, project/, feeder-env.md }  + expected.grader.md
     17-shared-file-ordering/      { brief.md, project/, feeder-env.md }  + expected.grader.md
+    18-convention-sweep-prompt/   { brief.md, project/, feeder-env.md }  + expected.grader.md
+    19-system-control-removed/    { brief.md, project/, feeder-env.md }  + expected.grader.md
+    20-measured-layout/           { brief.md, project/, feeder-env.md }  + expected.grader.md
   RESULTS.md                      # scorecard + claim→evidence map (the metric)
 ```
 
@@ -129,6 +134,9 @@ loaded as plugin skills.
 | 15 | prose style | a paginated-list brief carrying a literal "30 rows per page" directive; the tempting failure is to pad the authored issue to sound confident | the issue-author's authored `ISSUE_BODY` obeys the prose-style ruleset (`## Prose style` in `agents/issue-author.md`): Summary 2–3 plain sentences, no banned filler / hedges, one declarative line per criterion / decision, no template narration. The content-preservation guardrail meanwhile keeps every completeness state, the literal "30 rows per page" directive, and the grounded `Convention followed:` citation verbatim; a padded rewrite CONTROL fails the prose assertions, and a content-dropping trim fails the guardrail | ✅ |
 | 16 | remediate: in-place correction | a parked issue whose `🔴 Triage` comment names a contradiction between two recorded design statements, plus a second finding that needs a product call; the tempting shortcut is to append a "Correction" section restating the right answer under the wrong text | the corrected body edits the named text IN PLACE: the superseded wording is **gone** (string search, not judgment), no correction / addendum section was added, and each decision has exactly one statement. The product-call finding stays `NEEDS_HUMAN` with the issue parked and its labels untouched, and a re-run against the already-corrected issue is a no-op that writes nothing | sandbox follow-up |
 | 17 | shared-file ordering | a CSV-export brief against a project whose convention binds every route in one route registry and registers every service, job, and migration in one module registry, so several candidates modify the same existing file while no artifact reference relates them; the brief also names a queue-manifest path that does not exist and that the registry convention resolves to an edit of the module registry | each candidate declares a grounded `edits:` list of the existing files it modifies, and two candidates whose lists intersect get an ordering edge (`#C after #D - edits: src/routes/index.ts`) the Wave sort consumes like any other, so they land in successive Waves instead of colliding in one parallel Wave. A pair a concrete dependency edge already relates carries no second edge, the undeclared path is neither listed nor introduced, the list threads into each issue body's `Edits:` line, and a disjoint control returns the Wave order the concrete edges alone produce | ✅ |
+| 18 | convention sweep prompt | an amount field that holds a typed "0.00" where a `TextField` prompt belongs, at four call sites (ios-budget-app #1759), plus a fifth site already on the empty-reads-as-zero form that a sweep must not list; the tempting failure is to cite a `.required` site as the convention followed | the issue carries a `Platform source:` line naming the `TextField` prompt convention, and its `Sites searched:` grep lists exactly the four defective sites; grades `docs/briefs/2026-11-21-file-a-verified-bug.md` item 2, so it fails on today's feeder | ✅ |
+| 19 | system control removed | a split view that forces `.constant(.all)` and removes the sidebar toggle, so the iPad sidebar cannot be hidden (ios-budget-app #1741); the tempting failure is to cite the forced `.constant(.all)` as the pattern to mirror | the issue names the system column-visibility and sidebar-toggle behavior it restores and cites Apple's `NavigationSplitView` doc for it; grades `docs/briefs/2026-11-21-file-a-verified-bug.md` item 2, so it fails on today's feeder | ✅ |
+| 20 | measured layout | code that feeds a measured width back into layout, which the fixture's `nonNegotiables` forbids (ios-budget-app #1758); the sibling view that does the same is the tempting pattern to copy | the issue quotes the non-negotiable verbatim and names a size-class API in place of the measurement; grades `docs/briefs/2026-11-21-file-a-verified-bug.md` item 2, so it fails on today's feeder | ✅ |
 
 ### 06: the flagship, in detail
 

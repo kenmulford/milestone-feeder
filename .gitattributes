@@ -14,3 +14,7 @@
 # PowerShell scripts: keep LF too for clean cross-platform diffs.
 # pwsh 7+ runs LF scripts fine on Windows, Linux, and macOS.
 *.ps1 text eol=lf
+
+# The build-order expected files are compared byte for byte against LF output,
+# so they stay LF in the working tree even on Windows (core.autocrlf=true).
+tests/fixtures/build-order/** text eol=lf

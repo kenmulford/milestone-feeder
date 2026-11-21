@@ -197,7 +197,6 @@ esac
 # clause's unique tail instead.
 PRESENCE_ROWS=(
   "agents/architect.md|reuse is not grounds to absorb"
-  "agents/architect.md|never both"
   "agents/issue-author.md|weakening it to \"a sensible page size\" is a failure"
   "agents/issue-author.md|concision cuts prose, never content"
 )

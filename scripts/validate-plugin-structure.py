@@ -616,12 +616,14 @@ FILE_WORD_CEILINGS: dict[str, int] = {
     "skills/update/SKILL.md": 6550,
     "skills/build-roadmap/SKILL.md": 2650,
     "skills/setup/SKILL.md": 2400,
-    "skills/plan/SKILL.md": 9550,
+    # Ratcheted down by issue #565: 9037 words times 1.05 is 9488.85, which rounds up to 9500.
+    "skills/plan/SKILL.md": 9500,
     # New in issue #343, pinned by the formula on their as-authored counts:
     # 3260 words times 1.05 is 3423, rounding up to 3450; 1434 times 1.05 is
     # 1505.7, rounding up to 1550. Both go only down from here.
     "skills/remediate/SKILL.md": 3450,
-    "agents/remediator.md": 1550,
+    # Ratcheted down by issue #565: 1247 words times 1.05 is 1309.35, which rounds up to 1350.
+    "agents/remediator.md": 1350,
     # Raised from 2950 by issue #486; the decision is recorded on that issue
     # and its PR, as the never-up rule requires. Clause 11 (shared-file
     # ordering) gained the `edits:` declaration sentence, the one-edge-per-pair
@@ -636,7 +638,8 @@ FILE_WORD_CEILINGS: dict[str, int] = {
     # PR. The plain-English rule joins every agent's `## Communication style`,
     # and `## Incremental mode` had already used the headroom. 3259 words times
     # 1.05 is 3421.95, which rounds up to 3450.
-    "agents/architect.md": 3450,
+    # Ratcheted down by issue #565: 2575 words times 1.05 is 2703.75, which rounds up to 2750.
+    "agents/architect.md": 2750,
     # Raised from 2900 by issue #486, same recorded decision. The Rigor gate
     # gained the `Edits:` bullet: transcribe the architect's list verbatim,
     # confirm each path, and reconcile it against the clause 3 site search on
@@ -651,8 +654,10 @@ FILE_WORD_CEILINGS: dict[str, int] = {
     # Design section. Tightening was not used to pay for it, for the reason
     # recorded on agents/architect.md above. 3171 words times 1.05 is
     # 3329.55, which rounds up to 3350.
-    "agents/issue-author.md": 3350,
-    "agents/roadmap-splitter.md": 1850,
+    # Ratcheted down by issue #565: 2955 words times 1.05 is 3102.75, which rounds up to 3150.
+    "agents/issue-author.md": 3150,
+    # Ratcheted down by issue #565: 1538 words times 1.05 is 1614.9, which rounds up to 1650.
+    "agents/roadmap-splitter.md": 1650,
     # Raised from 6400 by issue #486 (issue #343 had ratcheted it down to that
     # from 6800 after an AI-prose pass cut 737 words); the decision is recorded
     # on #486 and its PR, as the never-up rule requires. §3.1's shared-file

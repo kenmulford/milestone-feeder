@@ -1,0 +1,2 @@
+sites searched: expected grep -rnE '<pattern>' <path>..., found "grep -rn 'needle' src"
+sites searched: expected grep -rnE '<pattern>' <path>..., found ""

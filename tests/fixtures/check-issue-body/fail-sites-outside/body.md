@@ -1,0 +1,2 @@
+- Sites searched: `grep -rnE 'needle' ../src`
+- Sites searched: `grep -rnE 'needle' /etc`
