@@ -1,0 +1,1 @@
+check-issue-body: body file not found: {dir}/absent.md
