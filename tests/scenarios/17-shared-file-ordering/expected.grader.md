@@ -43,6 +43,12 @@ No concrete edge relates the `POST /exports` and `GET /exports` candidates direc
 both edit `src/routes/index.ts` (in the reference cut both depend on #B only and share a
 Wave): that collision is the defect this scenario exists to catch.
 
+The brief's last two in-scope items add two candidates, tags not fixed. The export-finished
+email notifier parks at Step 3.5, because whether the email attaches the CSV or links to the
+export is a product gap with no conventional default. The nightly purge job survives. Both
+register in `src/app/modules.ts` (`project/conventions.md#Registries`), and no `depends_on`
+edge joins them.
+
 ---
 
 ## MUST: (a) two candidates editing the same path, no direct edge relating them, get the derived `after` edge  (AC2, AC3)
@@ -171,6 +177,11 @@ Wave): that collision is the defect this scenario exists to catch.
   ignored an `after` edge.
 - The CONTROL (disjoint) alternate nonetheless emits an `after` edge, moves a candidate
   off its concrete-edge Wave, or errors instead of producing the concrete-edge order.
+- The nightly purge job candidate is dropped or parked, though no `depends_on` edge joins it
+  to the parked notifier.
+- The purge job's issue body carries a `Depends on` line naming the notifier's tag, or names
+  that tag anywhere.
+- The email notifier is authored as a buildable issue or named in a Wave line.
 
 ## Disabled / edge: bash/pwsh parity
 
