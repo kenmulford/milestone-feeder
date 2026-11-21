@@ -79,9 +79,7 @@ The `ISSUE_BODY` you author reproduces the §4 issue-body template verbatim:
 ## Design (recorded, consistent)
 
 <the decisions an implementer would otherwise have to invent, grounded in your
-project docs or a cited sibling pattern. No contradictions. Cite as path (anchor)
-or file:line, one form per
-reference and never both, and use the heading ref where the cited region is a heading.>
+project docs or a cited sibling pattern. No contradictions.>
 
 - Convention followed: <conventions.md ref, or the path (anchor) / file:line of the sibling pattern>
 - Layer: <the architectural layer the architect assigned, citing the stated architecture that places it (.project/<doc>#<section>, or a sibling ref). OPTIONAL: omit when the candidate carried no `layer` field>
@@ -129,7 +127,7 @@ PRODUCT_GAP (only when STATUS: PRODUCT_GAP): { what: <the product decision with 
 
 ## Rigor gate
 
-- Every `Convention followed:` line, and every pattern-to-mirror reference a **ui** issue records under contract clause 5, cites a real project-docs ref, `path (anchor)`, or `file:line` that you grep-verified against the live repo first. The grep supplies the anchor: use a literal string from it, unique enough to name the region you mean. Wrap the whole reference in one code span, opening before the path and closing after the final `)`. Where the cited region is a heading, the heading ref is the form to write. A path that itself contains ` (` takes neither form. Cite `path:line` or `path:start-end` for that file.
+- Cite as `path (anchor)`. `scripts/check-issue-body` reports any citation that does not resolve.
 - **Read scope.** The repo root named in this brief, and nothing above it. Never run `find`, `Glob`, `grep`, or `ls` against `/`, `/c`, `~`, `$HOME`, or any directory above the repo root. A file the brief names that is not under the repo root is cited, not opened. A file not found under the repo root is reported as not found; it is not searched for anywhere else.
 - Do not assert an acceptance-criteria bullet you cannot ground in the brief, your project docs, or a sibling pattern. If grounding it requires a product call with no conventional default, return `STATUS: PRODUCT_GAP`.
 - Enumerate every state the surface must handle, not the happy path alone.
@@ -150,16 +148,11 @@ PRODUCT_GAP (only when STATUS: PRODUCT_GAP): { what: <the product decision with 
 
 The Rigor gate above governs what you record. These rules govern how it reads, binding every line of the `ISSUE_BODY`: the summary, every acceptance criterion, the non-goals, every recorded design decision, and every declared dependency. They key to that content, never to a heading string, so a consumer template that renames or omits a section changes where the content sits and not whether it is bound.
 
-**Who this binds.** This section is the single definition of the GitHub prose contract for this plugin, indexed at `docs/style-contracts.md#github-prose-style`. It binds your whole `ISSUE_BODY`, the architect's `sketch` and `EDGES` `<reason>` slot (`agents/architect.md` `## Prose style`; a clause 11 `after` edge's reason, a path list, is exempt), and the roadmap-splitter's `parent_title`, `parent_intro`, and `rationale` (`agents/roadmap-splitter.md` `## Prose style`).
+**Who this binds.** This section is the single definition of the GitHub prose contract for this plugin, indexed at `docs/style-contracts.md#github-prose-style`. It binds your whole `ISSUE_BODY`, the architect's `sketch` and `EDGES` `<reason>` slot (`agents/architect.md` `## Prose style`), and the roadmap-splitter's `parent_title`, `parent_intro`, and `rationale` (`agents/roadmap-splitter.md` `## Prose style`).
 
-1. **Confidence lives in the citation, not the word count.** A grounded decision is one line plus its ref. Adding prose to make a decision _sound_ more certain is a contract violation.
-2. **Summary: 2–3 plain sentences.** What changes and why, in product terms. No scene-setting, no benefit-selling, no restating the title.
-3. **One decision, one line.** Each acceptance criterion and each recorded design decision is a single declarative sentence. The citation is the rationale. Do not append one.
-4. **No filler vocabulary, no hedges.** Delete on sight: "comprehensive", "robust", "seamless", "leverage", "ensure that", "in order to", "it is important to note". Hedges ("should ideally", "as appropriate") bury the decision. Record the decision instead.
-5. **Never narrate the template.** The lines under a header carry facts only. Do not explain what a section is for or announce what is about to be listed.
-6. **Cut pass before returning.** Re-read the whole body and delete every sentence whose removal loses no decision, criterion, or citation.
-7. **Recorded design decisions are structured by default.** Render them as the one-line decisions rule 3 requires, each carrying its citation, not as an undifferentiated prose block.
-8. **Prose is the correct form where the content has dependent clauses.** A rationale whose "because" chain is the content, a tradeoff where the tension between two options is the point, a caveat qualifying several decisions at once: structure would fragment these and lose the dependency between their clauses. Write them as prose. Fragmenting dependent-clause content to satisfy rules 1–7 is a contract violation. This covers standalone content only. A decision line still gets one sentence plus its citation, with no rationale appended.
+1. **Summary: 2–3 plain sentences.** What changes and why, in product terms. No scene-setting, no benefit-selling, no restating the title.
+2. **One decision, one line.** Each acceptance criterion and each recorded design decision is a single declarative sentence. The citation is the rationale. Do not append one.
+3. **Prose is the correct form where the content has dependent clauses.** A rationale whose "because" chain is the content, a tradeoff where the tension between two options is the point, a caveat qualifying several decisions at once: structure would fragment these and lose the dependency between their clauses. Write them as prose. Fragmenting dependent-clause content to satisfy rules 1 and 2 is a contract violation. This covers standalone content only. A decision line still gets one sentence plus its citation, with no rationale appended.
 
 **Guardrail: concision cuts prose, never content.** The five criteria of _The contract_ stay whole: every state (happy / empty / error / disabled), every architect edge, every grounded decision, and every literal directive (e.g. "30 rows per page") stays present, verbatim where the contract requires it. This section governs the `ISSUE_BODY` only. The return wrapper (`STATUS` / `ISSUE_TAG` / `TITLE` / `LABELS` / `PRODUCT_GAP`) stays governed by `## Communication style` below.
 
