@@ -54,8 +54,7 @@
 #   The four required issue-body headings live in SPEC.md's template,
 #   scripts/issue-body-sections.txt, and both check-issue-body twins. The lists
 #   must agree so a default-template body is checked against SPEC section 4.
-#   The row that disagrees with the others is named, or every row when no
-#   majority exists.
+#   Each row that differs from SPEC.md's is named.
 #
 # The two contract strings (canonical form, ASCII hyphen U+002D):
 #   implied - review / trim / augment
@@ -100,8 +99,8 @@
 # file:line:match printed), or a pinned fragment missing from its named file
 # (check 2, fragment and file printed), or a named file missing from disk, or
 # the retired cross-repo pointer found under agents/ (check 3,
-# file:line:match printed), or a required-headings list that differs from the
-# others or whose source is missing (check 4, file and headings printed).
+# file:line:match printed), or a required-headings list that differs from
+# SPEC.md's or whose source is missing (check 4, file and headings printed).
 # Exit 2 = a scan itself failed (treated as a
 # failure, never as "clean").
 
@@ -349,41 +348,18 @@ for row in "${SECTIONS_ROWS[@]}"; do
   sections_n=$((sections_n + 1))
 done
 
-all_equal=1
 i=1
+# A missing source holds an empty list that would read as a mismatch.
+[ "${sections_failures}" -eq 0 ] || i="${sections_n}"
 while [ "${i}" -lt "${sections_n}" ]; do
-  [ "${sections_lists[i]}" = "${sections_lists[0]}" ] || all_equal=0
+  if [ "${sections_lists[i]}" != "${sections_lists[0]}" ]; then
+    echo "FAIL: required issue-body headings differ from SPEC.md's." >&2
+    echo "      source: ${sections_files[i]}" >&2
+    echo "      found:  $(printf '%s' "${sections_lists[i]}" | paste -sd'|' - | sed 's/|/ | /g')" >&2
+    sections_failures=$((sections_failures + 1))
+  fi
   i=$((i + 1))
 done
-
-if [ "${all_equal}" -eq 0 ]; then
-  sections_counts=()
-  max=0
-  i=0
-  while [ "${i}" -lt "${sections_n}" ]; do
-    c=0
-    j=0
-    while [ "${j}" -lt "${sections_n}" ]; do
-      if [ "${j}" -ne "${i}" ] && [ "${sections_lists[j]}" = "${sections_lists[i]}" ]; then
-        c=$((c + 1))
-      fi
-      j=$((j + 1))
-    done
-    sections_counts[i]="${c}"
-    [ "${c}" -gt "${max}" ] && max="${c}"
-    i=$((i + 1))
-  done
-  i=0
-  while [ "${i}" -lt "${sections_n}" ]; do
-    if [ "${sections_counts[i]}" -lt "${max}" ] || [ "${max}" -eq 0 ]; then
-      echo "FAIL: required issue-body headings differ from the other sources." >&2
-      echo "      source: ${sections_files[i]}" >&2
-      echo "      found:  $(printf '%s' "${sections_lists[i]}" | paste -sd'|' - | sed 's/|/ | /g')" >&2
-      sections_failures=$((sections_failures + 1))
-    fi
-    i=$((i + 1))
-  done
-fi
 
 if [ "${sections_failures}" -gt 0 ]; then
   exit 1

@@ -225,23 +225,32 @@ function Test-Sections {
     }
 }
 
+# Returns @(start, end): the first line outside a fence equal to the heading, -1
+# when none, and the next "## " line outside a fence after it, else the line
+# count. The section is the lines start+1 up to end, an empty range when there
+# is no heading.
+function Get-SectionBounds {
+    param([string]$Heading)
+    $start = -1
+    $end = 0
+    for ($i = 0; $i -lt $script:Lines.Count; $i++) {
+        if ($script:InFence[$i]) { continue }
+        if ($start -lt 0) {
+            if ($script:Lines[$i] -ceq $Heading) { $start = $i; $end = $script:Lines.Count }
+        }
+        elseif ($script:Lines[$i].StartsWith('## ', [StringComparison]::Ordinal)) { $end = $i; break }
+    }
+    return @($start, $end)
+}
+
 function Test-Invariants {
     if (-not $script:HaveInv) { return }
-    $start = -1
-    $section = [System.Collections.Generic.List[string]]::new()
-    for ($i = 0; $i -lt $script:Lines.Count; $i++) {
-        if (-not $script:InFence[$i]) {
-            if ($start -lt 0) {
-                if ($script:Lines[$i] -ceq '## Acceptance criteria') { $start = $i }
-                continue
-            }
-            if ($script:Lines[$i].StartsWith('## ', [StringComparison]::Ordinal)) { break }
-        }
-        if ($start -ge 0) { $section.Add($script:Lines[$i]) }
-    }
+    $start, $end = Get-SectionBounds '## Acceptance criteria'
     $haystack = $script:BodyText
     $where = ''
     if ($start -ge 0) {
+        $section = [System.Collections.Generic.List[string]]::new()
+        for ($i = $start + 1; $i -lt $end; $i++) { $section.Add($script:Lines[$i]) }
         $haystack = [string]::Join("`n", $section)
         $where = ' under "## Acceptance criteria"'
     }
@@ -488,53 +497,21 @@ function Test-PlatformSource {
     $script:Findings.Add('platform source: expected a "Platform source:" line, found none')
 }
 
-function Test-AsciiAlnum {
-    param([char]$C)
-    return (($C -ge [char]'A' -and $C -le [char]'Z') -or ($C -ge [char]'a' -and $C -le [char]'z') -or ($C -ge [char]'0' -and $C -le [char]'9'))
-}
-
-# Returns the alphanumeric run starting at $Pos, empty when none starts there.
-function Get-AlnumRun {
-    param([string]$Text, [int]$Pos)
-    $e = $Pos
-    while ($e -lt $Text.Length -and (Test-AsciiAlnum $Text[$e])) { $e++ }
-    return $Text.Substring($Pos, $e - $Pos)
-}
-
-# Returns the alphanumeric run after the first "#" that has one, else empty.
-function Get-FirstTag {
-    param([string]$Text)
-    $pos = 0
-    while ($true) {
-        $h = $Text.IndexOf('#', $pos, [StringComparison]::Ordinal)
-        if ($h -lt 0) { return '' }
-        $run = Get-AlnumRun $Text ($h + 1)
-        if ($run.Length -gt 0) { return $run }
-        $pos = $h + 1
-    }
-}
-
 function Test-Edges {
     if (-not $script:HaveEdges) { return }
-    $start = -1
+    $start, $end = Get-SectionBounds '## Dependencies'
     $entries = [System.Collections.Generic.List[object]]::new()
-    $depPrefix = 'Depends on #'
-    for ($i = 0; $i -lt $script:Lines.Count; $i++) {
+    $opts = [System.Text.RegularExpressions.RegexOptions]::CultureInvariant
+    for ($i = $start + 1; $i -lt $end; $i++) {
         if ($script:InFence[$i]) { continue }
-        if ($start -lt 0) {
-            if ($script:Lines[$i] -ceq '## Dependencies') { $start = $i }
-            continue
-        }
-        if ($script:Lines[$i].StartsWith('## ', [StringComparison]::Ordinal)) { break }
         $label = Get-LineLabel $script:Lines[$i]
-        $tag = ''
-        $kind = 'S'
-        if ($label.StartsWith($depPrefix, [StringComparison]::Ordinal)) {
-            $tag = Get-AlnumRun $label $depPrefix.Length
-            if ($tag.Length -gt 0) { $kind = 'D' }
+        $kind = 'D'
+        $m = [regex]::Match($label, '^Depends on #([A-Za-z0-9]+)', $opts)
+        if (-not $m.Success) {
+            $kind = 'S'
+            $m = [regex]::Match($label, '#([A-Za-z0-9]+)', $opts)
         }
-        if ($kind -ceq 'S') { $tag = Get-FirstTag $label }
-        if ($tag.Length -gt 0) { $entries.Add(@{ Kind = $kind; Tag = $tag; Line = $i + 1 }) }
+        if ($m.Success) { $entries.Add(@{ Kind = $kind; Tag = $m.Groups[1].Value; Line = $i + 1 }) }
     }
     $listed = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
     foreach ($tag in $script:EdgeTags) {

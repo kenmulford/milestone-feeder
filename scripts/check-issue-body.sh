@@ -115,11 +115,7 @@ validate_inputs() {
       j=$((j + 1))
       [ -n "$l" ] || continue
       case "$l" in
-        '#'?*) ;;
-        *) say_err "edges file holds a line that is not a tag: $l"; return 2 ;;
-      esac
-      case "${l#'#'}" in
-        *[!A-Za-z0-9]*) say_err "edges file holds a line that is not a tag: $l"; return 2 ;;
+        '#'|[!#]*|'#'*[!A-Za-z0-9]*) say_err "edges file holds a line that is not a tag: $l"; return 2 ;;
       esac
       EDGE_TAGS[${#EDGE_TAGS[@]}]=${l#'#'}
     done
@@ -218,24 +214,41 @@ check_sections() {
   done
 }
 
-check_invariants() {
-  local count i v n j start=-1 section=
-  [ "$HAVE_INV" = 1 ] || return 0
-  n=${#LINES[@]}
-  j=0
+# Sets SEC_START to the first line outside a fence equal to the heading, -1
+# when none, and SEC_END to the next "## " line outside a fence after it, else
+# the line count. The section is the lines SEC_START+1 up to SEC_END, which is
+# an empty range when there is no heading.
+section_bounds() {
+  local n=${#LINES[@]} j=0
+  SEC_START=-1
+  SEC_END=0
   while [ "$j" -lt "$n" ]; do
     if [ "${IN_FENCE[$j]}" = 0 ]; then
-      if [ "$start" -lt 0 ]; then
-        [ "${LINES[$j]}" = '## Acceptance criteria' ] && start=$j
+      if [ "$SEC_START" -lt 0 ]; then
+        [ "${LINES[$j]}" = "$1" ] && { SEC_START=$j; SEC_END=$n; }
       else
-        case "${LINES[$j]}" in '## '*) break ;; esac
+        case "${LINES[$j]}" in '## '*) SEC_END=$j; break ;; esac
       fi
-    fi
-    if [ "$start" -ge 0 ] && [ "$j" -gt "$start" ]; then
-      if [ "$j" -eq $((start + 1)) ]; then section=${LINES[$j]}; else section="$section$NL${LINES[$j]}"; fi
     fi
     j=$((j + 1))
   done
+}
+
+check_invariants() {
+  local count i v j hay where=
+  [ "$HAVE_INV" = 1 ] || return 0
+  hay=$BODY_TEXT
+  section_bounds '## Acceptance criteria'
+  if [ "$SEC_START" -ge 0 ]; then
+    hay=
+    j=$((SEC_START + 1))
+    while [ "$j" -lt "$SEC_END" ]; do
+      hay="$hay$NL${LINES[$j]}"
+      j=$((j + 1))
+    done
+    hay=${hay#"$NL"}
+    where=' under "## Acceptance criteria"'
+  fi
   count=$(jq -r '.|length' "$INV_FILE" | tr -d '\r')
   i=0
   while [ "$i" -lt "$count" ]; do
@@ -245,17 +258,10 @@ check_invariants() {
     v=$(jq -j --argjson i "$i" '.[$i].value' "$INV_FILE"; printf x)
     v=${v%x}
     v=${v%"$CR"}
-    if [ "$start" -ge 0 ]; then
-      case "$section" in
-        *"$v"*) ;;
-        *) add_finding "invariant: expected value \"$v\" under \"## Acceptance criteria\", found none" ;;
-      esac
-    else
-      case "$BODY_TEXT" in
-        *"$v"*) ;;
-        *) add_finding "invariant: expected value \"$v\", found none" ;;
-      esac
-    fi
+    case "$hay" in
+      *"$v"*) ;;
+      *) add_finding "invariant: expected value \"$v\"$where, found none" ;;
+    esac
     i=$((i + 1))
   done
 }
@@ -546,37 +552,32 @@ first_tag() {
 }
 
 check_edges() {
-  local n i j k s e=0 start=-1 end tag seen=0 listed
+  local i j k s e=0 tag seen=0 listed
   local kinds=() tags=() nums=()
   [ "$HAVE_EDGES" = 1 ] || return 0
-  n=${#LINES[@]}
-  i=0
-  while [ "$i" -lt "$n" ]; do
+  section_bounds '## Dependencies'
+  i=$((SEC_START + 1))
+  while [ "$i" -lt "$SEC_END" ]; do
     if [ "${IN_FENCE[$i]}" = 0 ]; then
-      if [ "$start" -lt 0 ]; then
-        [ "${LINES[$i]}" = '## Dependencies' ] && start=$i
-      else
-        case "${LINES[$i]}" in '## '*) break ;; esac
-        line_label "${LINES[$i]}"
-        tag=""
-        case "$LABEL" in
-          'Depends on #'*)
-            s=${LABEL#'Depends on #'}
-            case "$s" in
-              [A-Za-z0-9]*) tag=${s%%[!A-Za-z0-9]*}; kinds[$e]=D ;;
-            esac
-            ;;
-        esac
-        if [ -z "$tag" ]; then
-          first_tag "$LABEL"
-          tag=$TAG
-          kinds[$e]=S
-        fi
-        if [ -n "$tag" ]; then
-          tags[$e]=$tag
-          nums[$e]=$((i + 1))
-          e=$((e + 1))
-        fi
+      line_label "${LINES[$i]}"
+      tag=""
+      case "$LABEL" in
+        'Depends on #'*)
+          s=${LABEL#'Depends on #'}
+          case "$s" in
+            [A-Za-z0-9]*) tag=${s%%[!A-Za-z0-9]*}; kinds[$e]=D ;;
+          esac
+          ;;
+      esac
+      if [ -z "$tag" ]; then
+        first_tag "$LABEL"
+        tag=$TAG
+        kinds[$e]=S
+      fi
+      if [ -n "$tag" ]; then
+        tags[$e]=$tag
+        nums[$e]=$((i + 1))
+        e=$((e + 1))
       fi
     fi
     i=$((i + 1))

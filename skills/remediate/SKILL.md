@@ -94,14 +94,16 @@ Run these checks over the returned block, the **live** body from Step 1, and the
 
 **A finding whose fix needs a new section.** "Record the design decisions this issue never states" is a legitimate Blocker whose correction adds the section the issue-body template names (`## Design (recorded, consistent)`). That heading carries no correction vocabulary, so it passes (c) and is the correct fix. What (c) refuses is a section named for the correction itself. A finding that cannot be resolved except by such a section has no in-place edit available, and the agent returns it `NEEDS_HUMAN` rather than burning the run.
 
-**The body check** runs after (a) through (e) pass, writes `CORRECTED_BODY` to one `.milestone-feeder/` file, and runs `${CLAUDE_PLUGIN_ROOT}/scripts/check-issue-body.{sh,ps1} <body-file> <repo-root>` (the repo root) in Step 5's twin form without `--mode` or `--invariants`, and passes `--sections ${CLAUDE_PLUGIN_ROOT}/scripts/issue-body-sections.txt`, or, when `docs/step-0-grounding.md` §5 resolves a consumer template, a `.milestone-feeder/` file of that template's required `## ` headings, one per line.
+**The body check** runs after (a) through (e) pass, writes `CORRECTED_BODY` to one `.milestone-feeder/` file, and runs `${CLAUDE_PLUGIN_ROOT}/scripts/check-issue-body.{sh,ps1} <body-file> <repo-root>` (the repo root) as `skills/plan/SKILL.md` Step 4 does, with `--sections ${CLAUDE_PLUGIN_ROOT}/scripts/issue-body-sections.txt` or, when `docs/step-0-grounding.md` §5 resolves a consumer template, a `.milestone-feeder/` file of its required `## ` headings, one per line, and no `--mode`, `--invariants` or `--edges`.
 
 | Outcome | Action |
 |---|---|
 | **All checks pass, and the body check exits 0** | Proceed to Step 5. |
 | **A check fails, or the body check exits 1** | Re-dispatch once (Step 3's one bounded retry, never a second), with the failing check and span, or the findings verbatim. |
-| **Still failing, the one re-dispatch spent** | Write nothing, leave the issue as is. A failed (a) to (e) check stops the run (🔴) with its span. An exit 1 reports its findings on the Step 6 Needs human line. Never PATCH an unverified body. |
-| **The body check exits 2** | Stop the run (🔴), write nothing, and report the stderr line verbatim: a retry fails identically. |
+| **Still failing, the one re-dispatch spent** | A failed (a) to (e) check stops the run (🔴) with its span. An exit 1 reports its findings on the Step 6 Needs human line. |
+| **The body check exits 2** | Stop the run (🔴) and report the stderr line verbatim: a retry fails identically. |
+
+Both stop rows leave the issue as is: write nothing, never PATCH an unverified body.
 
 ### Step 5: Diff-gate the write
 
