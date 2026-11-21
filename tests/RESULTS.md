@@ -28,6 +28,49 @@ What each fixture asserts (the `expected.grader.md` contract, not a fresh execut
 
 `05-reviewer-backends` was **removed in v0.9.0**: its subject (the retired `reviewer` config key + reviewer backends) no longer exists.
 
+## Run record: 2026-11-21 (#564)
+
+**Tree and method.** The procedure under test is the milestone #35 tip `54eb2d9`, after every prose cut (#561, #562, #563) and every script (#556, #557, #560) landed. The installed agents (milestone-feeder `1.1.1`) predate the milestone, so each runner dispatched `general-purpose` proxies told to act as the tree's `agents/architect.md` and `agents/issue-author.md`, as section 06 of this file did. Each runner received only `{ brief.md, project/, feeder-env.md }`, never `expected.grader.md`, and a separate grader scored its output. Method, blindness and grading otherwise match the `2026-11-21` record below. On a contested clause the grader recorded the worse verdict.
+
+| # | Scenario | Baseline (`829ca08`) | This run | Change | Issue-author dispatches (baseline → this run) |
+|---|----------|----------|----------|--------|--------|
+| 01 | clean-happy-path | ✅ PASS | ✅ PASS (run 2) | same | 2 → 2 (run 1: 4) |
+| 02 | product-gap-parks | ✅ PASS | ✅ PASS | same | 0 → 0 |
+| 03 | design-resolvable-no-park | ❌ FAIL | ❌ FAIL | same | 2 → 1 |
+| 04 | no-code-refusal | ⚠️ PARTIAL | ✅ PASS | better | 1 → 2 |
+| 06 | cross-cutting-consistency (flagship) | ⚠️ PARTIAL | ❌ FAIL | **worse** | 14 → 16 |
+| 10 | nested-layout | ❌ FAIL | ❌ FAIL | same | 1 → 2 |
+| 11 | roadmap-fan-out (plan side only) | ❌ FAIL | ⚠️ PARTIAL | better | 25 → 38 |
+| 12 | implied-surfaces | ❌ FAIL | ✅ PASS | better | 4 → 8 |
+| 12b | implied-surfaces-control | ✅ PASS | ✅ PASS | same | 1 → 1 |
+| 13 | layer-aware-breakdown | ⚠️ PARTIAL | ❌ FAIL | **worse** | 5 → 10 |
+| 14 | config-pointers | ⚠️ PARTIAL | ⚠️ PARTIAL | same | 1 → 2 |
+| 15 | prose-style | ❌ FAIL | ⚠️ PARTIAL | better | 1 → 1 |
+| 17 | shared-file-ordering | ⚠️ PARTIAL | ⚠️ PARTIAL | same | 1 → 6 |
+| 18 | convention-sweep-prompt | ❌ FAIL (expected) | not re-run | n/a | 1 → n/a |
+| 19 | system-control-removed | ❌ FAIL (expected) | not re-run | n/a | 1 → n/a |
+| 20 | measured-layout | ❌ FAIL (expected) | not re-run | n/a | 1 → n/a |
+
+**Tally.** Of 13 scenarios in 01 to 17: 5 ✅ PASS (baseline 3), 4 better, 7 the same, 2 worse.
+
+**Acceptance rule: failed.** 06 and 13 grade worse than the baseline. Both are named as regressions below. In both, the rule text that governs the failing clause is byte-identical to `829ca08`, and the FAIL rests on the worse reading of a contested clause.
+
+**Regression: 06.** All 10 page issues were drafted (the baseline parked #J), each citing `project/design-system.md`, and each Design section carries all five data-table rules verbatim. The acceptance criteria of #C, #F, #I and #J say "a table" and leave out the `DataTable` reuse rule, so the grader scored "the FULL directive in its acceptance criteria" at 6 of 10. On the whole-body reading the verdict is PASS. `agents/issue-author.md` ("The invariants binding this candidate", "record it once") is unchanged.
+
+**Regression: 13.** The five layer candidates carry the correct cited layer, a `Layer:` line, the services-on-data layer edge and the layer Wave order. The implied candidate #F (get-by-id across four layers) carries no `layer` and no `Layer:` line, and it survived, which fires the "no `Layer:` line in a surviving issue" FAIL clause. The baseline emitted the same layerless #F, but it parked on a product gap, so the clause could not fire. `agents/architect.md` clause 9 is unchanged. The key states no rule for an implied candidate that spans layers.
+
+**01's two runs.** Run 1 graded ❌ FAIL: the architect applied the cross-cutting search / filter / sort trigger to "the current report's rows" and emitted an implied #D the brief never names. Run 2, on the same tree and inputs, emitted no implied candidate and graded ✅ PASS. The regression does not reproduce, and the verdict above is run 2's.
+
+**Not re-run.** 18, 19 and 20 grade `docs/briefs/2026-11-21-file-a-verified-bug.md` item 2, not this milestone's brief, and sit outside the 01 to 17 acceptance rule. They were not re-run on this tree to hold token cost. Their last verdict is the baseline's ❌ FAIL (expected), the predicted result until that brief's item 2 ships.
+
+**Dispatch counts.** Issue-author dispatches rose from 24 to 32 across 02, 03, 04, 06, 10, 12, 12b and 14. 5 of the 7 retries in those runs were `check-issue-body` reporting `sites searched: expected an existing path, found "src"`, because those fixtures name `src/` paths their `input/` lacks. The rest of the rise is candidates that now survive or are proposed as implied: 06 drafts #J and three implied companions, 12 four, 17 six where the baseline kept one.
+
+**Scope notes.**
+
+- 11 ran the plan side only: the runner accepted the 8-milestone split non-interactively, and `create` never ran. Position 6 (Client portal) planned no buildable issue, so its manifest `Plan file:` is blank.
+- Runners dispatched issue-authors in the foreground in batches of at most 4, not with `run_in_background`. Concurrency is the same.
+- Proxy agents cannot read the plugin tree, so runners pasted the implied-surfaces reference into the architect brief.
+
 ## Run record: 2026-11-21 (#560)
 
 **Tree and method.** The procedure under test is `skills/plan/SKILL.md` on `issue/560-build-order-script` (milestone tip `25a37d0` plus the #560 diff), with `plan` deriving the `after` edges and Waves through `scripts/build-order`. The installed agents (milestone-feeder `1.1.1`) predate #560, so each runner dispatched `general-purpose` proxies told to act as the branch's `agents/architect.md` and `agents/issue-author.md`, as section 06 of this file did. Method, blindness and grading match the `2026-11-21` record below. 01 and 17 were run: 01 covers the Wave render, 17 the shared-file edges.
