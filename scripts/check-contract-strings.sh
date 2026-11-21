@@ -3,9 +3,9 @@
 # check-contract-strings.sh — the contract-strings gate.
 #
 # What this checks, in plain terms:
-#   Three checks run in order: a DRIFT scan over the whole live surface, a
-#   per-file PRESENCE assertion, then a POINTER scan over agents/. All three
-#   must be clean for exit 0.
+#   Four checks run in order: a DRIFT scan over the whole live surface, a
+#   per-file PRESENCE assertion, a POINTER scan over agents/, then a SECTIONS
+#   comparison. All four must be clean for exit 0.
 #
 #   Check 1 (drift).
 #   Two prompt strings are contract-declared byte-exact, separator and all.
@@ -50,6 +50,13 @@
 #   and docs/plan-file-contract.md keep their references on purpose; a human
 #   reads those, and no agent loads them as its own instructions.
 #
+#   Check 4 (sections).
+#   The four required issue-body headings live in SPEC.md's template,
+#   scripts/issue-body-sections.txt, and both check-issue-body twins. The lists
+#   must agree so a default-template body is checked against SPEC section 4.
+#   The row that disagrees with the others is named, or every row when no
+#   majority exists.
+#
 # The two contract strings (canonical form, ASCII hyphen U+002D):
 #   implied - review / trim / augment
 #   this is a starting set for YOUR app - what's missing?
@@ -89,11 +96,13 @@
 #   FAIL CLOSED on a scan error instead of silently passing.
 #
 # Run it locally from the repo root:  ./scripts/check-contract-strings.sh
-# Exit 0 = all three checks clean. Exit 1 = a drifted variant found (check 1,
+# Exit 0 = all four checks clean. Exit 1 = a drifted variant found (check 1,
 # file:line:match printed), or a pinned fragment missing from its named file
 # (check 2, fragment and file printed), or a named file missing from disk, or
 # the retired cross-repo pointer found under agents/ (check 3,
-# file:line:match printed). Exit 2 = a scan itself failed (treated as a
+# file:line:match printed), or a required-headings list that differs from the
+# others or whose source is missing (check 4, file and headings printed).
+# Exit 2 = a scan itself failed (treated as a
 # failure, never as "clean").
 
 set -euo pipefail
@@ -283,9 +292,107 @@ case "${pointer_status}" in
     ;;
 esac
 
-echo "PASS: all three contract-string checks are clean."
+# --- check 4: required issue-body headings agree ---------------------------
+
+SECTIONS_ROWS=(
+  "spec|SPEC.md"
+  "list|scripts/issue-body-sections.txt"
+  "sh|scripts/check-issue-body.sh"
+  "ps1|scripts/check-issue-body.ps1"
+)
+
+# Prints one required heading per line. Returns 1 when the file or its anchor
+# is missing. Single-quoted items are pulled with grep -o so the twins' quoting
+# is the only shape read.
+read_required_headings() {
+  local kind="$1" file="$2" line
+  [ -f "${file}" ] || return 1
+  case "${kind}" in
+    spec)
+      grep -qxF '### Issue body template' -- "${file}" || return 1
+      awk '
+        /^### Issue body template$/ { seen = 1; next }
+        seen && /^```/ { if (infence) exit; infence = 1; next }
+        infence && /^## / && $0 != "## Non-goals" { sub(/\r$/, ""); print }
+      ' "${file}"
+      ;;
+    list)
+      tr -d '\r' < "${file}" | grep -v '^$' || true
+      ;;
+    sh|ps1)
+      local anchor="want=('"
+      [ "${kind}" = "ps1" ] && anchor='$want = @('"'"
+      line="$(grep -F -e "${anchor}" -- "${file}" | head -n 1)" || true
+      [ -n "${line}" ] || return 1
+      printf '%s\n' "${line}" | tr -d '\r' | grep -o "'[^']*'" | sed "s/^'//; s/'\$//"
+      ;;
+  esac
+}
+
+sections_failures=0
+sections_n=0
+sections_lists=()
+sections_files=()
+
+for row in "${SECTIONS_ROWS[@]}"; do
+  kind="${row%%|*}"
+  file="${row#*|}"
+  sections_files[sections_n]="${file}"
+  if list="$(read_required_headings "${kind}" "${file}")"; then
+    sections_lists[sections_n]="${list}"
+  else
+    echo "FAIL: a required-headings source is missing." >&2
+    echo "      source: ${file}" >&2
+    sections_failures=$((sections_failures + 1))
+    sections_lists[sections_n]=""
+  fi
+  sections_n=$((sections_n + 1))
+done
+
+all_equal=1
+i=1
+while [ "${i}" -lt "${sections_n}" ]; do
+  [ "${sections_lists[i]}" = "${sections_lists[0]}" ] || all_equal=0
+  i=$((i + 1))
+done
+
+if [ "${all_equal}" -eq 0 ]; then
+  sections_counts=()
+  max=0
+  i=0
+  while [ "${i}" -lt "${sections_n}" ]; do
+    c=0
+    j=0
+    while [ "${j}" -lt "${sections_n}" ]; do
+      if [ "${j}" -ne "${i}" ] && [ "${sections_lists[j]}" = "${sections_lists[i]}" ]; then
+        c=$((c + 1))
+      fi
+      j=$((j + 1))
+    done
+    sections_counts[i]="${c}"
+    [ "${c}" -gt "${max}" ] && max="${c}"
+    i=$((i + 1))
+  done
+  i=0
+  while [ "${i}" -lt "${sections_n}" ]; do
+    if [ "${sections_counts[i]}" -lt "${max}" ] || [ "${max}" -eq 0 ]; then
+      echo "FAIL: required issue-body headings differ from the other sources." >&2
+      echo "      source: ${sections_files[i]}" >&2
+      echo "      found:  $(printf '%s' "${sections_lists[i]}" | paste -sd'|' - | sed 's/|/ | /g')" >&2
+      sections_failures=$((sections_failures + 1))
+    fi
+    i=$((i + 1))
+  done
+fi
+
+if [ "${sections_failures}" -gt 0 ]; then
+  exit 1
+fi
+
+echo "PASS: all four contract-string checks are clean."
 echo "      drift:    both contract strings intact wherever they appear"
 echo "                (the implied-surfaces marker and anti-fixation prompt)"
 echo "      presence: all ${#PRESENCE_ROWS[@]} pinned clauses found in their named files"
 echo "      pointer:  no file under agents/ names the cross-repo citation-format path"
+echo "      sections: SPEC.md, the sections file, and both check-issue-body twins agree"
 exit 0
