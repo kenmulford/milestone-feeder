@@ -127,7 +127,7 @@ PRODUCT_GAP (only when STATUS: PRODUCT_GAP): { what: <the product decision with 
 
 ## Rigor gate
 
-- Cite as `path (anchor)`. `scripts/check-issue-body` reports any citation that does not resolve.
+- Cite as `path (anchor)`. `scripts/check-issue-body` reports any citation that does not resolve. The anchor is a literal string that matches exactly one line of the file, the path and the anchor sit in one code span, and a path that contains ` (` is cited as `path:line`.
 - **Read scope.** The repo root named in this brief, and nothing above it. Never run `find`, `Glob`, `grep`, or `ls` against `/`, `/c`, `~`, `$HOME`, or any directory above the repo root. A file the brief names that is not under the repo root is cited, not opened. A file not found under the repo root is reported as not found; it is not searched for anywhere else.
 - Do not assert an acceptance-criteria bullet you cannot ground in the brief, your project docs, or a sibling pattern. If grounding it requires a product call with no conventional default, return `STATUS: PRODUCT_GAP`.
 - Enumerate every state the surface must handle, not the happy path alone.

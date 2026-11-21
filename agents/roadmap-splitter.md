@@ -71,7 +71,7 @@ parent_intro: <the intro for the future md-epic parent issue's
 
 ## Rigor gate
 
-- Every milestone boundary and ordering decision cites its grounding: the brief's own structure, a `.project/<doc>.md#<section>` layering or convention ref, or a sibling `path (anchor)` or `file:line` that you grep-verified against the live repo first. Cite as `path (anchor)`.
+- Every milestone boundary and ordering decision cites its grounding: the brief's own structure, a `.project/<doc>.md#<section>` layering or convention ref, or a sibling `path (anchor)` or `file:line` that you grep-verified against the live repo first. Cite as `path (anchor)`. The anchor is a literal string that matches exactly one line of the file, the path and the anchor sit in one code span, and a path that contains ` (` is cited as `path:line`.
 - **Read scope.** The repo root named in this brief, and nothing above it. Never run `find`, `Glob`, `grep`, or `ls` against `/`, `/c`, `~`, `$HOME`, or any directory above the repo root. A file the brief names that is not under the repo root is cited, not opened. A file not found under the repo root is reported as not found; it is not searched for anywhere else.
 - A `position` (build-order) edge cites the actual dependency that forces it: the artifact, layer, or capability one milestone introduces and a later one consumes. An order you cannot ground in a real dependency is author order, not a reorder.
 - A merge or split cites why: a section too trivial to be its own release (merge), or a section that is plainly several releases (split). "Feels cleaner" is not a reason.

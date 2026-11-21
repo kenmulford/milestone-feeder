@@ -198,9 +198,12 @@ check_invariants() {
   count=$(jq -r '.|length' "$INV_FILE" | tr -d '\r')
   i=0
   while [ "$i" -lt "$count" ]; do
-    # The trailing x keeps $(...) from trimming a value's final newlines.
-    v=$(jq -j --argjson i "$i" '.[$i].value' "$INV_FILE" | tr -d '\r'; printf x)
+    # The trailing x keeps $(...) from trimming a value's final newlines. One
+    # trailing CR is dropped (a Windows jq ends its output with CRLF), never a
+    # CR inside the value.
+    v=$(jq -j --argjson i "$i" '.[$i].value' "$INV_FILE"; printf x)
     v=${v%x}
+    v=${v%"$CR"}
     case "$BODY_TEXT" in
       *"$v"*) ;;
       *) add_finding "invariant: expected value \"$v\", found none" ;;
@@ -268,9 +271,12 @@ check_citations() {
 }
 
 # Returns 1 when the pattern holds a token outside the ERE subset that POSIX
-# and .NET read the same way.
+# and .NET read the same way: a "{" not opening a well-formed {m}, {m,} or
+# {m,n}, or a quantifier (* + ? {) with no atom before it (pattern start, after
+# "(" or "|") or right after another quantifier. qok is 1 when an atom has just
+# ended.
 pattern_in_subset() {
-  local p=$1 n=${#1} i=0 c
+  local p=$1 n=${#1} i=0 c j d qok=0
   while [ "$i" -lt "$n" ]; do
     c=${p:i:1}
     case "$c" in
@@ -280,10 +286,39 @@ pattern_in_subset() {
           *) return 1 ;;
         esac
         i=$((i + 2))
+        qok=1
         ;;
       '(')
         [ "${p:i+1:1}" = '?' ] && return 1
         i=$((i + 1))
+        qok=0
+        ;;
+      '|')
+        i=$((i + 1))
+        qok=0
+        ;;
+      '*'|'+'|'?')
+        [ "$qok" = 1 ] || return 1
+        i=$((i + 1))
+        qok=0
+        ;;
+      '{')
+        [ "$qok" = 1 ] || return 1
+        j=$((i + 1))
+        d=0
+        while :; do
+          case "${p:j:1}" in [0-9]) j=$((j + 1)); d=$((d + 1)) ;; *) break ;; esac
+        done
+        [ "$d" -gt 0 ] || return 1
+        if [ "${p:j:1}" = ',' ]; then
+          j=$((j + 1))
+          while :; do
+            case "${p:j:1}" in [0-9]) j=$((j + 1)) ;; *) break ;; esac
+          done
+        fi
+        [ "${p:j:1}" = '}' ] || return 1
+        i=$((j + 1))
+        qok=0
         ;;
       '[')
         i=$((i + 1))
@@ -299,8 +334,12 @@ pattern_in_subset() {
           i=$((i + 1))
         done
         i=$((i + 1))
+        qok=1
         ;;
-      *) i=$((i + 1)) ;;
+      *)
+        i=$((i + 1))
+        qok=1
+        ;;
     esac
   done
   return 0

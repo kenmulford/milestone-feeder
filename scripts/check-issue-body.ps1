@@ -35,10 +35,14 @@ $script:InFence = @()
 $script:BodyText = ''
 $script:Findings = [System.Collections.Generic.List[string]]::new()
 $script:InvValues = @()
+$script:BodyArg = ''
+$script:RepoArg = ''
+$script:InvArg = ''
+$script:SecArg = ''
 
 function Write-Err {
     param([string]$Message)
-    [Console]::Error.WriteLine("check-issue-body: $Message")
+    [Console]::Error.Write("check-issue-body: $Message`n")
 }
 function Write-Row {
     param([string]$Text)
@@ -75,6 +79,22 @@ function Read-Arguments {
     return 0
 }
 
+# .NET calls resolve a relative path against the process directory, which
+# Set-Location does not move, so every path is made absolute against $PWD once,
+# before any .NET call. The *Arg variables keep the text the caller typed for
+# messages.
+function Resolve-Arguments {
+    $session = $ExecutionContext.SessionState.Path
+    $script:BodyArg = $script:BodyFile
+    $script:RepoArg = $script:RepoRoot
+    $script:InvArg = $script:InvFile
+    $script:SecArg = $script:SecFile
+    if ($script:BodyFile.Length -gt 0) { $script:BodyFile = $session.GetUnresolvedProviderPathFromPSPath($script:BodyFile) }
+    if ($script:RepoRoot.Length -gt 0) { $script:RepoRoot = $session.GetUnresolvedProviderPathFromPSPath($script:RepoRoot) }
+    if ($script:InvFile.Length -gt 0) { $script:InvFile = $session.GetUnresolvedProviderPathFromPSPath($script:InvFile) }
+    if ($script:SecFile.Length -gt 0) { $script:SecFile = $session.GetUnresolvedProviderPathFromPSPath($script:SecFile) }
+}
+
 function Test-ReadableFile {
     param([string]$Path)
     if (-not [System.IO.File]::Exists($Path)) { return $false }
@@ -85,10 +105,10 @@ function Test-Inputs {
     if ($script:Mode -cne 'plan' -and $script:Mode -cne 'bug') {
         Write-Err "--mode must be plan or bug, got: $($script:Mode)"; return 2
     }
-    if (-not (Test-ReadableFile $script:BodyFile)) { Write-Err "body file not found: $($script:BodyFile)"; return 2 }
-    if (-not [System.IO.Directory]::Exists($script:RepoRoot)) { Write-Err "repo root is not a directory: $($script:RepoRoot)"; return 2 }
+    if (-not (Test-ReadableFile $script:BodyFile)) { Write-Err "body file not found: $($script:BodyArg)"; return 2 }
+    if (-not [System.IO.Directory]::Exists($script:RepoRoot)) { Write-Err "repo root is not a directory: $($script:RepoArg)"; return 2 }
     if ($script:HaveInv) {
-        if (-not (Test-ReadableFile $script:InvFile)) { Write-Err "invariants file not found: $($script:InvFile)"; return 2 }
+        if (-not (Test-ReadableFile $script:InvFile)) { Write-Err "invariants file not found: $($script:InvArg)"; return 2 }
         $values = [System.Collections.Generic.List[string]]::new()
         $ok = $false
         try {
@@ -108,11 +128,11 @@ function Test-Inputs {
                 }
             } finally { $doc.Dispose() }
         } catch { $ok = $false }
-        if (-not $ok) { Write-Err "invariants file is not a JSON array of entries carrying a string value: $($script:InvFile)"; return 2 }
+        if (-not $ok) { Write-Err "invariants file is not a JSON array of entries carrying a string value: $($script:InvArg)"; return 2 }
         $script:InvValues = $values
     }
     if ($script:HaveSec) {
-        if (-not (Test-ReadableFile $script:SecFile)) { Write-Err "sections file not found: $($script:SecFile)"; return 2 }
+        if (-not (Test-ReadableFile $script:SecFile)) { Write-Err "sections file not found: $($script:SecArg)"; return 2 }
     }
     return 0
 }
@@ -250,21 +270,50 @@ function Test-Citations {
 }
 
 # Returns $false when the pattern holds a token outside the ERE subset that
-# POSIX and .NET read the same way.
+# POSIX and .NET read the same way: a "{" not opening a well-formed {m}, {m,} or
+# {m,n}, or a quantifier (* + ? {) with no atom before it (pattern start, after
+# "(" or "|") or right after another quantifier. $qok is $true when an atom has
+# just ended.
 function Test-PatternSubset {
     param([string]$P)
     $n = $P.Length
     $i = 0
+    $qok = $false
     while ($i -lt $n) {
         $c = $P[$i]
         if ($c -eq '\') {
             if ($i + 1 -ge $n) { return $false }
             if ('.[]()*+?{}|^$\'.IndexOf($P[$i + 1]) -lt 0) { return $false }
             $i += 2
+            $qok = $true
         }
         elseif ($c -eq '(') {
             if ($i + 1 -lt $n -and $P[$i + 1] -eq '?') { return $false }
             $i++
+            $qok = $false
+        }
+        elseif ($c -eq '|') {
+            $i++
+            $qok = $false
+        }
+        elseif ($c -eq '*' -or $c -eq '+' -or $c -eq '?') {
+            if (-not $qok) { return $false }
+            $i++
+            $qok = $false
+        }
+        elseif ($c -eq '{') {
+            if (-not $qok) { return $false }
+            $j = $i + 1
+            $d = 0
+            while ($j -lt $n -and $P[$j] -ge [char]'0' -and $P[$j] -le [char]'9') { $j++; $d++ }
+            if ($d -eq 0) { return $false }
+            if ($j -lt $n -and $P[$j] -eq ',') {
+                $j++
+                while ($j -lt $n -and $P[$j] -ge [char]'0' -and $P[$j] -le [char]'9') { $j++ }
+            }
+            if ($j -ge $n -or $P[$j] -ne '}') { return $false }
+            $i = $j + 1
+            $qok = $false
         }
         elseif ($c -eq '[') {
             $i++
@@ -278,8 +327,9 @@ function Test-PatternSubset {
                 $i++
             }
             $i++
+            $qok = $true
         }
-        else { $i++ }
+        else { $i++; $qok = $true }
     }
     return $true
 }
@@ -399,6 +449,7 @@ function Test-PlatformSource {
 
 function Invoke-Main {
     if ((Read-Arguments $argv) -ne 0) { Write-Err $script:Usage; return 2 }
+    Resolve-Arguments
     $code = [int](@(Test-Inputs) | Select-Object -Last 1)
     if ($code -ne 0) { return 2 }
     Read-Body

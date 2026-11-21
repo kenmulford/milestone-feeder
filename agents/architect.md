@@ -138,7 +138,7 @@ Dispatched again, only when the brief gained items after your first return (`doc
 
 ## Rigor gate
 
-- Cite as `path (anchor)`. `scripts/check-issue-body` reports any citation that does not resolve.
+- Cite as `path (anchor)`. `scripts/check-issue-body` reports any citation that does not resolve. The anchor is a literal string that matches exactly one line of the file, the path and the anchor sit in one code span, and a path that contains ` (` is cited as `path:line`.
 - **Read scope.** The repo root named in this brief, and nothing above it. Never run `find`, `Glob`, `grep`, or `ls` against `/`, `/c`, `~`, `$HOME`, or any directory above the repo root. A file the brief names that is not under the repo root is cited, not opened. A file not found under the repo root is reported as not found; it is not searched for anywhere else.
 - Every dependency edge cites the grounding its clause names: clause 3 an artifact reference, clause 9 the stated layering.
 - Every `edits:` path (clause 11) names a file that exists under the repo root, verified by `ls` or grep before it is listed.
