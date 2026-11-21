@@ -83,7 +83,7 @@ parse_args() {
 }
 
 validate_inputs() {
-  local m j l
+  local m j l ws=' 	'
   case "$MODE" in
     plan|bug) ;;
     *) say_err "--mode must be plan or bug, got: $MODE"; return 2 ;;
@@ -113,6 +113,8 @@ validate_inputs() {
     while [ "$j" -lt "$m" ]; do
       l=${RL[$j]}
       j=$((j + 1))
+      l=${l#"${l%%[!$ws$CR]*}"}
+      l=${l%"${l##*[!$ws$CR]}"}
       [ -n "$l" ] || continue
       case "$l" in
         '#'|[!#]*|'#'*[!A-Za-z0-9]*) say_err "edges file holds a line that is not a tag: $l"; return 2 ;;

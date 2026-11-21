@@ -2,7 +2,8 @@
 #
 # Runs every fixture directory beside this file against
 # scripts/validate-plugin-structure.py --paths-file. Run it as `bash run.sh`
-# or `/bin/bash run.sh` (bash 3.2).
+# or `/bin/bash run.sh` (bash 3.2). A fixture holding a `no-git` file runs the
+# whole validator with GIT_DIR pointed nowhere instead.
 
 HERE=$(cd "$(dirname "$0")" && pwd)
 ROOT=$(cd "$HERE/../../.." && pwd)
@@ -21,7 +22,11 @@ for d in "$HERE"/*/; do
   d=${d%/}
   name=$(basename "$d")
   want_code=$(tr -d '\r' < "$d/expected.exit")
-  python3 "$SCRIPT" --paths-file "$d/paths.txt" > "$WORK/out" 2> "$WORK/err"
+  if [ -f "$d/no-git" ]; then
+    GIT_DIR=/nonexistent python3 "$SCRIPT" > "$WORK/out" 2> "$WORK/err"
+  else
+    python3 "$SCRIPT" --paths-file "$d/paths.txt" > "$WORK/out" 2> "$WORK/err"
+  fi
   code=$?
   diffs=""
   [ "$code" = "$want_code" ] || diffs=" exit $code, expected $want_code"

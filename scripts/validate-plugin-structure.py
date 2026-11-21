@@ -296,8 +296,13 @@ def _die(msg: str) -> NoReturn:
     sys.exit(1)
 
 
-def tracked_paths(paths_file: str | None) -> list[str]:
-    """Return the tracked paths, from `paths_file` or `git ls-files -z`."""
+def tracked_paths(paths_file: str | None) -> list[str] | None:
+    """Return the tracked paths, from `paths_file` or `git ls-files -z`.
+
+    Returns None when git is missing or REPO_ROOT is not a git work tree, so
+    the caller can skip the check; a `git ls-files` failure inside a work tree
+    still exits 1.
+    """
     if paths_file is not None:
         try:
             text = Path(paths_file).read_text(encoding="utf-8")
@@ -308,6 +313,15 @@ def tracked_paths(paths_file: str | None) -> list[str]:
             )
         return [line for line in text.splitlines() if line]
     try:
+        probe = subprocess.run(
+            ["git", "rev-parse", "--is-inside-work-tree"],
+            cwd=REPO_ROOT,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+        )
+        if probe.returncode != 0 or probe.stdout.strip() != "true":
+            return None
         proc = subprocess.run(
             ["git", "ls-files", "-z"],
             cwd=REPO_ROOT,
@@ -315,8 +329,8 @@ def tracked_paths(paths_file: str | None) -> list[str]:
             text=True,
             encoding="utf-8",
         )
-    except FileNotFoundError as exc:
-        _die(f"validate-plugin-structure: git ls-files failed:\n{exc}")
+    except FileNotFoundError:
+        return None
     if proc.returncode != 0:
         _die(
             f"validate-plugin-structure: git ls-files failed:\n"
@@ -351,9 +365,16 @@ def windows_path_problems(path: str) -> list[str]:
 
 
 def check_windows_paths(paths_file: str | None) -> None:
-    for path in tracked_paths(paths_file):
+    paths = tracked_paths(paths_file)
+    if paths is None:
+        warnings.append(
+            "check 10 (Windows-checkout paths) skipped: git is missing or "
+            "the repo root is not a git work tree"
+        )
+        return
+    for path in paths:
         for msg in windows_path_problems(path):
-            err(REPO_ROOT / path, msg)
+            errors.append(f"{path}: {msg}")
 
 
 def report() -> NoReturn:
@@ -1090,7 +1111,7 @@ def emphasis_violations(text: str) -> list[tuple[int, str]]:
                 opener
                 and opener.group(1)[0] == fence[0]
                 and len(opener.group(1)) >= len(fence)
-                and not line[opener.end() :].strip()
+                and not line[opener.end():].strip()
             ):
                 fence = ""
             continue
@@ -1163,11 +1184,7 @@ if cj is not None:
 
     hooks_ref = cj.get("hooks")
     codex_hooks_json = REPO_ROOT / hooks_ref if isinstance(hooks_ref, str) else None
-    ch = (
-        load_json(codex_hooks_json)
-        if codex_hooks_json and codex_hooks_json.is_file()
-        else None
-    )
+    ch = load_json(codex_hooks_json) if codex_hooks_json and codex_hooks_json.is_file() else None
     if ch is not None:
         checked += 1
         handler_re = re.compile(r"\$\{CLAUDE_PLUGIN_ROOT\}/([^\"\s]+)")
@@ -1184,9 +1201,7 @@ if cj is not None:
                                     f"{event} {field} names {ref!r}, which does not exist",
                                 )
                     if "no-source-edit" in str(handler.get("command", "")):
-                        gate_matched = gate_matched or "apply_patch" in matcher.split(
-                            "|"
-                        )
+                        gate_matched = gate_matched or "apply_patch" in matcher.split("|")
         if not gate_matched:
             err(
                 codex_hooks_json,

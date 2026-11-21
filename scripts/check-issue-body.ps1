@@ -148,7 +148,8 @@ function Test-Inputs {
     if ($script:HaveEdges) {
         if (-not (Test-ReadableFile $script:EdgesFile)) { Write-Err "edges file not found: $($script:EdgesArg)"; return 2 }
         $tags = [System.Collections.Generic.List[string]]::new()
-        foreach ($l in (Get-FileLines $script:EdgesFile)) {
+        foreach ($raw in (Get-FileLines $script:EdgesFile)) {
+            $l = $raw.Trim(" `t`r")
             if ($l.Length -eq 0) { continue }
             if (-not [regex]::IsMatch($l, '^#[A-Za-z0-9]+$', [System.Text.RegularExpressions.RegexOptions]::CultureInvariant)) {
                 Write-Err "edges file holds a line that is not a tag: $l"; return 2
