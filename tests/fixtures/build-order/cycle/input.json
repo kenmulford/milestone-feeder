@@ -1,0 +1,2 @@
+{"candidates":[{"tag":"#A"},{"tag":"#B"},{"tag":"#C"},{"tag":"#D"}],
+"edges":["#A depends_on #B - x","#B depends_on #C - x","#C depends_on #A - x","#D depends_on #A - x"]}

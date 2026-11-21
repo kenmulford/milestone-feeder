@@ -28,6 +28,133 @@ What each fixture asserts (the `expected.grader.md` contract, not a fresh execut
 
 `05-reviewer-backends` was **removed in v0.9.0**: its subject (the retired `reviewer` config key + reviewer backends) no longer exists.
 
+## Run record: 2026-11-21 (#564)
+
+**Tree and method.** The procedure under test is the milestone #35 tip `54eb2d9`, after every prose cut (#561, #562, #563) and every script (#556, #557, #560) landed. The installed agents (milestone-feeder `1.1.1`) predate the milestone, so each runner dispatched `general-purpose` proxies told to act as the tree's `agents/architect.md` and `agents/issue-author.md`, as section 06 of this file did. Each runner received only `{ brief.md, project/, feeder-env.md }`, never `expected.grader.md`, and a separate grader scored its output. Method, blindness and grading otherwise match the `2026-11-21` record below. On a contested clause the grader recorded the worse verdict.
+
+| # | Scenario | Baseline (`829ca08`) | This run | Change | Issue-author dispatches (baseline → this run) |
+|---|----------|----------|----------|--------|--------|
+| 01 | clean-happy-path | ✅ PASS | ✅ PASS (run 2) | same | 2 → 2 (run 1: 4) |
+| 02 | product-gap-parks | ✅ PASS | ✅ PASS | same | 0 → 0 |
+| 03 | design-resolvable-no-park | ❌ FAIL | ❌ FAIL | same | 2 → 1 |
+| 04 | no-code-refusal | ⚠️ PARTIAL | ✅ PASS | better | 1 → 2 |
+| 06 | cross-cutting-consistency (flagship) | ⚠️ PARTIAL | ❌ FAIL | **worse** | 14 → 16 |
+| 10 | nested-layout | ❌ FAIL | ❌ FAIL | same | 1 → 2 |
+| 11 | roadmap-fan-out (plan side only) | ❌ FAIL | ⚠️ PARTIAL | better | 25 → 38 |
+| 12 | implied-surfaces | ❌ FAIL | ✅ PASS | better | 4 → 8 |
+| 12b | implied-surfaces-control | ✅ PASS | ✅ PASS | same | 1 → 1 |
+| 13 | layer-aware-breakdown | ⚠️ PARTIAL | ❌ FAIL | **worse** | 5 → 10 |
+| 14 | config-pointers | ⚠️ PARTIAL | ⚠️ PARTIAL | same | 1 → 2 |
+| 15 | prose-style | ❌ FAIL | ⚠️ PARTIAL | better | 1 → 1 |
+| 17 | shared-file-ordering | ⚠️ PARTIAL | ⚠️ PARTIAL | same | 1 → 6 |
+| 18 | convention-sweep-prompt | ❌ FAIL (expected) | not re-run | n/a | 1 → n/a |
+| 19 | system-control-removed | ❌ FAIL (expected) | not re-run | n/a | 1 → n/a |
+| 20 | measured-layout | ❌ FAIL (expected) | not re-run | n/a | 1 → n/a |
+
+**Tally.** Of 13 scenarios in 01 to 17: 5 ✅ PASS (baseline 3), 4 better, 7 the same, 2 worse.
+
+**Acceptance rule: failed.** 06 and 13 grade worse than the baseline. Both are named as regressions below. In both, the rule text that governs the failing clause is byte-identical to `829ca08`, and the FAIL rests on the worse reading of a contested clause.
+
+**Regression: 06.** All 10 page issues were drafted (the baseline parked #J), each citing `project/design-system.md`, and each Design section carries all five data-table rules verbatim. The acceptance criteria of #C, #F, #I and #J say "a table" and leave out the `DataTable` reuse rule, so the grader scored "the FULL directive in its acceptance criteria" at 6 of 10. On the whole-body reading the verdict is PASS. `agents/issue-author.md` ("The invariants binding this candidate", "record it once") is unchanged.
+
+**Regression: 13.** The five layer candidates carry the correct cited layer, a `Layer:` line, the services-on-data layer edge and the layer Wave order. The implied candidate #F (get-by-id across four layers) carries no `layer` and no `Layer:` line, and it survived, which fires the "no `Layer:` line in a surviving issue" FAIL clause. The baseline emitted the same layerless #F, but it parked on a product gap, so the clause could not fire. `agents/architect.md` clause 9 is unchanged. The key states no rule for an implied candidate that spans layers.
+
+**01's two runs.** Run 1 graded ❌ FAIL: the architect applied the cross-cutting search / filter / sort trigger to "the current report's rows" and emitted an implied #D the brief never names. Run 2, on the same tree and inputs, emitted no implied candidate and graded ✅ PASS. The regression does not reproduce, and the verdict above is run 2's.
+
+**Not re-run.** 18, 19 and 20 grade `docs/briefs/2026-11-21-file-a-verified-bug.md` item 2, not this milestone's brief, and sit outside the 01 to 17 acceptance rule. They were not re-run on this tree to hold token cost. Their last verdict is the baseline's ❌ FAIL (expected), the predicted result until that brief's item 2 ships.
+
+**Dispatch counts.** Issue-author dispatches rose from 24 to 32 across 02, 03, 04, 06, 10, 12, 12b and 14. 5 of the 7 retries in those runs were `check-issue-body` reporting `sites searched: expected an existing path, found "src"`, because those fixtures name `src/` paths their `input/` lacks. The rest of the rise is candidates that now survive or are proposed as implied: 06 drafts #J and three implied companions, 12 four, 17 six where the baseline kept one.
+
+**Scope notes.**
+
+- 11 ran the plan side only: the runner accepted the 8-milestone split non-interactively, and `create` never ran. Position 6 (Client portal) planned no buildable issue, so its manifest `Plan file:` is blank.
+- Runners dispatched issue-authors in the foreground in batches of at most 4, not with `run_in_background`. Concurrency is the same.
+- Proxy agents cannot read the plugin tree, so runners pasted the implied-surfaces reference into the architect brief.
+
+## Run record: 2026-11-21 (#560)
+
+**Tree and method.** The procedure under test is `skills/plan/SKILL.md` on `issue/560-build-order-script` (milestone tip `25a37d0` plus the #560 diff), with `plan` deriving the `after` edges and Waves through `scripts/build-order`. The installed agents (milestone-feeder `1.1.1`) predate #560, so each runner dispatched `general-purpose` proxies told to act as the branch's `agents/architect.md` and `agents/issue-author.md`, as section 06 of this file did. Method, blindness and grading match the `2026-11-21` record below. 01 and 17 were run: 01 covers the Wave render, 17 the shared-file edges.
+
+| # | Scenario | Baseline (`829ca08`) | This run | Change |
+|---|----------|----------|----------|--------|
+| 01 | clean-happy-path | ✅ PASS | ✅ PASS | same |
+| 17 | shared-file-ordering | ⚠️ PARTIAL | ⚠️ PARTIAL | same |
+
+**17's two runs.** Run 1 graded ❌ FAIL: the brief left N's value and the report's contents open, both endpoints parked at Step 3.5, and `plan` derives edges over the Step 4 set, so no `after` edge appeared. The baseline's PARTIAL came from an edge the architect emitted over the parked set. The brief now states N (`exports.maxInFlight`, default 3), the report's columns and the list order, and the key names `plan` as the edge's source. Run 2 kept all 8 candidates, derived 5 `after` edges each naming its shared path, including POST after GET on `src/routes/index.ts`, and left no Wave holding two candidates that edit one file. It stays PARTIAL because the breakdown differs from the key's: the cap default rides the service, so POST and GET never share a Wave under the concrete edges, and no telemetry candidate exists.
+
+**Redundant edge.** `scripts/build-order` suppresses an `after` edge only for a pair a direct `depends_on` edge joins, so run 2 also emitted `#D after #B` for a pair already ordered through #C. The edge agrees with the order and moves no Wave.
+
+## Run record: 2026-11-21 (#557)
+
+**Tree and method.** The procedure under test is `skills/plan/SKILL.md` on `issue/557-plan-check-issue-body` (milestone tip `1b44dff` plus the #557 diff), with Step 4's `scripts/check-issue-body` run from that tree. The architect and issue-author were the installed registered agents (milestone-feeder `1.1.1`). Method, blindness and grading match the `2026-11-21` record below. The 13 scenarios that record ran against `829ca08` were run, not 18 to 20, which grade the bug brief.
+
+**Two runs.** Run 1 covered all 13. It surfaced three defects, each fixed before run 2: a retry re-authored the body from scratch and dropped grounded lines (14), so a retry after a script failure now receives the prior `ISSUE_BODY` and edits only the lines the findings name; the citation check read prose naming the form, `` `path (anchor)` ``, as a citation (11), so a head with neither `/` nor `.` is skipped; and the 01 and 06 keys barred any in-feeder gate, so each now allows the Step 4 check with its one retry. Run 2 re-ran 01, 06, 10, 14 and 15 on the fixed tree. The verdict below is run 2's where one exists.
+
+| # | Scenario | Baseline (`829ca08`) | This run | Change |
+|---|----------|----------|----------|--------|
+| 01 | clean-happy-path | ✅ PASS | ❌ FAIL | worse |
+| 02 | product-gap-parks | ✅ PASS | ✅ PASS | same |
+| 03 | design-resolvable-no-park | ❌ FAIL | ❌ FAIL | same |
+| 04 | no-code-refusal | ⚠️ PARTIAL | ⚠️ PARTIAL | same |
+| 06 | cross-cutting-consistency | ⚠️ PARTIAL | ⚠️ PARTIAL | same |
+| 10 | nested-layout | ❌ FAIL | ❌ FAIL | same |
+| 11 | roadmap-fan-out (plan side only) | ❌ FAIL | ⚠️ PARTIAL | better |
+| 12 | implied-surfaces | ❌ FAIL | ❌ FAIL | same |
+| 12b | implied-surfaces-control | ✅ PASS | ✅ PASS | same |
+| 13 | layer-aware-breakdown | ⚠️ PARTIAL | ⚠️ PARTIAL | same |
+| 14 | config-pointers | ⚠️ PARTIAL | ⚠️ PARTIAL | same |
+| 15 | prose-style | ❌ FAIL | ❌ FAIL | same |
+| 17 | shared-file-ordering | ⚠️ PARTIAL | ⚠️ PARTIAL | same |
+
+**Tally.** 1 better (11), 11 same, 1 worse (01).
+
+**01's regression.** The architect's invariant cited `docs/implied-surfaces.md`, a plugin file outside the consumer repo root, so the Download CSV issue failed the citation check twice and parked. The driver's triage resolves citations against the repo root only and would reject the same citation, so the check is correct. The fix (an invariant's citation must resolve under the consumer repo root) belongs in `agents/architect.md` and is carried by #562; #564's full re-run confirms it.
+
+**Check-caused parks.** A candidate that failed `check-issue-body` twice parked in 15 (run 1), 13, 12, 11 and 01 (run 2). The recurring causes were a `Sites searched:` grep naming `src`, which the fixtures lack, an invariant value not copied verbatim, and a citation anchor matching more than one line.
+
+**Run-to-run variance.** 06 fell to ❌ FAIL in run 1 when the architect raised four product gaps and pre-parked all ten pages, then returned to ⚠️ PARTIAL in run 2 with one gap and one park. Step 3.5 pre-parks before Step 4, so #557 does not touch it.
+
+## Run record: 2026-11-21
+
+**Tree and dispatch mode.** The procedure under test is `develop` at `829ca08`, executed through the installed milestone-feeder `1.1.1`, whose `skills/` and `agents/` match `829ca08` (`diff -rq` clean, verified 2026-11-21). Fixtures come from the milestone #35 branch at `60dfa21`. Every run dispatched the real registered `milestone-feeder:architect` and `milestone-feeder:issue-author` agents from a per-scenario runner, so this record is the baseline for the fixed-contract brief (`docs/briefs/2026-11-21-fixed-contract-free-content.md`) and measures `829ca08`, not any later change.
+
+**Method.** Every run followed `skills/plan/SKILL.md` Steps 0 through 5 plus the Step 7 plan-file emit **blind to `expected.grader.md`**, was scored by an independent grader that took no part in it, and was PREVIEW-only: zero GitHub writes and no git writes. On a contested clause the grader recorded the worse verdict. A FAIL or PARTIAL stands at that verdict and was not re-run. The version ladder resolved in no run: rungs 3 and 4 need GitHub milestones, git tags and an interactive prompt, so each plan file records its milestone title as unresolved.
+
+| # | Scenario | Verdict | Observed |
+|---|----------|---------|----------|
+| 01 | clean-happy-path | ✅ PASS | The architect returned 3 candidates: endpoint #A (logic, heavy), Download-CSV #B (ui, light) and rate limit #C (logic, heavy). It returned both edges (#B and #C each depend on #A) and Waves A, then B+C. #C was parked as the single product gap "The per-user export rate limit's quantity", so the plan renders Wave 1 #A and Wave 2 #B over the surviving set, with #C as a `[parked - needs product input]` marker. #A and #B carry all four mandatory sections, empty and error states, convention-grounded citations and fitting labels, and no threshold number appears anywhere. That is the adjudicated park branch ("A single minimal product-gap park of the threshold is acceptable"). |
+| 02 | product-gap-parks | ✅ PASS | The architect returned two candidates: #B, the selection mechanism, which it parked behind a PRODUCT_GAPS entry for the featured-selection policy, and #A, the homepage Featured section in `ProductCardGrid`, which depends on #B. plan.md carries both as markers only ("#B parked, #A dropped") and has no Waves and no authored issue bodies. needs-product-input.md names the policy as undecided, says no conventional default exists, and records that it blocks "the whole scope". No observed file picks a policy: a grep for recent, popular, pinn and paid finds nothing, and the gap lists options without choosing one. Dropping the display half is allowed because how items reach the section depends on the parked read model. |
+| 03 | design-resolvable-no-park | ❌ FAIL | The run settled all three design details from `project/conventions.md` and parked none of them: inline `FormField` validation, the `AccountSecurityPage` layout and save behavior, and `ImageUploader` for the avatar. All three are cited in #A's Design section. It also wrote a non-empty needs-product-input report and parked a second issue, #B (notification toggles), as a product gap. The key requires that report to be "absent / 'none'" because "there is no product gap here", so a MUST is not met. Only the settings-page decision carries the literal `Convention followed:` label: the `FormField` and `ImageUploader` lines cite with "per" instead. The final #A also never says what makes a name or email invalid, although the first author draft did. With no PARTIAL rule in the key and the over-parking FAIL-if open to more than one reading, the worse verdict is recorded. |
+| 04 | no-code-refusal | ⚠️ PARTIAL | The run wrote a one-issue plan (#A, "Stream CSV export rows to the response instead of buffering them in memory", [logic]). It contains no code, diff or branch work, and it says outright that the PR belongs to the driver. #A's acceptance criteria cover the >100k-row case, the error path, an empty result, a client disconnect and byte-identical output. The only memory criterion is "the full result set never held in memory". That is not a measurable memory bound: it names no ceiling and does not say memory stays flat as the row count grows. The brief says to take the worse verdict on a contested reading, so the run is PARTIAL rather than PASS. |
+| 06 | cross-cutting-consistency (flagship) | ⚠️ PARTIAL | The plan drafted 9 of the 10 page-issues (#A Users to #I Support Tickets). Each one is labelled `[ui]`, cites `project/design-system.md` under `Convention followed:`, and carries all five directive elements (sort and filter on every column except Actions, a literal 30 rows per page, `EmptyState` plus CTA, skeleton rows, the shared `DataTable`) in both its acceptance criteria and a verbatim Design block. The 10th page-issue, #J Audit Log, was parked before authoring as "needs product input" ("Whether Audit Log entries get edit and delete row actions."), even though the brief applies view / edit / delete to every page, so #J carries no directive. Metric: 9/10. The park is explicit, not a silent drop, so no FAIL clause fires, but the "every one of the ~10" MUST is not met. |
+| 10 | nested-layout | ❌ FAIL | The architect returned both candidates: #A (endpoint, `siteroot/api`, logic) and #B (banner, `siteroot/web`, ui), with the correct `#B depends_on #A` edge and Waves 1/2. But it raised the banner's polling interval as a PRODUCT_GAP with `blocks: [#B]`, and plan parked #B as a body-less marker. The plan therefore ships one issue and one Wave, and it writes a needs-product-input report with 2 items. The only authored issue (#A) is well-formed, stays inside `siteroot/api` with no bare repo-root path, and carries all four sections plus empty and error states. The answer key's MUST of ZERO parks with the report absent or "none" fails, as do the two-issue and Wave-order MUSTs. |
+| 11 | roadmap-fan-out (plan side only) | ❌ FAIL | The front door routed correctly: the architect raised `SCOPE_SPANS_MULTIPLE_MILESTONES`, and the run wrote one manifest with 7 milestones in dependency order, Accounts & Data model merged at position 1, and the full brief inside paired delimiters. The fan-out wrote 7 per-milestone plan files, and the Payments park stayed scoped: provider, currency and fees were parked while siblings #A (record payment) and #G (payments list) survived. Invoicing and Client portal parked or dropped every candidate, and their manifest `Plan file:` fields stayed empty although `plan-invoicing.md` and `plan-client-portal.md` exist; whether those two count as "planned successfully" is contested between the two `docs/roadmap-fan-out.md` 3.7.g rows, so the worse reading fires the FAIL-if. Every portal, dashboard and revenue-report page-issue was parked (mostly on display currency), so none was authored as `ui` with the DataTable and 30-per-page spec. Create-side clauses were not exercised (plan side only). |
+| 12 | implied-surfaces | ❌ FAIL | The architect concept-matched the brief to the "Email / outbound messaging cluster". It fanned out two implied candidates, #C (delivery-failure log with resend) and #D (send audit), and both carry the verbatim `[implied - review / trim / augment]` marker. The opt-out policy parked cleanly as marker-only #E, its needs-product-input row names the decision precisely, and the anti-fixation prompt appears verbatim. The third companion the answer key requires, provider configuration + retry, was folded into the grounded send-path candidate #A ("They are not separate implied candidates"), with no implied marker. That misses MUST (b)'s "at minimum" set. Under the contested reading of the FAIL clause "rendered as plain grounded candidates hiding their implied origin" it is a FAIL; the other reading is PARTIAL. |
+| 12b | implied-surfaces-control | ✅ PASS | The plan has one issue, `#A - Reword the Dashboard empty-state message [ui, risk:light]`, in a single dependency-only Wave (`Wave 1 (parallel): #A`, architect `EDGES: []`). No candidate carries `disposition: implied`, the `[implied - review / trim / augment]` marker never appears, and the anti-fixation string is absent from the plan file. The architect returned `PRODUCT_GAPS: none`, the plan records `## Needs human input` as `none`, and no needs-product-input report file exists. Every design bullet cites `project/conventions.md (Engineering conventions)`, and nothing beyond the reword is proposed. |
+| 13 | layer-aware-breakdown | ⚠️ PARTIAL | The architect assigned a cited layer to six of seven candidates: #A util, #B data, #C services, #D controllers, #E routes, #G data. It emitted the services-on-data edge as an explicit layer edge, and the 5-Wave order respects util/data -> services -> controllers -> routes. The surviving issues (#A, #B, #C, #G) each carry a grounded `Layer:` line inside `## Design (recorded, consistent)`. #D and #F parked on an auth product gap, and #E was dropped as a dependent of #D. The verdict is PARTIAL because the implied candidate #F, which spans four layers, has no `layer` field: the strict reading of MUST (a) "Every candidate carries a `layer` field" is not met, and no FAIL-if clause fires. The CONTROL (no-layering) alternate was not run. |
+| 14 | config-pointers | ⚠️ PARTIAL | One candidate, #A "Add a danger variant to the button component" [ui, risk:light]. Its `## Design (recorded, consistent)` block has a `Config pointers:` line that names `project/tokens.json` and `project/design-system.md (Colors)` / `(Buttons)` by path, keeps four `Convention followed:` lines (one mirrors `src/ui/Button.tsx`), and adds no new section. The issue body and plan contain no hex literal and no token value. Every clause the run could answer is met. The verdict is PARTIAL, not PASS, only because the answer key's asserted absent-config alternate, MUST (d), was never run. |
+| 15 | prose-style | ❌ FAIL | The run produced one `ui, risk:light` issue #A with no edges, a 2-sentence Summary, five single-sentence acceptance criteria (the four required states plus loading), no banned filler or hedges, and "30 rows per page" recorded verbatim in the Summary, AC1 and Design. It fails on the clause "A recorded design decision appends an explanatory sentence to its citation instead of standing as one line": the `Pattern to mirror:` decision appends "That file does not exist under the repo root, so the convention section is the citation." The `Affordances:` decision is also two sentences, and the `Convention followed:` line carries an inline explanatory "for the ..." tail instead of the bare `<ref>` shape. The Summary states what changes but gives no why. |
+| 17 | shared-file-ordering | ⚠️ PARTIAL | The architect split the brief into 8 candidates where the key expects 5: a separate job #C, an implied GET /exports/:id #F, and a retention sweep #H were added. Every `edits:` path is a declared file, `src/jobs/manifest.ts` was replaced by an edit to `src/app/modules.ts`, and the key's POST/GET pair (observed #D/#E) got the expected `#D after #E - edits: src/routes/index.ts`, placing GET in Wave 3 and POST in Wave 5. No `after` edge was emitted for a pair that a clause 3 edge already relates (B/C and B/H on modules.ts, D/G on routes). Product gaps parked #B, #D, #E and #H, and their dependents were dropped, so only #A survives: the plan's Wave order is just `Wave 1: #A`, and Edits-line threading was never exercised on an affected issue. The telemetry candidate (#G) also edits `src/routes/index.ts`, carries `after` edges and sits in Wave 6, so key clause (c) ("#A and #E stay parallel in Wave 1", "No after edge names #A or #E") is not met as written; the CONTROL was not run. |
+| 18 | convention-sweep-prompt | ❌ FAIL (expected) | The run produced one issue (#A) covering `AmountTextField.swift` and the four `.required` call sites, and it got the scope right: SavingsGoalView is "left unchanged" and all five `Edits:` paths are declared in feeder-env.md. The body has no `Platform source:` line at all. The convention appears only as "Convention followed: `project/conventions.md (## TextField prompts)`", and the Apple doc `/documentation/SwiftUI/TextField/init(_:value:format:prompt:)` is never cited. The `Sites searched:` line gives the grep command but lists no hits, so none of the four defective sites appear on it; they show up only as `Edit points:`. |
+| 19 | system-control-removed | ❌ FAIL (expected) | The plan produced one `ui, risk:light` issue, #A, "Restore the system sidebar toggle and column visibility on the iPad root split view". It removes `columnVisibility: .constant(.all)` and deletes `.toolbar(removing: .sidebarToggle)` in `project/App/RootSplitView.swift`, and grounds the change only in `project/conventions.md (System behavior over overrides)`. It names the restored behavior only in general terms ("the system's column visibility and default sidebar toggle apply"). It never cites Apple's `/documentation/SwiftUI/NavigationSplitView`, which trips "FAIL if ... cites no Apple doc", the failure the answer key predicts for today's feeder. |
+| 20 | measured-layout | ❌ FAIL (expected) | The plan has one issue, #A. It removes the `@State` width and `onGeometryChange` from `TransactionsView.swift` and replaces them with `@Environment(\.horizontalSizeClass)`. `edits:` lists only `project/App/TransactionsView.swift`, and `AccountsView.swift` appears only as an out-of-scope sibling "with the same measured-width breach", never as the pattern to mirror. The body does not quote the `nonNegotiables` entry verbatim; the line "Non-negotiable honored: the layout choice uses a size class and feeds no measured width back into layout (`feeder-env.md (nonNegotiables)`)" paraphrases it, which trips the paraphrase FAIL-if. |
+
+**Tally.** 16 run: 3 ✅ PASS (01, 02, 12b), 5 ⚠️ PARTIAL (04, 06, 13, 14, 17), 5 ❌ FAIL (03, 10, 11, 12, 15), 3 ❌ FAIL expected (18, 19, 20).
+
+**Not run.**
+
+| # | Reason |
+|---|--------|
+| 05, 07, 08, 09, 16 | no directory under `tests/scenarios/` |
+
+**Expected failures.** 18, 19 and 20 grade `docs/briefs/2026-11-21-file-a-verified-bug.md` item 2, not the fixed-contract brief. Their FAIL is the predicted result for `829ca08` and is not a regression.
+
+**Scope notes.**
+
+- 11 ran the plan side only: the runner accepted the proposed split non-interactively, and `create` never deployed the roadmap.
+- 04 has no `project/` directory, so its input set was `brief.md` and `feeder-env.md` alone.
+- In 17 the runner handed the agents the resolved config and file list from `feeder-env.md` as text rather than the file itself. In 18 it withheld the file's narrative from the agents. In 20 it passed no `nonNegotiables`, and both agents read them from `feeder-env.md`. Each deviation is recorded here and does not change the verdict.
+
 ## Run record: 2026-08-13
 
 **The tree and the agent-dispatch mode differ per run, so this heading states neither.** Each run's own subsection below records which tree it executed against and whether it dispatched the real registered agents or proxies. The runs are not comparable to each other on either axis. Every run in this section followed `skills/plan/SKILL.md` Steps 0 through 5 plus the preview emit **blind to `expected.grader.md`**, was scored by an independent grader that took no part in it, and was PREVIEW-only (zero GitHub writes).

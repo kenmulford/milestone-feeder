@@ -33,7 +33,7 @@ prior plan file at `.milestone-feeder/plan-<slug>.md`. Read its persisted
 ## 3. The incremental architect dispatch (Step 3)
 
 Input and output are `agents/architect.md` → "Incremental mode". `plan`
-reconstructs the prior `CANDIDATES` / `EDGES` / `WAVES` from the prior plan
+reconstructs the prior `CANDIDATES` / `EDGES` from the prior plan
 file rather than a second contract field (`docs/plan-file-contract.md`
 unchanged): each `### #<tag> - <title> [<surface>, <risk>] […]` heading plus
 its `Depends on #<n>` lines and the `## Waves` block already carry them.
@@ -41,9 +41,7 @@ its `Depends on #<n>` lines and the `## Waves` block already carry them.
 ## 4. The orchestrator merge (Step 3, after return)
 
 - **Merge candidates and edges**: prior ∪ new, unchanged and unreordered.
-- **Recompute `WAVES`** over the merged edges, the same topological sort
-  `agents/architect.md` clause 4 defines; the incremental return carries no
-  `WAVES` of its own.
+- **Derive the `after` edges and Waves** by running `scripts/build-order` over the merged set per `skills/plan/SKILL.md` Step 3.5 clause 4. Prior `edits` come from each prior body's `Edits:` line; prior edges from its `Depends on` lines, minus those whose reason starts `edits:`, which the run re-derives. Prior bodies stay verbatim.
 - **Step 4 dispatches `issue-author` only for the new candidates.** A prior
   candidate's issue body is carried forward from the prior plan file verbatim,
   never re-authored.

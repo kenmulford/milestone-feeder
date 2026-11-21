@@ -1,0 +1,6 @@
+{dir}/body.md
+{dir}
+--invariants
+{dir}/invariants.json
+--sections
+{dir}/sections.txt

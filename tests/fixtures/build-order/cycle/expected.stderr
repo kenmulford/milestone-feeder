@@ -1,0 +1,1 @@
+build-order: cycle: #A, #B, #C

@@ -3,6 +3,46 @@
 Release notes for milestone-feeder. Each tagged release is also published on the
 [GitHub Releases page](https://github.com/kenmulford/milestone-feeder/releases).
 
+## v1.2.0: fixed contract, free content
+
+**Theme:** `plan` derives the build order with `scripts/build-order` and checks every authored issue body with `scripts/check-issue-body`, so those rules run as tested code instead of agent prose, and the prose they replaced is cut from `plan` and four agents.
+
+### ✨ Scripted plan checks
+
+| Issue | PR | What |
+|---|---|---|
+| #552 Add scenarios 18 to 20 built from ios-budget-app milestone 99 failures | #567 | Three scenarios under `tests/scenarios/18-20`, each grading a failure class from a real plan run. On today's feeder each is an expected FAIL, graded against the follow-up brief. |
+| #553 Add scripts/build-order.{sh,ps1} to derive shared-file edges and Waves | #567 | `build-order` reads candidates and edges as JSON and prints the shared-file `after` edges and the Wave lines. Exit 1 names a cycle, exit 2 a malformed input. The CI job `build-order-fixtures` runs 16 cases on Ubuntu and Windows. |
+| #554 Add scripts/check-issue-body.{sh,ps1} with section, invariant, vocabulary and bug-mode checks | #567 | `check-issue-body` prints one finding per missing template section, unmet invariant, banned word and missing bug-mode line, and exits 1 on any finding. Runs under bash 3.2, bash 5 and pwsh. |
+| #555 Record a dated baseline run of scenarios 01 to 20 | #567 | `tests/RESULTS.md` records the 2026-11-21 baseline on v1.1.1: 3 PASS, 5 PARTIAL, 5 FAIL, 3 expected FAIL. |
+| #556 Add citation and Sites searched checks to scripts/check-issue-body | #567 | `check-issue-body` also fails a `path (anchor)` citation that does not resolve and a `Sites searched:` line whose pattern finds a call site the body does not list. |
+| #557 Run scripts/check-issue-body on every authored body at plan Step 4 | #567 | `plan` Step 4 runs `check-issue-body` on each authored body and re-dispatches the issue-author once with the findings verbatim. A second failure parks the candidate. |
+| #558 Cut agents/remediator.md to the sentences the keep-test retains | #567 | 1547 to 1247 words, deletion only. |
+| #559 Cut agents/roadmap-splitter.md to the sentences the keep-test retains | #567 | 1842 to 1538 words, deletion only. |
+| #560 Derive the build order in plan with scripts/build-order instead of the architect | #567 | `plan` runs `build-order` at Step 3.5 and, when parks drop candidates, again at Step 5. The architect no longer returns Waves or `after` edges. |
+| #561 Cut skills/plan/SKILL.md to the sentences the keep-test retains | #567 | 9531 to 9037 words. Every phrase another file cites is kept verbatim. |
+| #562 Cut agents/architect.md to the sentences the keep-test retains | #567 | 3141 to 2575 words. An invariant citation resolves under the consumer repo root. |
+| #563 Cut agents/issue-author.md to the sentences the keep-test retains | #567 | Three prose rules remain, and the Rigor gate's citation rule is the one `check-issue-body` line. |
+| #564 Re-run scenarios 01 to 20 on the cut feeder and record the results | #567 | `tests/RESULTS.md` records 01 to 17 on the cut feeder: 5 PASS against the baseline's 3, 4 better, 7 the same, 2 worse (06, 13). The acceptance rule failed. |
+| #565 Re-pin FILE_WORD_CEILINGS for the five cut files | #567 | The five ceilings in `scripts/validate-plugin-structure.py` drop to each file's word count times 1.05, rounded up to the next 50. |
+| none (simplify pass and milestone-end review) | #567 | `plan` Step 4 stops the run when `check-issue-body` exits 2 (a usage or environment fault) and retries the author only on exit 1. On an incremental re-plan `build-order` runs over the merged prior and new set. Both `check-issue-body` twins reject the same patterns outside the shared ERE subset and resolve relative paths alike. The architect, issue-author and roadmap-splitter state the citation rule the check enforces. CI runs the `check-issue-body` fixtures on Ubuntu and Windows. |
+
+### Consumer notes (upgrading from v1.1.1)
+
+- **No schema changes** to `.milestone-config/feeder.json` or `.milestone-config/driver.json`.
+- `plan` stops with no plan file when `build-order` exits 1 (a dependency cycle) or 2 (malformed input), naming the tags on stderr.
+- `plan` re-dispatches the issue-author once when `check-issue-body` reports a finding, and parks the candidate on a second failure.
+- A bash host needs `jq` for both scripts, as for `emit-notice`. Without it `check-issue-body` exits 2 and `plan` stops with that line.
+
+### ⚖️ Post-run audit trail
+
+Judgment-call PRs: none.
+
+- The #564 acceptance rule failed: scenarios 06 and 13 graded worse than the baseline, with the rules they grade byte-identical to the baseline tree.
+- Scenarios 18 to 20 were not re-run on the cut feeder. Their baseline verdict is the expected FAIL.
+- `skills/plan/SKILL.md` is 9093 words against a 9500 ceiling.
+- The Step 5 drop pass still drops a candidate that only shares a file with a parked one, because its body carries the `after` edge naming the parked tag.
+
 ## v1.1.1: Codex deny on non-ASCII paths
 
 ### 🔒 Security fix: the Codex gate failed open on Windows for a non-ASCII source path

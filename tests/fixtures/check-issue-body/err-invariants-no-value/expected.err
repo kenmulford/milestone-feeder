@@ -1,0 +1,1 @@
+check-issue-body: invariants file is not a JSON array of entries carrying a string value: {dir}/invariants.json
