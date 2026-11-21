@@ -70,14 +70,17 @@
 
 ## 5. The section check runs on every body
 
-**Evidence:** `skills/plan/SKILL.md` Step 4 passes `--sections <file>` "only when a template resolved". A body authored to the SPEC §4 default template is never checked for its five headings: `## Summary`, `## Acceptance criteria`, `## Non-goals`, `## Design (recorded, consistent)`, `## Dependencies`.
+**Evidence:** `skills/plan/SKILL.md` Step 4 passes `--sections <file>` "only when a template resolved". Without it, each `check-issue-body` twin falls back to its own hard-coded list of the four required SPEC §4 headings: `## Summary`, `## Acceptance criteria`, `## Design (recorded, consistent)`, `## Dependencies`. `## Non-goals` is optional, because SPEC §4 omits it "when the issue records no scope boundary". The list has three copies (SPEC and both twins), and nothing fails when they drift.
 
 **Work:**
-- Ship `scripts/issue-body-sections.txt` with those five headings, one per line.
+- Ship `scripts/issue-body-sections.txt` with those four required headings, one per line.
 - Step 4 passes it as `--sections` when no consumer template resolves.
-- `scripts/check-contract-strings.sh` fails when the file and the SPEC §4 Issue body template headings differ.
+- `scripts/check-contract-strings.sh` fails when the file, the SPEC §4 required headings, and either twin's built-in list differ.
 
-**Acceptance:** a default-template body that lacks `## Non-goals` makes `check-issue-body` exit 1.
+**Acceptance:**
+- A default-template body that lacks `## Dependencies` makes `check-issue-body` exit 1 with `--sections scripts/issue-body-sections.txt`.
+- A body that omits `## Non-goals` passes.
+- Editing one twin's built-in list fails `scripts/check-contract-strings.sh`.
 
 ## 6. remediate checks the body it writes
 
