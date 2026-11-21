@@ -90,15 +90,18 @@ Run these checks over the returned block, the **live** body from Step 1, and the
 | (d) No section was dropped | whole body | Every heading present in the live body is still present in `CORRECTED_BODY`. A correction removes superseded **text**, never a whole section the findings did not name. |
 | (e) Already-applied claims are true | each `ALREADY_APPLIED` finding | The `superseded_span` is absent from the live body and the `replacement` is present in the live body. A finding meeting neither is not already applied, and the claim fails. |
 
-**What check (b) does and does not guarantee.** It is the mechanical proxy for AC3's one-statement-per-decision rule, and it catches the two shapes that actually occur: the superseded text surviving (caught by (a) leg 2) and the replacement appearing twice. It cannot catch a decision restated a third time in wholly new words: that is the agent's contract rule 3 (`agents/remediator.md (## The contract)`), enforced by the agent, re-read by the human at the Step-5 diff. This step does not claim to decide it.
+**What check (b) does not catch.** A decision restated a third time in wholly new words is the agent's contract rule 3 (`agents/remediator.md (## The contract)`), enforced by the agent and re-read by the human at the Step-5 diff.
 
 **A finding whose fix needs a new section.** "Record the design decisions this issue never states" is a legitimate Blocker whose correction adds the section the issue-body template names (`## Design (recorded, consistent)`). That heading carries no correction vocabulary, so it passes (c) and is the correct fix. What (c) refuses is a section named for the correction itself. A finding that cannot be resolved except by such a section has no in-place edit available, and the agent returns it `NEEDS_HUMAN` rather than burning the run.
 
+**The body check** runs after (a) through (e) pass, writes `CORRECTED_BODY` to one `.milestone-feeder/` file, and runs `${CLAUDE_PLUGIN_ROOT}/scripts/check-issue-body.{sh,ps1} <body-file> <repo-root>` (the repo root) in Step 5's twin form without `--mode` or `--invariants`, and passes `--sections ${CLAUDE_PLUGIN_ROOT}/scripts/issue-body-sections.txt`, or, when `docs/step-0-grounding.md` §5 resolves a consumer template, a `.milestone-feeder/` file of that template's required `## ` headings, one per line.
+
 | Outcome | Action |
 |---|---|
-| **All checks pass** | Proceed to Step 5. |
-| **Any check fails** | Re-dispatch the agent once (the same bounded retry Step 3 allows, never a second one), briefed with the failing check and the span that proves it. |
-| **Still failing after the re-dispatch** | 🔴 Stop and write nothing. Print the failing check and the span, and leave the issue exactly as it was. Never PATCH an unverified body. |
+| **All checks pass, and the body check exits 0** | Proceed to Step 5. |
+| **A check fails, or the body check exits 1** | Re-dispatch once (Step 3's one bounded retry, never a second), with the failing check and span, or the findings verbatim. |
+| **Still failing, the one re-dispatch spent** | Write nothing, leave the issue as is. A failed (a) to (e) check stops the run (🔴) with its span. An exit 1 reports its findings on the Step 6 Needs human line. Never PATCH an unverified body. |
+| **The body check exits 2** | Stop the run (🔴), write nothing, and report the stderr line verbatim: a retry fails identically. |
 
 ### Step 5: Diff-gate the write
 
@@ -107,7 +110,7 @@ Run these checks over the returned block, the **live** body from Step 1, and the
 | **Corrected body equal to the live body** after normalizing line endings and trailing newlines | NO-OP: perform zero `gh` writes and say so: `remediate: issue #<n> already matches the recorded corrections: nothing to remediate (no-op)`. This is the steady state of a re-run, where every finding came back `ALREADY_APPLIED`. |
 | **They differ** | ANNOUNCE-THEN-WRITE. Print a unified-style diff of the live body → the corrected body (changed hunks only), then apply it. Never a silent clobber, the same discipline as `update`'s body patch (`skills/update/SKILL.md` Step 4). |
 
-Write the corrected body to one `.milestone-feeder/` file, then run the `apply-body <number> <body-file>` entry point of the bundled twin `${CLAUDE_PLUGIN_ROOT}/scripts/deploy-write-sequence.{sh,ps1}` (the `.sh` or the `.ps1` form selected by the shell this session already runs, as `skills/create/SKILL.md` Step 1R selects its twins). It reads the live body, prints the unified diff of live → corrected (the announce), and runs `gh issue edit <n> --body-file <body-file>`. When the bodies are equal it prints `unchanged` and makes no edit, which is the NO-OP row above.
+Run the `apply-body <number> <body-file>` entry point, on Step 4's checked body file, of the bundled twin `${CLAUDE_PLUGIN_ROOT}/scripts/deploy-write-sequence.{sh,ps1}` (the `.sh` or the `.ps1` form selected by the shell this session already runs, as `skills/create/SKILL.md` Step 1R selects its twins). It reads the live body, prints the unified diff of live → corrected (the announce), and runs `gh issue edit <n> --body-file <body-file>`. When the bodies are equal it prints `unchanged` and makes no edit, which is the NO-OP row above.
 
 **`--body-file`, never `--body`.** A corrected issue body is always multi-line and routinely carries backticks and `$`, and there is no shell-quoting path for a multi-line body: this is the same reason `create` writes every issue body from a file (`docs/create-deploy-sequence.md (no shell-quoting path for a multi-line body)`). Identical bytes land on GitHub either way; only one of them survives the shell.
 
