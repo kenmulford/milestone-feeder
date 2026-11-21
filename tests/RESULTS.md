@@ -28,6 +28,45 @@ What each fixture asserts (the `expected.grader.md` contract, not a fresh execut
 
 `05-reviewer-backends` was **removed in v0.9.0**: its subject (the retired `reviewer` config key + reviewer backends) no longer exists.
 
+## Run record: 2026-11-21 (#584)
+
+**Tree and method.** The procedure under test is the milestone #36 branch at `c078618`, after every key, fixture, rule and script change (#573 to #583) landed. The installed agents (milestone-feeder `1.2.0`) predate the milestone, so each runner dispatched `general-purpose` proxies told to act as the tree's `agents/architect.md` and `agents/issue-author.md`, as the #564 record did. Each runner received only `{ brief.md, project/, feeder-env.md }`, never `expected.grader.md`, and a separate grader scored its output. On a contested clause the grader recorded the worse verdict. The seven scenarios `docs/briefs/2026-11-21-scenario-and-gate-repair.md` names were run once each.
+
+| # | Scenario | Baseline (#564) | This run | Change | Issue-author dispatches (#564 → this run) |
+|---|----------|----------|----------|--------|--------|
+| 01 | clean-happy-path | ✅ PASS | not re-run | n/a | 2 → n/a |
+| 02 | product-gap-parks | ✅ PASS | not re-run | n/a | 0 → n/a |
+| 03 | design-resolvable-no-park | ❌ FAIL | ✅ PASS | better | 1 → 3 |
+| 04 | no-code-refusal | ✅ PASS | not re-run | n/a | 2 → n/a |
+| 06 | cross-cutting-consistency (flagship) | ❌ FAIL | ✅ PASS | better | 16 → 16 |
+| 10 | nested-layout | ❌ FAIL | ✅ PASS | better | 2 → 4 |
+| 11 | roadmap-fan-out (plan side only) | ⚠️ PARTIAL | not re-run | n/a | 38 → n/a |
+| 12 | implied-surfaces | ✅ PASS | not re-run | n/a | 8 → n/a |
+| 12b | implied-surfaces-control | ✅ PASS | not re-run | n/a | 1 → n/a |
+| 13 | layer-aware-breakdown | ❌ FAIL | ⚠️ PARTIAL | better | 10 → 6 |
+| 14 | config-pointers | ⚠️ PARTIAL | ⚠️ PARTIAL | same | 2 → 2 (1 + 1 alternate) |
+| 15 | prose-style | ⚠️ PARTIAL | ✅ PASS | better | 1 → 1 |
+| 17 | shared-file-ordering | ⚠️ PARTIAL | ⚠️ PARTIAL | same | 6 → 9 |
+| 18 | convention-sweep-prompt | not re-run | not re-run | n/a | n/a |
+| 19 | system-control-removed | not re-run | not re-run | n/a | n/a |
+| 20 | measured-layout | not re-run | not re-run | n/a | n/a |
+
+**Tally.** Of the seven run: 4 ✅ PASS (#564: 0), 5 better, 2 the same, 0 worse.
+
+**Acceptance rule: failed.** None of the seven grades worse than #564, so no regression is recorded. 13, 14 and 17 are required PASS and grade ⚠️ PARTIAL. Each is named below with the clause that is not met and the rule text that governs it.
+
+**Required PASS not met: 13.** All 10 candidates carry a cited layer, and the implied get-by-id work is split by layer into #F (data), #G (services), #H (controllers), #I (routes) and #J (data), as `agents/architect.md` clause 9 now requires. The six survivors each carry a cited `Layer:` line, and the services-on-data layer edge is present. The architect parked the controllers #D and #H on one product gap: how a request identifies the signed-in user, which no input states. The routes #E and #I were dropped as their dependents. MUST (b) (the controllers and routes Waves) and MUST (d) (a `Layer:` line on those issues) therefore have no issue to grade. The park follows the park boundary (`SPEC.md` §2), because `brief.md` names "a signed-in user" and the fixture's `project/` states no identity convention. The CONTROL no-layering alternate was not run, because it needs its own `project/` input. On the exercised clauses alone the verdict is PASS, recorded at the worse.
+
+**Required PASS not met: 14.** The main run meets MUST (a) to (c): #A's Design block carries "Config pointers: colors: `project/tokens.json` / `project/design-system.md#Colors` / `project/design-system.md#Buttons`", inlines no hex or token value, and its `Convention followed:` line names `project/src/ui/Button.tsx`. The MUST (d) alternate was run with `tokens.json` and `design-system.md` removed, and it degraded with no pointer, no fabricated reference, no hex and every script exit 0. MUST (d) stays not met on two clauses. The alternate's `Convention followed:` line cites `conventions.md` and its exemplar row but not `src/ui/Button.tsx`, against "still records the styling convention it CAN ground (mirror `src/ui/Button.tsx`, from `conventions.md#Styling`)" (contested, recorded at the worse). The key's "the same issue MINUS the token / design-system pointer, byte-for-byte" cannot hold across two independent runs, whose bodies differ in wording, criterion count and labels.
+
+**Required PASS not met: 17.** All 5 `after` edges match what `scripts/build-order` derives for the run's cut, the Waves match the script's, and `manifest.ts` is absent. The purge job #G, which edits a file the pre-parked #H also edits, survives with no `Depends on` line naming #H, and no survivor body names a parked or dropped tag. MUST (e) is not met: #A's body carries "Edits: none; this issue modifies no existing file.", against "#A carries no `Edits:` line, because its candidate carried no `edits:` field". The governing author rule is `agents/issue-author.md` "A candidate with no `edits` gets no `Edits:` line". The CONTROL alternate was not exercised.
+
+**Not re-run.** 01, 02, 04, 11, 12 and 12b grade rules `docs/briefs/2026-11-21-scenario-and-gate-repair.md` does not touch, and 18, 19 and 20 grade `docs/briefs/2026-11-21-file-a-verified-bug.md` item 2. Their last verdicts are the #564 record's.
+
+**14's alternate run.** The key's MUST (d) is an asserted alternate, so a second runner ran the same brief against a copy of `project/` with `tokens.json` and `design-system.md` removed. Its one dispatch is counted in the 14 row.
+
+**Dispatch counts.** Issue-author dispatches rose from 38 to 41 across the seven. 3 of the 3 retries were `check-issue-body` reporting a `Sites searched:` path absent from the fixture: two in 10 (`siteroot/` paths) and one in 17 (`src`). 03 drafts three issues and parks none. 13 fell from 10 to 6 because the identity park removed four of its 10 candidates at Step 3.5.
+
 ## Run record: 2026-11-21 (#564)
 
 **Tree and method.** The procedure under test is the milestone #35 tip `54eb2d9`, after every prose cut (#561, #562, #563) and every script (#556, #557, #560) landed. The installed agents (milestone-feeder `1.1.1`) predate the milestone, so each runner dispatched `general-purpose` proxies told to act as the tree's `agents/architect.md` and `agents/issue-author.md`, as section 06 of this file did. Each runner received only `{ brief.md, project/, feeder-env.md }`, never `expected.grader.md`, and a separate grader scored its output. Method, blindness and grading otherwise match the `2026-11-21` record below. On a contested clause the grader recorded the worse verdict.

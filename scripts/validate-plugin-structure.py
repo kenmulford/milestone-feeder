@@ -32,6 +32,10 @@ It checks:
      docs/one-time-notices.md, and this repo's own committed
      .milestone-config/.gitignore. A drifted copy is named, and so is a
      missing one (see "--- 7: nested .gitignore three-copy pin ---" below).
+  6. Windows-checkout paths (issue #575): every tracked path (from
+     `git ls-files -z`, or from `--paths-file <file>`) has no component whose
+     stem before its first dot is a reserved device name, no character from
+     <>:"|?*, and no component ending in a space or a dot.
 
 Two readers, two rules (read before "upgrading" this):
   Claude Code's frontmatter reader is tolerant: it takes everything after the
@@ -56,15 +60,19 @@ Two readers, two rules (read before "upgrading" this):
 Dependencies: Python standard library only.
 
 Run it locally from the repo root:  python3 scripts/validate-plugin-structure.py
+  --paths-file <file>: newline-separated paths read in place of `git ls-files`, for fixtures. Runs the Windows-path check alone.
 Exit 0 = valid. Exit 1 = at least one structural problem (each printed).
 """
 
 from __future__ import annotations
 
+import argparse
 import json
 import re
+import subprocess
 import sys
 from pathlib import Path
+from typing import NoReturn
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
@@ -269,6 +277,133 @@ def check_strict_scalars(path: Path) -> None:
                 f"unquoted plain scalar containing a colon+space (': '). {_MSG}",
             )
 
+
+# --- Windows-checkout paths (check 10): definitions ---------------------------
+#
+# Defined ahead of the other checks so `--paths-file` can run this check alone
+# and report, instead of running the whole validator over the fixture's paths.
+
+WINDOWS_RESERVED_NAMES: frozenset[str] = frozenset(
+    ["CON", "PRN", "AUX", "NUL"]
+    + [f"COM{n}" for n in range(1, 10)]
+    + [f"LPT{n}" for n in range(1, 10)]
+)
+WINDOWS_FORBIDDEN_CHARS = '<>:"|?*'
+
+
+def _die(msg: str) -> NoReturn:
+    print(msg, file=sys.stderr, end="" if msg.endswith("\n") else "\n")
+    sys.exit(1)
+
+
+def tracked_paths(paths_file: str | None) -> list[str] | None:
+    """Return the tracked paths, from `paths_file` or `git ls-files -z`.
+
+    Returns None when git is missing or REPO_ROOT is not a git work tree, so
+    the caller can skip the check; a `git ls-files` failure inside a work tree
+    still exits 1.
+    """
+    if paths_file is not None:
+        try:
+            text = Path(paths_file).read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError) as exc:
+            _die(
+                f"validate-plugin-structure: cannot read --paths-file "
+                f"{paths_file} ({exc})"
+            )
+        return [line for line in text.splitlines() if line]
+    try:
+        probe = subprocess.run(
+            ["git", "rev-parse", "--is-inside-work-tree"],
+            cwd=REPO_ROOT,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+        )
+        if probe.returncode != 0 or probe.stdout.strip() != "true":
+            return None
+        proc = subprocess.run(
+            ["git", "ls-files", "-z"],
+            cwd=REPO_ROOT,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+        )
+    except FileNotFoundError:
+        return None
+    if proc.returncode != 0:
+        _die(
+            f"validate-plugin-structure: git ls-files failed:\n"
+            f"{proc.stderr or chr(10)}"
+        )
+    return [entry for entry in proc.stdout.split("\0") if entry]
+
+
+def windows_path_problems(path: str) -> list[str]:
+    problems: list[str] = []
+    for comp in path.split("/"):
+        if not comp:
+            continue
+        stem = comp.split(".", 1)[0].upper()
+        if stem in WINDOWS_RESERVED_NAMES:
+            problems.append(
+                f"component {comp!r} uses the Windows reserved device name "
+                f"{stem}, so Windows cannot check this path out"
+            )
+        for ch in WINDOWS_FORBIDDEN_CHARS:
+            if ch in comp:
+                problems.append(
+                    f"component {comp!r} contains {ch!r}, a character Windows "
+                    f"forbids in a path, so Windows cannot check this path out"
+                )
+        if comp.endswith((" ", ".")):
+            problems.append(
+                f"component {comp!r} ends in a space or a dot, so Windows "
+                f"cannot check this path out"
+            )
+    return problems
+
+
+def check_windows_paths(paths_file: str | None) -> None:
+    paths = tracked_paths(paths_file)
+    if paths is None:
+        warnings.append(
+            "check 10 (Windows-checkout paths) skipped: git is missing or "
+            "the repo root is not a git work tree"
+        )
+        return
+    for path in paths:
+        for msg in windows_path_problems(path):
+            errors.append(f"{path}: {msg}")
+
+
+def report() -> NoReturn:
+    for w in warnings:
+        print(f"WARN: {w}", file=sys.stderr)
+
+    if errors:
+        print(
+            f"FAIL: plugin structure invalid ({len(errors)} problem(s)):",
+            file=sys.stderr,
+        )
+        for e in errors:
+            print(f"  - {e}", file=sys.stderr)
+        sys.exit(1)
+
+    print(
+        f"PASS: plugin structure valid ({checked} file(s) checked, "
+        f"{len(warnings)} warning(s))."
+    )
+    sys.exit(0)
+
+
+_parser = argparse.ArgumentParser(description="Validate the plugin structure.")
+_parser.add_argument("--paths-file", default=None)
+_args = _parser.parse_args()
+
+if _args.paths_file is not None:
+    check_windows_paths(_args.paths_file)
+    report()
 
 # --- 1 & 2: manifests -------------------------------------------------------
 
@@ -1075,21 +1210,10 @@ if cj is not None:
                 "without it the gate never fires",
             )
 
+# --- 10: Windows-checkout paths ---------------------------------------------
+
+check_windows_paths(None)
+
 # --- report -----------------------------------------------------------------
 
-for w in warnings:
-    print(f"WARN: {w}", file=sys.stderr)
-
-if errors:
-    print(
-        f"FAIL: plugin structure invalid ({len(errors)} problem(s)):", file=sys.stderr
-    )
-    for e in errors:
-        print(f"  - {e}", file=sys.stderr)
-    sys.exit(1)
-
-print(
-    f"PASS: plugin structure valid ({checked} file(s) checked, "
-    f"{len(warnings)} warning(s))."
-)
-sys.exit(0)
+report()

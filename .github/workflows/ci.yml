@@ -16,7 +16,10 @@ name: CI
 #                                prose file (a skills/**/SKILL.md, an
 #                                agents/**/*.md, SPEC.md, or a
 #                                runtime-referenced docs/*.md) exceeds its
-#                                size-budget ceiling (issue #270).
+#                                size-budget ceiling (issue #270), or a tracked
+#                                path is one Windows cannot check out; it also
+#                                runs the fixtures under
+#                                tests/fixtures/windows-paths/ (issue #575).
 #   3. contract-strings gate:    three checks. Fails if the implied-surfaces
 #                                marker or the anti-fixation prompt drifts
 #                                from its canonical hyphen form; if a pinned
@@ -91,6 +94,8 @@ jobs:
           python-version: "3.x"
       - name: Validate manifests and skill/agent/command frontmatter
         run: python3 scripts/validate-plugin-structure.py
+      - name: Run the windows-paths fixtures
+        run: bash tests/fixtures/windows-paths/run.sh
 
   contract-strings-gate:
     name: contract-strings gate

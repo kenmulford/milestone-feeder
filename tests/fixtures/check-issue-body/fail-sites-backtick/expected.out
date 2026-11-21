@@ -1,0 +1,1 @@
+sites searched: expected grep -rnE '<pattern>' <path>..., found "grep -rnE 'need"

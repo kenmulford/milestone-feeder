@@ -6,6 +6,7 @@
 # Invocation (identical on both twins):
 #   scripts/check-issue-body.sh <body-file> <repo-root>
 #     [--invariants <file>] [--sections <file>] [--mode plan|bug]
+#     [--edges <file>]
 #   Positionals first, flags in any order, each flag at most once.
 #
 # Output: one finding per line on stdout, in check order, then input order.
@@ -13,7 +14,7 @@
 # runs; one stderr line).
 #
 # Stages, in run order: check_sections, check_invariants, check_citations,
-# check_sites_searched, check_vocabulary, check_platform_source.
+# check_sites_searched, check_vocabulary, check_platform_source, check_edges.
 #
 # LC_ALL=C makes every comparison bytewise, so "ASCII case-insensitive" means
 # A-Z only and matches the PowerShell twin's folding. `set -e` is not set: a
@@ -23,7 +24,7 @@
 export LC_ALL=C
 set -u
 
-USAGE='usage: check-issue-body <body-file> <repo-root> [--invariants <file>] [--sections <file>] [--mode plan|bug]'
+USAGE='usage: check-issue-body <body-file> <repo-root> [--invariants <file>] [--sections <file>] [--mode plan|bug] [--edges <file>]'
 BODY_FILE=""
 REPO_ROOT=""
 INV_FILE=""
@@ -32,6 +33,9 @@ MODE="plan"
 HAVE_INV=0
 HAVE_SEC=0
 HAVE_MODE=0
+EDGES_FILE=""
+HAVE_EDGES=0
+EDGE_TAGS=()
 LINES=()
 IN_FENCE=()
 BODY_TEXT=""
@@ -50,13 +54,14 @@ parse_args() {
   local npos=0 sawflag=0
   while [ $# -gt 0 ]; do
     case "$1" in
-      --invariants|--sections|--mode)
+      --invariants|--sections|--mode|--edges)
         [ $# -ge 2 ] || return 2
         sawflag=1
         case "$1" in
           --invariants) [ "$HAVE_INV" = 0 ] || return 2; HAVE_INV=1; INV_FILE="$2" ;;
           --sections) [ "$HAVE_SEC" = 0 ] || return 2; HAVE_SEC=1; SEC_FILE="$2" ;;
           --mode) [ "$HAVE_MODE" = 0 ] || return 2; HAVE_MODE=1; MODE="$2" ;;
+          --edges) [ "$HAVE_EDGES" = 0 ] || return 2; HAVE_EDGES=1; EDGES_FILE="$2" ;;
         esac
         shift 2
         ;;
@@ -78,6 +83,7 @@ parse_args() {
 }
 
 validate_inputs() {
+  local m j l ws=' 	'
   case "$MODE" in
     plan|bug) ;;
     *) say_err "--mode must be plan or bug, got: $MODE"; return 2 ;;
@@ -97,6 +103,24 @@ validate_inputs() {
   if [ "$HAVE_SEC" = 1 ]; then
     [ -f "$SEC_FILE" ] && [ -r "$SEC_FILE" ] \
       || { say_err "sections file not found: $SEC_FILE"; return 2; }
+  fi
+  if [ "$HAVE_EDGES" = 1 ]; then
+    [ -f "$EDGES_FILE" ] && [ -r "$EDGES_FILE" ] \
+      || { say_err "edges file not found: $EDGES_FILE"; return 2; }
+    read_file_lines "$EDGES_FILE"
+    m=${#RL[@]}
+    j=0
+    while [ "$j" -lt "$m" ]; do
+      l=${RL[$j]}
+      j=$((j + 1))
+      l=${l#"${l%%[!$ws$CR]*}"}
+      l=${l%"${l##*[!$ws$CR]}"}
+      [ -n "$l" ] || continue
+      case "$l" in
+        '#'|[!#]*|'#'*[!A-Za-z0-9]*) say_err "edges file holds a line that is not a tag: $l"; return 2 ;;
+      esac
+      EDGE_TAGS[${#EDGE_TAGS[@]}]=${l#'#'}
+    done
   fi
   return 0
 }
@@ -192,9 +216,41 @@ check_sections() {
   done
 }
 
+# Sets SEC_START to the first line outside a fence equal to the heading, -1
+# when none, and SEC_END to the next "## " line outside a fence after it, else
+# the line count. The section is the lines SEC_START+1 up to SEC_END, which is
+# an empty range when there is no heading.
+section_bounds() {
+  local n=${#LINES[@]} j=0
+  SEC_START=-1
+  SEC_END=0
+  while [ "$j" -lt "$n" ]; do
+    if [ "${IN_FENCE[$j]}" = 0 ]; then
+      if [ "$SEC_START" -lt 0 ]; then
+        [ "${LINES[$j]}" = "$1" ] && { SEC_START=$j; SEC_END=$n; }
+      else
+        case "${LINES[$j]}" in '## '*) SEC_END=$j; break ;; esac
+      fi
+    fi
+    j=$((j + 1))
+  done
+}
+
 check_invariants() {
-  local count i v
+  local count i v j hay where=
   [ "$HAVE_INV" = 1 ] || return 0
+  hay=$BODY_TEXT
+  section_bounds '## Acceptance criteria'
+  if [ "$SEC_START" -ge 0 ]; then
+    hay=
+    j=$((SEC_START + 1))
+    while [ "$j" -lt "$SEC_END" ]; do
+      hay="$hay$NL${LINES[$j]}"
+      j=$((j + 1))
+    done
+    hay=${hay#"$NL"}
+    where=' under "## Acceptance criteria"'
+  fi
   count=$(jq -r '.|length' "$INV_FILE" | tr -d '\r')
   i=0
   while [ "$i" -lt "$count" ]; do
@@ -204,9 +260,9 @@ check_invariants() {
     v=$(jq -j --argjson i "$i" '.[$i].value' "$INV_FILE"; printf x)
     v=${v%x}
     v=${v%"$CR"}
-    case "$BODY_TEXT" in
+    case "$hay" in
       *"$v"*) ;;
-      *) add_finding "invariant: expected value \"$v\", found none" ;;
+      *) add_finding "invariant: expected value \"$v\"$where, found none" ;;
     esac
     i=$((i + 1))
   done
@@ -482,6 +538,82 @@ check_platform_source() {
   add_finding 'platform source: expected a "Platform source:" line, found none'
 }
 
+# Sets TAG to the alphanumeric run after the first "#" in the line that has
+# one, empty when none does.
+first_tag() {
+  local r=$1 c
+  TAG=""
+  while :; do
+    case "$r" in *'#'*) ;; *) return 0 ;; esac
+    r=${r#*'#'}
+    c=${r%"${r#?}"}
+    case "$c" in
+      [A-Za-z0-9]) TAG=${r%%[!A-Za-z0-9]*}; return 0 ;;
+    esac
+  done
+}
+
+check_edges() {
+  local i j k s e=0 tag seen=0 listed
+  local kinds=() tags=() nums=()
+  [ "$HAVE_EDGES" = 1 ] || return 0
+  section_bounds '## Dependencies'
+  i=$((SEC_START + 1))
+  while [ "$i" -lt "$SEC_END" ]; do
+    if [ "${IN_FENCE[$i]}" = 0 ]; then
+      line_label "${LINES[$i]}"
+      tag=""
+      case "$LABEL" in
+        'Depends on #'*)
+          s=${LABEL#'Depends on #'}
+          case "$s" in
+            [A-Za-z0-9]*) tag=${s%%[!A-Za-z0-9]*}; kinds[$e]=D ;;
+          esac
+          ;;
+      esac
+      if [ -z "$tag" ]; then
+        first_tag "$LABEL"
+        tag=$TAG
+        kinds[$e]=S
+      fi
+      if [ -n "$tag" ]; then
+        tags[$e]=$tag
+        nums[$e]=$((i + 1))
+        e=$((e + 1))
+      fi
+    fi
+    i=$((i + 1))
+  done
+  listed=" "
+  j=0
+  while [ "$j" -lt "${#EDGE_TAGS[@]}" ]; do
+    tag=${EDGE_TAGS[$j]}
+    j=$((j + 1))
+    case "$listed" in *" $tag "*) continue ;; esac
+    listed="$listed$tag "
+    seen=0
+    k=0
+    while [ "$k" -lt "$e" ]; do
+      [ "${kinds[$k]}" = D ] && [ "${tags[$k]}" = "$tag" ] && seen=1
+      k=$((k + 1))
+    done
+    [ "$seen" = 1 ] || add_finding "edges: expected a \"Depends on #$tag\" line under \"## Dependencies\", found none"
+  done
+  k=0
+  while [ "$k" -lt "$e" ]; do
+    tag=${tags[$k]}
+    if [ "${kinds[$k]}" = D ]; then
+      case "$listed" in
+        *" $tag "*) ;;
+        *) add_finding "edges: expected no \"Depends on #$tag\" line under \"## Dependencies\", found one" ;;
+      esac
+    else
+      add_finding "edges: expected no \"#$tag\" under \"## Dependencies\" outside a \"Depends on\" line, found it on line ${nums[$k]}"
+    fi
+    k=$((k + 1))
+  done
+}
+
 main() {
   local i
   parse_args "$@" || { say_err "$USAGE"; return 2; }
@@ -493,6 +625,7 @@ main() {
   check_sites_searched
   check_vocabulary
   check_platform_source
+  check_edges
   i=0
   while [ "$i" -lt "${#FINDINGS[@]}" ]; do
     printf '%s\n' "${FINDINGS[$i]}"

@@ -1,0 +1,3 @@
+src/dir./file.md
+src/file.
+src/trailing /file.md

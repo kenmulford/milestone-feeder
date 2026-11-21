@@ -1,0 +1,2 @@
+  - ../x:y: component '..' ends in a space or a dot, so Windows cannot check this path out
+  - ../x:y: component 'x:y' contains ':', a character Windows forbids in a path, so Windows cannot check this path out

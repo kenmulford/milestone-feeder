@@ -21,3 +21,4 @@ root is governed by the project's baked source/UI globs, not restated here.
 - Pages call the backend through the shared API client, never `fetch` directly from a page.
 - User-facing surfaces: show a success/error toast via the shared `useToast()` hook; empty and
   error states are required on every surface.
+- Status endpoints are polled every 5 s by the shared `usePoll()` hook.

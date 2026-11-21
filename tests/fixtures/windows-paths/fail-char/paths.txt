@@ -1,0 +1,7 @@
+src/a<b.md
+src/a>b.md
+src/a:b.md
+src/a"b.md
+src/a|b.md
+src/a?b.md
+src/a*b.md
