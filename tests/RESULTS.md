@@ -28,6 +28,36 @@ What each fixture asserts (the `expected.grader.md` contract, not a fresh execut
 
 `05-reviewer-backends` was **removed in v0.9.0**: its subject (the retired `reviewer` config key + reviewer backends) no longer exists.
 
+## Run record: 2026-11-21 (#557)
+
+**Tree and method.** The procedure under test is `skills/plan/SKILL.md` on `issue/557-plan-check-issue-body` (milestone tip `1b44dff` plus the #557 diff), with Step 4's `scripts/check-issue-body` run from that tree. The architect and issue-author were the installed registered agents (milestone-feeder `1.1.1`). Method, blindness and grading match the `2026-11-21` record below. The 13 scenarios that record ran against `829ca08` were run, not 18 to 20, which grade the bug brief.
+
+**Two runs.** Run 1 covered all 13. It surfaced three defects, each fixed before run 2: a retry re-authored the body from scratch and dropped grounded lines (14), so a retry after a script failure now receives the prior `ISSUE_BODY` and edits only the lines the findings name; the citation check read prose naming the form, `` `path (anchor)` ``, as a citation (11), so a head with neither `/` nor `.` is skipped; and the 01 and 06 keys barred any in-feeder gate, so each now allows the Step 4 check with its one retry. Run 2 re-ran 01, 06, 10, 14 and 15 on the fixed tree. The verdict below is run 2's where one exists.
+
+| # | Scenario | Baseline (`829ca08`) | This run | Change |
+|---|----------|----------|----------|--------|
+| 01 | clean-happy-path | ✅ PASS | ❌ FAIL | worse |
+| 02 | product-gap-parks | ✅ PASS | ✅ PASS | same |
+| 03 | design-resolvable-no-park | ❌ FAIL | ❌ FAIL | same |
+| 04 | no-code-refusal | ⚠️ PARTIAL | ⚠️ PARTIAL | same |
+| 06 | cross-cutting-consistency | ⚠️ PARTIAL | ⚠️ PARTIAL | same |
+| 10 | nested-layout | ❌ FAIL | ❌ FAIL | same |
+| 11 | roadmap-fan-out (plan side only) | ❌ FAIL | ⚠️ PARTIAL | better |
+| 12 | implied-surfaces | ❌ FAIL | ❌ FAIL | same |
+| 12b | implied-surfaces-control | ✅ PASS | ✅ PASS | same |
+| 13 | layer-aware-breakdown | ⚠️ PARTIAL | ⚠️ PARTIAL | same |
+| 14 | config-pointers | ⚠️ PARTIAL | ⚠️ PARTIAL | same |
+| 15 | prose-style | ❌ FAIL | ❌ FAIL | same |
+| 17 | shared-file-ordering | ⚠️ PARTIAL | ⚠️ PARTIAL | same |
+
+**Tally.** 1 better (11), 11 same, 1 worse (01).
+
+**01's regression.** The architect's invariant cited `docs/implied-surfaces.md`, a plugin file outside the consumer repo root, so the Download CSV issue failed the citation check twice and parked. The driver's triage resolves citations against the repo root only and would reject the same citation, so the check is correct. The fix (an invariant's citation must resolve under the consumer repo root) belongs in `agents/architect.md` and is carried by #562; #564's full re-run confirms it.
+
+**Check-caused parks.** A candidate that failed `check-issue-body` twice parked in 15 (run 1), 13, 12, 11 and 01 (run 2). The recurring causes were a `Sites searched:` grep naming `src`, which the fixtures lack, an invariant value not copied verbatim, and a citation anchor matching more than one line.
+
+**Run-to-run variance.** 06 fell to ❌ FAIL in run 1 when the architect raised four product gaps and pre-parked all ten pages, then returned to ⚠️ PARTIAL in run 2 with one gap and one park. Step 3.5 pre-parks before Step 4, so #557 does not touch it.
+
 ## Run record: 2026-11-21
 
 **Tree and dispatch mode.** The procedure under test is `develop` at `829ca08`, executed through the installed milestone-feeder `1.1.1`, whose `skills/` and `agents/` match `829ca08` (`diff -rq` clean, verified 2026-11-21). Fixtures come from the milestone #35 branch at `60dfa21`. Every run dispatched the real registered `milestone-feeder:architect` and `milestone-feeder:issue-author` agents from a per-scenario runner, so this record is the baseline for the fixed-contract brief (`docs/briefs/2026-11-21-fixed-contract-free-content.md`) and measures `829ca08`, not any later change.

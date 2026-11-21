@@ -1,1 +1,1 @@
-Cites `absent.md (x)` and `sub (x)`.
+Cites `absent.md (x)` and `sub/ (x)`.

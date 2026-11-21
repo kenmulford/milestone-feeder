@@ -215,6 +215,10 @@ function Get-LineSpans {
     return , $spans
 }
 
+# A span is a citation candidate only when it ends with ")" and holds " (".
+# Heading forms (a "#" or section sign in the head), a head holding neither "/"
+# nor ".", an empty head or anchor, and "new" are skipped without a finding. The
+# dotless, slashless head skips prose naming the form itself, "path (anchor)".
 function Resolve-Citation {
     param([string]$Span)
     if (-not $Span.EndsWith(')', [StringComparison]::Ordinal)) { return }
@@ -222,6 +226,7 @@ function Resolve-Citation {
     if ($cut -lt 0) { return }
     $head = $Span.Substring(0, $cut)
     if ($head.Length -eq 0 -or $head.Contains('#') -or $head.Contains([string][char]0x00A7)) { return }
+    if (-not ($head.Contains('/') -or $head.Contains('.'))) { return }
     $anchor = $Span.Substring($cut + 2)
     $anchor = $anchor.Substring(0, $anchor.Length - 1)
     if ($anchor.Length -eq 0 -or $anchor -ceq 'new') { return }

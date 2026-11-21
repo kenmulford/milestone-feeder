@@ -17,7 +17,7 @@ bar so nothing drops it.
 
 ## MUST: consistency at scale
 - Every one of the ~10 page-issues carries the COMPLETE, unweakened directive (sortable + filterable EXCEPT the Actions column, pagination literally "30" per page). The directive is drafted consistently across all 10, with the later issues (7–10) checked as hard as the first.
-- There is no in-feeder gate: the feeder DRAFTS each issue to the driver's triage bar rather than auditing the not-yet-created issues itself. A milestone where an issue silently drops or weakens the directive is a FAILURE of the consistency claim.
+- The only in-feeder gate is the Step 4 `check-issue-body` run with its one bounded retry; any other in-feeder gate fails. The feeder DRAFTS each issue to the driver's triage bar rather than auditing the not-yet-created issues itself. A milestone where an issue silently drops or weakens the directive is a FAILURE of the consistency claim.
 
 ## METRIC for this scenario
 Fraction of the 10 issues carrying the **complete, unweakened** directive as drafted

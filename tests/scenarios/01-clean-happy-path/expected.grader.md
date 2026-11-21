@@ -8,7 +8,7 @@ milestone whose issues are drafted to pass the driver's triage clean, with NO pa
 - Dependency edges: the UI action depends on the endpoint; the rate limit depends on the endpoint. Endpoint = Wave 1; the other two = Wave 2.
 - The milestone description encodes the Wave order (§4 template).
 - Each issue body has all four mandatory §4 sections (Summary, Acceptance criteria, Design (recorded, consistent), Dependencies); `Non-goals` is optional and omitted entirely when the issue records no scope boundary. Acceptance criteria include empty/error states (per convention). The UI-action issue records the in-flight-disable + toast convention; the rate-limit issue cites the `RateLimiter` pattern (429 + `Retry-After`).
-- The feeder DRAFTS every issue to pass the driver's triage clean (`GAPS: none` when the driver later triages); no in-feeder gate, no re-author loop.
+- The feeder DRAFTS every issue to pass the driver's triage clean (`GAPS: none` when the driver later triages); the only in-feeder gate is the Step 4 `check-issue-body` run with its one bounded retry; any other in-feeder gate or re-author loop fails.
 - ZERO parks; needs-product-input report absent or "none".
 - Labels: UI action = `ui`; endpoint + rate limit = `logic`. Risk passes on either branch: a `risk:light` / `risk:heavy` label whose level fits the issue, OR no `risk:*` label at all, which is the correct return when the author was not confident of the level (`agents/issue-author.md` The contract, clause 5). Only a risk label whose level contradicts the issue fails; a missing one never does.
 

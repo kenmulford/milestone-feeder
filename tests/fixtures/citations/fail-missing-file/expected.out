@@ -1,2 +1,2 @@
 citation: expected 1 line matching "x" in absent.md, found 0 (no readable file)
-citation: expected 1 line matching "x" in sub, found 0 (no readable file)
+citation: expected 1 line matching "x" in sub/, found 0 (no readable file)

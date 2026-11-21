@@ -222,14 +222,16 @@ line_spans() {
 }
 
 # A span is a citation candidate only when it ends with ")" and holds " (".
-# Heading forms (a "#" or "§" in the head), an empty head or anchor, and "new"
-# are skipped without a finding.
+# Heading forms (a "#" or "§" in the head), a head holding neither "/" nor ".",
+# an empty head or anchor, and "new" are skipped without a finding. The
+# dotless, slashless head skips prose naming the form itself, "path (anchor)".
 resolve_citation() {
   local span=$1 head anchor file hits=0 i=0 n
   case "$span" in *')') ;; *) return 0 ;; esac
   case "$span" in *' ('*) ;; *) return 0 ;; esac
   head=${span%%' ('*}
   case "$head" in ''|*'#'*|*'§'*) return 0 ;; esac
+  case "$head" in */*|*.*) ;; *) return 0 ;; esac
   anchor=${span#*' ('}
   anchor=${anchor%')'}
   case "$anchor" in ''|new) return 0 ;; esac
