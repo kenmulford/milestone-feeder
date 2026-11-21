@@ -219,8 +219,23 @@ check_sections() {
 }
 
 check_invariants() {
-  local count i v
+  local count i v n j start=-1 section=
   [ "$HAVE_INV" = 1 ] || return 0
+  n=${#LINES[@]}
+  j=0
+  while [ "$j" -lt "$n" ]; do
+    if [ "${IN_FENCE[$j]}" = 0 ]; then
+      if [ "$start" -lt 0 ]; then
+        [ "${LINES[$j]}" = '## Acceptance criteria' ] && start=$j
+      else
+        case "${LINES[$j]}" in '## '*) break ;; esac
+      fi
+    fi
+    if [ "$start" -ge 0 ] && [ "$j" -gt "$start" ]; then
+      if [ "$j" -eq $((start + 1)) ]; then section=${LINES[$j]}; else section="$section$NL${LINES[$j]}"; fi
+    fi
+    j=$((j + 1))
+  done
   count=$(jq -r '.|length' "$INV_FILE" | tr -d '\r')
   i=0
   while [ "$i" -lt "$count" ]; do
@@ -230,10 +245,17 @@ check_invariants() {
     v=$(jq -j --argjson i "$i" '.[$i].value' "$INV_FILE"; printf x)
     v=${v%x}
     v=${v%"$CR"}
-    case "$BODY_TEXT" in
-      *"$v"*) ;;
-      *) add_finding "invariant: expected value \"$v\", found none" ;;
-    esac
+    if [ "$start" -ge 0 ]; then
+      case "$section" in
+        *"$v"*) ;;
+        *) add_finding "invariant: expected value \"$v\" under \"## Acceptance criteria\", found none" ;;
+      esac
+    else
+      case "$BODY_TEXT" in
+        *"$v"*) ;;
+        *) add_finding "invariant: expected value \"$v\", found none" ;;
+      esac
+    fi
     i=$((i + 1))
   done
 }

@@ -227,9 +227,27 @@ function Test-Sections {
 
 function Test-Invariants {
     if (-not $script:HaveInv) { return }
+    $start = -1
+    $section = [System.Collections.Generic.List[string]]::new()
+    for ($i = 0; $i -lt $script:Lines.Count; $i++) {
+        if (-not $script:InFence[$i]) {
+            if ($start -lt 0) {
+                if ($script:Lines[$i] -ceq '## Acceptance criteria') { $start = $i }
+                continue
+            }
+            if ($script:Lines[$i].StartsWith('## ', [StringComparison]::Ordinal)) { break }
+        }
+        if ($start -ge 0) { $section.Add($script:Lines[$i]) }
+    }
+    $haystack = $script:BodyText
+    $where = ''
+    if ($start -ge 0) {
+        $haystack = [string]::Join("`n", $section)
+        $where = ' under "## Acceptance criteria"'
+    }
     foreach ($v in $script:InvValues) {
-        if ($script:BodyText.IndexOf($v, [StringComparison]::Ordinal) -lt 0) {
-            $script:Findings.Add("invariant: expected value `"$v`", found none")
+        if ($haystack.IndexOf($v, [StringComparison]::Ordinal) -lt 0) {
+            $script:Findings.Add("invariant: expected value `"$v`"$where, found none")
         }
     }
 }
