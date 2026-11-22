@@ -541,8 +541,19 @@ function Test-EditsNamesPath {
         $tok = $raw.Trim($strip)
         if ($tok.EndsWith('.', [StringComparison]::Ordinal)) { $tok = $tok.Substring(0, $tok.Length - 1) }
         $tok = $tok.Trim($strip)
-        if ($tok.Contains('/')) { return $true }
-        if ([regex]::IsMatch($tok, '^[A-Za-z0-9_.-]+\.[A-Za-z0-9]+$', $opts)) { return $true }
+        if ($tok.Contains('/')) {
+            foreach ($seg in $tok.Split('/')) {
+                if ($seg.Length -eq 0) { continue }
+                $word = [regex]::Replace($seg, '["'':*_]', '')
+                if (-not [regex]::IsMatch($word, '^(?i:n|a|o|na|none|tbd|w|and|or)$', $opts)) { return $true }
+            }
+            continue
+        }
+        if ([regex]::IsMatch($tok, '^[A-Za-z0-9_.-]*\.[A-Za-z0-9]+$', $opts)) {
+            if ([regex]::IsMatch($tok, '^[vV]?[0-9]+(\.[0-9]+)+$', $opts)) { continue }
+            if ([regex]::IsMatch($tok, '^(?i:e\.g|i\.e)$', $opts)) { continue }
+            return $true
+        }
     }
     return $false
 }
@@ -554,7 +565,7 @@ function Test-Edits {
         $label = Get-LineLabel $script:Lines[$i]
         if (-not $label.StartsWith('Edits:', [StringComparison]::Ordinal)) { continue }
         if (-not (Test-EditsNamesPath $label.Substring(6))) {
-            $script:Findings.Add('Edits: line names no file: omit the line when the candidate edits no existing file')
+            $script:Findings.Add("Edits: expected a path on the `"Edits:`" line (omit the line when the candidate edits no existing file), found none on line $($i + 1)")
         }
     }
 }

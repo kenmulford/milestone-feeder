@@ -633,25 +633,58 @@ strip_edit_punct() {
   done
 }
 
+# Returns 0 when $1 is a placeholder word, ASCII case-insensitive.
+edit_placeholder_word() {
+  case "$1" in
+    [Nn]|[Aa]|[Oo]|[Nn][Aa]|[Nn][Oo][Nn][Ee]|[Tt][Bb][Dd]|[Ww]|[Aa][Nn][Dd]|[Oo][Rr]) return 0 ;;
+  esac
+  return 1
+}
+
+# Returns 0 when TOK is version-like (v1.2, 1.2.3) or e.g or i.e, which are
+# dotted but name no file.
+edit_not_file_shape() {
+  local v=${TOK#[vV]}
+  case "$TOK" in [Ee].[Gg]|[Ii].[Ee]) return 0 ;; esac
+  case "$v" in
+    ''|*[!0-9.]*|.*|*.|*..*) return 1 ;;
+    *.*) return 0 ;;
+  esac
+  return 1
+}
+
 # Returns 0 when a token of the text after "Edits:" names a path, 1 otherwise.
 # Tokens split on space and tab only, so a "*" token is never glob-expanded.
 edits_names_path() {
   local -a toks
-  local tok h t
+  local tok h t rest seg
   IFS=$' \t' read -r -a toks <<<"$1"
   [ ${#toks[@]} -eq 0 ] && return 1
   for tok in "${toks[@]}"; do
     TOK=$tok; strip_edit_punct
     TOK=${TOK%.}; strip_edit_punct
     tok=$TOK
-    case "$tok" in */*) return 0 ;; esac
+    case "$tok" in
+      */*)
+        rest=$tok
+        while :; do
+          seg=${rest%%/*}
+          if [ -n "$seg" ]; then
+            seg=${seg//[\"\':*_]/}
+            edit_placeholder_word "$seg" || return 0
+          fi
+          case "$rest" in */*) rest=${rest#*/} ;; *) break ;; esac
+        done
+        continue
+        ;;
+    esac
     case "$tok" in *.*) ;; *) continue ;; esac
     t=${tok##*.}
     h=${tok%.*}
-    [ -n "$t" ] && [ -n "$h" ] || continue
+    [ -n "$t" ] || continue
     case "$t" in *[!A-Za-z0-9]*) continue ;; esac
     case "$h" in *[!A-Za-z0-9_.-]*) continue ;; esac
-    return 0
+    edit_not_file_shape || return 0
   done
   return 1
 }
@@ -665,7 +698,7 @@ check_edits() {
       line_label "${LINES[$i]}"
       case "$LABEL" in
         'Edits:'*)
-          edits_names_path "${LABEL#Edits:}" || add_finding 'Edits: line names no file: omit the line when the candidate edits no existing file'
+          edits_names_path "${LABEL#Edits:}" || add_finding "Edits: expected a path on the \"Edits:\" line (omit the line when the candidate edits no existing file), found none on line $((i + 1))"
           ;;
       esac
     fi
