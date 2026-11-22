@@ -3,6 +3,71 @@
 Release notes for milestone-feeder. Each tagged release is also published on the
 [GitHub Releases page](https://github.com/kenmulford/milestone-feeder/releases).
 
+## v1.2.2: gradable scenarios at a lower acceptance cost
+
+**Theme:** Acceptance stand-ins run on the model their agent file declares, scenario keys assert structure instead of byte equality over agent text, and every asserted alternate ships a committed input, so a re-run costs less and a verdict grades the feeder rather than the fixture.
+
+### ✨ Gradable scenarios
+
+| Issue | PR | What |
+|---|---|---|
+| #587 Run acceptance stand-ins on their declared model and commit the grader brief template | #593 | Each stand-in dispatch passes the `model` its agent file's frontmatter declares, and `tests/README.md` carries `## Grader brief (neutral template)`, which every grader follows. |
+| #588 Fail an issue body whose Edits line names no file in check-issue-body | #593 | Both `check-issue-body` twins report `Edits: expected a path on the "Edits:" line ..., found none on line N` for an `Edits:` line in the Design section holding only placeholders such as `none`, `n/a`, `TBD/none` or `e.g.`. |
+| #589 Make scenario fixture inputs match the paths and conventions their keys cite | #593 | 14 and 15 move `src/` to the scenario root so `sourceGlobs src/**` matches, 17 ships the `src/` stubs its key cites, and 13 states its request identity. |
+| #590 Replace byte-for-byte clauses over agent text with structural assertions in scenario keys 12, 12b, 13 and 14 | #593 | Each clause names the lines or blocks it requires present or absent. Byte equality stays only over script output, such as 17's `build-order` Waves. |
+| #591 Commit an input for every asserted alternate in scenarios 13, 14 and 17 and run each one | #593 | Each alternate has `alternate/project/` (and 17 its own `src/`), and the README runs one runner per committed alternate. An omitted alternate caps the verdict at PARTIAL. |
+| #592 Re-run scenarios 13, 14 and 17 with their alternates and record the run with per-turn token use | #593 | `tests/RESULTS.md` records 17 PASS, 13 PARTIAL and 14 FAIL, with token sums per group. The acceptance rule failed on two key defects, not agent regressions. |
+| none (simplify pass and milestone-end review) | #593 | `tests/README.md` states the runner input set once, and the `Edits:` check rejects version numbers, single-letter abbreviations and slash placeholders. |
+
+### Consumer notes (upgrading from v1.2.1)
+
+- **No schema changes** to `.milestone-config/feeder.json` or `.milestone-config/driver.json`.
+- An issue body whose `Edits:` line names no file now fails `plan` Step 4 and takes the one author retry.
+
+### ⚖️ Post-run audit trail
+
+Judgment-call PRs: none.
+
+- The acceptance rule failed with no regression. 13's CONTROL names per-layer tags that a no-layering cut never produces, and 14's MUST (d) asks for `src/ui/Button.tsx` where `agents/issue-author.md` permits a `conventions.md` section reference.
+- The `Edits:` check judges paths by shape, so it still rejects `Makefile` and `**README.md**`. Checking that the path exists under the repo root is the fix.
+
+## v1.2.1: scenario and gate repair
+
+**Theme:** Scenario keys grade only clauses their inputs make satisfiable, and `check-issue-body` now checks where each invariant sits and what `## Dependencies` lists, so a FAIL names a feeder failure and an issue body cannot carry another issue's edges.
+
+### ✨ Scenario and gate repair
+
+| Issue | PR | What |
+|---|---|---|
+| #573 Make scenarios 03, 10, 14, 15 and 17 grade only clauses their inputs make satisfiable | #585 | 03's brief names the toggle set, 10's conventions state the 5 s `usePoll()` interval, 14 and 15 ship the cited `project/src/` files, and 17's key grades the edges `build-order` derives for the run's cut instead of one fixed Wave order. |
+| #574 Split a candidate that crosses stated layers into one candidate per layer in architect clause 9 | #585 | When the project states a layering convention, the architect splits a candidate whose work crosses layers into one candidate per layer, each with its own `layer`, ordered by layer edges. |
+| #575 Fail validate-plugin-structure on any tracked path Windows cannot check out | #585 | `validate-plugin-structure.py` fails on a tracked path with a reserved basename (`CON`, `NUL`, `COM1` to `COM9` and the rest), a character from `<>:"\|?*`, or a component ending in a space or dot. Outside a git work tree it skips that check with a WARN. |
+| #576 Add an --edges stage to check-issue-body that checks ## Dependencies against the handed edges | #585 | `check-issue-body --edges <file>` requires one `Depends on #<tag>` line per listed tag and fails on an unlisted tag or any other line under `## Dependencies` naming a tag. Edges-file lines are trimmed of space, tab and CR. |
+| #577 State in issue-author that the Sites searched pattern holds no backtick | #585 | The issue-author's clause 3 and Output format say the `Sites searched:` pattern holds no backtick, because a backtick closes the code span. |
+| #578 Save the architect's return block to .milestone-feeder/architect-<slug>.md in plan Step 3 | #585 | `plan` writes the architect's return byte for byte before Step 3.5, appends incremental returns under `## Incremental dispatch <n>`, and a run resumed after compaction reads the file instead of re-dispatching. |
+| #579 Record each handed-in invariant as an acceptance criterion and check that it sits there | #585 | The issue-author records each invariant verbatim as an `## Acceptance criteria` line, and `check-issue-body --invariants` requires it there when the body has that heading. |
+| #580 Ship the default issue-body sections file and pass it in plan Step 4 when no template resolves | #585 | `scripts/issue-body-sections.txt` holds the four required SPEC §4 headings. `plan` passes it when no consumer template resolves, and `check-contract-strings.sh` fails when it, SPEC §4 and either twin's built-in list differ. |
+| #581 Walk only EDGES in the Step 5 drop pass and strip parked-tag Depends on lines from survivors | #585 | A candidate that only shares a file with a parked one survives, and `plan` deletes each survivor's `Depends on` line naming a parked or dropped tag. |
+| #582 Run check-issue-body on the corrected body in remediate before apply-body | #585 | `remediate` checks the corrected body and the live body, blocks only on findings the correction introduced, re-dispatches once on exit 1, and stops with no write on a second failure or exit 2. |
+| #583 Write each candidate's edges file in plan Step 4 and pass it to check-issue-body on every check | #585 | `plan` Step 4 writes `.milestone-feeder/check-<tag>-edges.txt` and passes `--edges` on every check whose sections list holds `## Dependencies`. |
+| #584 Re-run scenarios 03, 06, 10, 13, 14, 15 and 17 blind and record them in tests/RESULTS.md | #585 | `tests/RESULTS.md` records 4 PASS against #564's 0, 5 better, 2 the same, 0 worse. The acceptance rule failed: 13, 14 and 17 grade PARTIAL. |
+| none (simplify pass and milestone-end review) | #585 | Both `check-issue-body` twins share one section-bounds helper, and `--paths-file` runs only the Windows-path check. SPEC.md and the issue-author state the new invariant and edges rules. |
+
+### Consumer notes (upgrading from v1.2.0)
+
+- **No schema changes** to `.milestone-config/feeder.json` or `.milestone-config/driver.json`.
+- An issue body whose `## Dependencies` lists another issue's edge now fails `plan` Step 4 and takes the one author retry.
+- An invariant found only in a Design section now fails `check-issue-body` when the body has `## Acceptance criteria`.
+- `plan` leaves `.milestone-feeder/architect-<slug>.md` and `check-<tag>-edges.txt` in its gitignored scratch dir.
+
+### ⚖️ Post-run audit trail
+
+Judgment-call PRs: none.
+
+- The acceptance rule failed with no regression. 13 parks its controllers on a sign-in identity gap its fixture never states, 14's key asks for a byte-for-byte match across two independent runs, and 17's #A carries an `Edits: none` line the key forbids.
+- `validate-plugin-structure.py` check 10 does not catch `COM0`, `LPT0`, superscript `COM`/`LPT` names, `CONIN$`, a stem ending in a space, or control characters.
+- `skills/remediate/SKILL.md` is at 3444 of its 3450 ceiling, and `skills/plan/SKILL.md` at 9305 of 9500.
+
 ## v1.2.0: fixed contract, free content
 
 **Theme:** `plan` derives the build order with `scripts/build-order` and checks every authored issue body with `scripts/check-issue-body`, so those rules run as tested code instead of agent prose, and the prose they replaced is cut from `plan` and four agents.

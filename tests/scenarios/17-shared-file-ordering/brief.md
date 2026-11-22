@@ -15,6 +15,8 @@ In scope:
   export is kept for 30 days.
 - A URL-safe filename for each finished export, derived from the report title.
 - Telemetry events for the export lifecycle (queued, started, finished, failed).
+- Email the user when an export finishes. Whether the email attaches the CSV or links to the export is not decided.
+- A nightly purge job deletes finished exports older than 30 days.
 
 Out of scope:
 - Editing, re-running, or deleting an export.

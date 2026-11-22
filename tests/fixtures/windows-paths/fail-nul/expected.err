@@ -1,0 +1,7 @@
+  - src/nul.bin: component 'nul.bin' uses the Windows reserved device name NUL, so Windows cannot check this path out
+  - NUL.tar.gz: component 'NUL.tar.gz' uses the Windows reserved device name NUL, so Windows cannot check this path out
+  - aux/readme.md: component 'aux' uses the Windows reserved device name AUX, so Windows cannot check this path out
+  - docs/Con: component 'Con' uses the Windows reserved device name CON, so Windows cannot check this path out
+  - PRN.md: component 'PRN.md' uses the Windows reserved device name PRN, so Windows cannot check this path out
+  - com1: component 'com1' uses the Windows reserved device name COM1, so Windows cannot check this path out
+  - lpt9.txt: component 'lpt9.txt' uses the Windows reserved device name LPT9, so Windows cannot check this path out

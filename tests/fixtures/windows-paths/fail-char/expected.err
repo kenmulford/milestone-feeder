@@ -1,0 +1,7 @@
+  - src/a<b.md: component 'a<b.md' contains '<', a character Windows forbids in a path, so Windows cannot check this path out
+  - src/a>b.md: component 'a>b.md' contains '>', a character Windows forbids in a path, so Windows cannot check this path out
+  - src/a:b.md: component 'a:b.md' contains ':', a character Windows forbids in a path, so Windows cannot check this path out
+  - src/a"b.md: component 'a"b.md' contains '"', a character Windows forbids in a path, so Windows cannot check this path out
+  - src/a|b.md: component 'a|b.md' contains '|', a character Windows forbids in a path, so Windows cannot check this path out
+  - src/a?b.md: component 'a?b.md' contains '?', a character Windows forbids in a path, so Windows cannot check this path out
+  - src/a*b.md: component 'a*b.md' contains '*', a character Windows forbids in a path, so Windows cannot check this path out

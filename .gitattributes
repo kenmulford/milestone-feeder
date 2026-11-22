@@ -18,3 +18,6 @@
 # The build-order expected files are compared byte for byte against LF output,
 # so they stay LF in the working tree even on Windows (core.autocrlf=true).
 tests/fixtures/build-order/** text eol=lf
+
+# This edges file carries CRLF and a trailing space on purpose; the check trims both.
+tests/fixtures/check-issue-body/pass-edges-whitespace/edges.txt -text

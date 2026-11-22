@@ -70,14 +70,17 @@
 
 ## 5. The section check runs on every body
 
-**Evidence:** `skills/plan/SKILL.md` Step 4 passes `--sections <file>` "only when a template resolved". A body authored to the SPEC §4 default template is never checked for its five headings: `## Summary`, `## Acceptance criteria`, `## Non-goals`, `## Design (recorded, consistent)`, `## Dependencies`.
+**Evidence:** `skills/plan/SKILL.md` Step 4 passes `--sections <file>` "only when a template resolved". Without it, each `check-issue-body` twin falls back to its own hard-coded list of the four required SPEC §4 headings: `## Summary`, `## Acceptance criteria`, `## Design (recorded, consistent)`, `## Dependencies`. `## Non-goals` is optional, because SPEC §4 omits it "when the issue records no scope boundary". The list has three copies (SPEC and both twins), and nothing fails when they drift.
 
 **Work:**
-- Ship `scripts/issue-body-sections.txt` with those five headings, one per line.
+- Ship `scripts/issue-body-sections.txt` with those four required headings, one per line.
 - Step 4 passes it as `--sections` when no consumer template resolves.
-- `scripts/check-contract-strings.sh` fails when the file and the SPEC §4 Issue body template headings differ.
+- `scripts/check-contract-strings.sh` fails when the file, the SPEC §4 required headings, and either twin's built-in list differ.
 
-**Acceptance:** a default-template body that lacks `## Non-goals` makes `check-issue-body` exit 1.
+**Acceptance:**
+- A default-template body that lacks `## Dependencies` makes `check-issue-body` exit 1 with `--sections scripts/issue-body-sections.txt`.
+- A body that omits `## Non-goals` passes.
+- Editing one twin's built-in list fails `scripts/check-contract-strings.sh`.
 
 ## 6. remediate checks the body it writes
 
@@ -105,3 +108,33 @@
 Re-run scenarios 03, 06, 10, 13, 14, 15 and 17 once each, blind, and record them in `tests/RESULTS.md` against the #564 record. The other scenarios grade rules this brief does not touch. Estimate: about 1.8M subagent tokens, from the #564 runner-plus-grader cost of those seven.
 
 The rule: none of the seven grades worse than #564, and each of 03, 10, 13, 14, 15 and 17 grades PASS.
+
+---
+
+## 8. The check reads `## Dependencies` against the handed edges
+
+**Evidence:** `scripts/check-issue-body` runs six stages (sections, invariants, citations, sites searched, vocabulary, platform source), and none reads `## Dependencies`. On this brief's own plan run, #E's body listed three edges of other issues (`#F depends_on #E`, `#H depends_on #E`, `#D after #E`) under its own `## Dependencies` and exited 0. The driver's triage reads each line there as an edge of that issue.
+
+**Work:**
+- `scripts/check-issue-body.{sh,ps1}` gains `--edges <file>`: one tag this issue depends on per line (`#A`), from the `EDGES` and `after` edges whose first tag is this issue. An empty file means the issue depends on nothing.
+- With `--edges`, the stage requires one `Depends on #<tag>` line under `## Dependencies` for each listed tag, and fails on a `Depends on` line for an unlisted tag and on any other line in that section that names a `#<tag>`.
+- `skills/plan/SKILL.md` Step 4 writes `check-<tag>-edges.txt` and passes it on every check. `remediate` passes no `--edges`, because it has no handed edges.
+- Fixtures: an unlisted tag exits 1, a listed tag with no line exits 1, a downstream edge written as `#F depends_on #E` exits 1, and the matching set exits 0.
+
+**Acceptance:** the #E body from this plan run, checked with an empty `--edges` file, exits 1.
+
+## 9. The `Sites searched:` pattern holds no backtick
+
+**Evidence:** `agents/issue-author.md` clause 3 puts the search in one code span. On this brief's plan run, 2 of 8 first returns (#B, #D) put a backtick inside the grep pattern, so the span closed early and `check-issue-body` read a truncated command. Both took a retry.
+
+**Work:** clause 3 and the `Sites searched:` line in the Output format say the pattern holds no backtick, because a backtick closes the code span.
+
+**Acceptance:** a body whose `Sites searched:` pattern holds a backtick still exits 1, and the rule is stated in both places.
+
+## 10. `plan` saves the architect's return
+
+**Evidence:** `skills/plan/SKILL.md` Step 3 captures the architect's return block in the run's context only. On this brief's plan run, the context compacted between Step 3 and Step 4, and the return had to be recovered from the session transcript.
+
+**Work:** Step 3 writes the return block byte for byte to `.milestone-feeder/architect-<slug>.md` before Step 3.5. A full dispatch overwrites the file, and an incremental dispatch appends its return under `## Incremental dispatch <n>`. A run that resumes after compaction reads the file instead of re-dispatching.
+
+**Acceptance:** after Step 3 the file holds the return byte for byte, and Step 4's candidate fields match it.

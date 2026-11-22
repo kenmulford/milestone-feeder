@@ -37,36 +37,39 @@ endpoint reads the `exports` table the pipeline's migration adds).
 `EDGES` **may** also carry one telemetry edge (`#B depends_on #E` or `#C depends_on #E`),
 grounded in `project/conventions.md#Registries`: every event name is declared in
 `src/telemetry/events.ts` before it is emitted. Its presence or absence changes no Wave
-assertion below (#E has no dependency of its own and stays in Wave 1 either way).
+assertion below (#E has no dependency of its own and stays in its concrete-edge Wave either way).
 
-Wave order under the concrete edges alone: Wave 1 `#A, #E` · Wave 2 `#B` · Wave 3 `#C, #D`.
-**#C and #D share Wave 3 and both edit `src/routes/index.ts`**: that collision is the
-defect this scenario exists to catch.
+No concrete edge relates the `POST /exports` and `GET /exports` candidates directly, though
+both edit `src/routes/index.ts` (in the reference cut both depend on #B only and share a
+Wave): that collision is the defect this scenario exists to catch.
+
+The brief's last two in-scope items add two candidates, tags not fixed. The export-finished
+email notifier parks at Step 3.5, because whether the email attaches the CSV or links to the
+export is a product gap with no conventional default. The nightly purge job survives. Both
+register in `src/app/modules.ts` (`project/conventions.md#Registries`), and no `depends_on`
+edge joins them.
 
 ---
 
-## MUST: (a) two candidates editing the same path, no other relation, land in successive Waves  (AC2, AC3)
+## MUST: (a) two candidates editing the same path, no direct edge relating them, get the derived `after` edge  (AC2, AC3)
 
-- #C and #D both carry `src/routes/index.ts` in `edits:`, and **no** clause 3 edge relates
-  the pair (neither consumes an artifact the other introduces; each depends on #B only).
-  The project states no layering convention, so no clause 9 edge relates them either.
-- `plan` derives exactly one ordering edge for the pair, running `scripts/build-order` over the
-  Step 4 set (the architect returns no `after` edge, `agents/architect.md` clause 11), in the
-  clause 11 shape. Direction: the sort over clause 3 and clause 9 edges alone puts #C and
-  #D in the **same** Wave (both depend on #B, nothing else relates them), so the tie breaks
-  on list size: **`#D` first**, its `edits:` list being the smaller. The reason **names the
-  shared path**: `#C after #D - edits: src/routes/index.ts`.
-- #C's list is the larger **independent of where the queue job lands**: the in-flight cap
-  makes `POST /exports` read a new config key, which `project/conventions.md#Registries`
-  puts in `src/config/defaults.ts`. #C therefore carries at least `src/routes/index.ts` and
-  `src/config/defaults.ts` against #D's single path.
-- Clause 4's topological sort consumes it like any other edge, so the two land in
-  **successive** Waves: **Wave 3 `#D`**, **Wave 4 `#C`**. The full order is Wave 1 `#A, #E`
-  · Wave 2 `#B` · Wave 3 `#D` · Wave 4 `#C`.
-- **The load-bearing check:** the edge exists at all. Nothing in the artifact-reference
-  heuristic relates #C to #D; only the intersecting `edits:` lists do. Its presence is the
-  proof that the order reflects the shared file, not only the artifacts one candidate
-  introduces.
+1. Pairs: every pair whose `edits:` lists intersect and that no direct clause 3 or clause 9
+   edge relates. A transitive path does not suppress the edge.
+2. Edges: `plan` carries, per pair, the edge `scripts/build-order` emits for the run's Step 4
+   candidates and `EDGES`, in the clause 11 shape `#L after #F - edits: <shared paths>`.
+   Direction: the earlier concrete-edge Wave first, then the smaller `edits:` list, then the
+   earlier tag.
+3. Waves: the plan's Wave lines are the ones `scripts/build-order` prints for that input, and
+   no Wave holds two candidates whose `edits:` lists intersect.
+4. Load-bearing: the `POST /exports` and `GET /exports` candidates both carry
+   `src/routes/index.ts` (`project/conventions.md#Registries` binds every HTTP path there);
+   with no direct edge between them, the edge between them names `src/routes/index.ts`. The
+   edge existing at all is the proof: nothing in the artifact-reference heuristic relates the
+   two, only the intersecting `edits:` lists do.
+5. Reference-cut instance, when the run's cut matches the table: `#C after #D - edits:
+   src/routes/index.ts`, #D first on list size, because #C's list is the larger independent
+   of where the queue job lands (the in-flight cap reads a config key that
+   `project/conventions.md#Registries` puts in `src/config/defaults.ts`).
 
 ## MUST: (b) a clause 3 edge already relating the pair orders it  (AC2)
 
@@ -81,10 +84,9 @@ defect this scenario exists to catch.
 
 ## MUST: (c) disjoint `edits:` lists produce no edge and no Wave change  (AC2, AC3)
 
-- #E's `edits:` list (`src/telemetry/events.ts`) intersects no other candidate's, and #A
-  carries no `edits:` field at all. **No `after` edge names #A or #E.**
-- #A and #E stay **parallel in Wave 1**, exactly as the concrete-edge breakdown places
-  them. A candidate with no shared file is ordered by its concrete edges alone. An optional
+- A candidate whose `edits:` list intersects no other candidate's, or that carries no
+  `edits:` field, is named by no `after` edge and sits in the Wave its concrete edges alone
+  give it. In the reference cut these are #A and #E. An optional
   telemetry `depends_on #E` edge does not move #E: it has no dependency of its own.
 - Every non-overlapping pair is treated the same way: the `after` edge is emitted
   **pairwise over overlapping pairs only** (here #C/#D), never over the candidate set at
@@ -129,8 +131,9 @@ defect this scenario exists to catch.
   produce, byte-for-byte:
   - **No `after` edge is emitted.** The edge set `plan` derives carries the three named clause 3
     edges, may also carry the telemetry `depends_on #E` edge, and carries no clause 11 edge.
-  - The Wave order is Wave 1 `#A, #E` · Wave 2 `#B` · **Wave 3 `#C, #D` (parallel)**: #C
-    and #D are back in one Wave, because no shared file separates them.
+  - The Wave lines are the ones `scripts/build-order` prints for the run's cut with no
+    `after` edge derived, the concrete-edge Wave order. Where those edges place the
+    `POST /exports` and `GET /exports` candidates in one Wave, they share it.
   - Candidates still carry their `edits:` fields where they modify an existing file. The
     byte-for-byte claim binds the derived edge set and the Wave order, never `CANDIDATES`: the field is
     emitted; only the edge is absent.
@@ -142,9 +145,11 @@ defect this scenario exists to catch.
 - Every candidate that modifies an existing file carries an `edits:` list, every path in
   it declared to exist (record which candidates carried one and whether every path was
   grounded).
-- The `after` edge `#C after #D - edits: src/routes/index.ts` present, its reason naming
-  the shared path (yes/no): the shared-file-collision proof.
-- The Wave order places #C and #D in successive Waves, #C last (yes/no).
+- Every `after` edge `scripts/build-order` derives for the run's cut present, each naming
+  its shared paths, the `POST /exports`/`GET /exports` edge included when no direct edge
+  relates them (yes/no): the shared-file-collision proof.
+- The Wave lines match `scripts/build-order` output for the run's cut, and no Wave holds two
+  candidates whose `edits:` lists intersect (yes/no).
 - No `after` edge emitted for the #B/#C pair, which a clause 3 edge already relates
   (yes/no).
 - `src/jobs/manifest.ts` in no `edits:` list and introduced by no candidate, the export job
@@ -152,8 +157,8 @@ defect this scenario exists to catch.
   (yes/no).
 - Each surviving affected issue body carries an `Edits:` line in its `## Design` block, and
   #A carries none (yes/no).
-- CONTROL: the disjoint-`edits:` alternate emits no `after` edge, returns #C and #D to one
-  parallel Wave, and errors on nothing (yes/no).
+- CONTROL: the disjoint-`edits:` alternate emits no `after` edge, keeps the concrete-edge
+  Wave order, and errors on nothing (yes/no).
 
 ## FAIL if
 
@@ -168,10 +173,15 @@ defect this scenario exists to catch.
 - The `edits:` list never reaches the issue body (no `Edits:` line in the `## Design` block
   of a surviving affected issue), or the author invents a **new §4 section** for it instead
   of recording it in the existing Design block.
-- #C and #D stay in the **same Wave** despite both editing `src/routes/index.ts`, i.e. the
-  topological sort ignored the `after` edge.
-- The CONTROL (disjoint) alternate nonetheless emits an `after` edge, splits #C and #D
-  across Waves, or errors instead of producing the concrete-edge order.
+- Two candidates whose `edits:` lists intersect share a Wave, i.e. the topological sort
+  ignored an `after` edge.
+- The CONTROL (disjoint) alternate nonetheless emits an `after` edge, moves a candidate
+  off its concrete-edge Wave, or errors instead of producing the concrete-edge order.
+- The nightly purge job candidate is dropped or parked, though no `depends_on` edge joins it
+  to the parked notifier.
+- The purge job's issue body carries a `Depends on` line naming the notifier's tag, or names
+  that tag anywhere.
+- The email notifier is authored as a buildable issue or named in a Wave line.
 
 ## Disabled / edge: bash/pwsh parity
 

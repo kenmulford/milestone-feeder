@@ -11,9 +11,9 @@ brief already yields an implied candidate).
 
 The claim under test: when a brief names no capability and introduces no new
 entity, the architect's clause-8 implied-surfaces consult (`agents/architect.md`
-clause 8) is a genuine no-op. Zero candidates carry `disposition: implied`, no
-`[implied - review / trim / augment]` marker is rendered, and `plan` never fires
-the anti-fixation prompt. Plan behaves byte-for-byte as today.
+clause 8) is a genuine no-op. Zero candidates carry `disposition: implied`, zero
+occurrences of `[implied - review / trim / augment]` appear in the plan file's
+`## Issues`, and the plan file does not contain `this is a starting set for YOUR app - what's missing?`.
 
 This is a **plan-side, preview-only** scenario (zero GitHub writes), mirroring
 scenario 12's own execution model.
