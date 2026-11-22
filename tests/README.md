@@ -36,8 +36,9 @@ writes. CI runs both legs on every pull request (`hook regression tests`).
 ## The one rule that makes the metric honest
 
 The scenario **runner never sees `expected.grader.md`**: it is **not part of the runner
-input set**. The runner input set is exactly `{ brief.md, project/, feeder-env.md }`; the
-runner runs the brief blind on those inputs and the plan procedure alone. A separate
+input set**. The runner input set is exactly `{ brief.md, project/, feeder-env.md }`,
+plus `src/` when the scenario has one; the runner runs the brief blind on those inputs and
+the plan procedure alone. A separate
 **grader** compares observed output against `expected.grader.md`. No teaching to the test.
 
 ## Runner brief (neutral template)
@@ -46,8 +47,8 @@ A runner is dispatched with this brief, which is reusable across scenarios and
 deliberately neutral so the inputs never bias the architect:
 
 > You are the `plan` runner for one scenario. Your **only** inputs are the scenario's
-> runner input set: `{ brief.md, project/, feeder-env.md }`. Follow `skills/plan/SKILL.md`
-> on those inputs and the plan procedure alone.
+> runner input set: `{ brief.md, project/, feeder-env.md }`, plus `src/` when the scenario has one.
+> Follow `skills/plan/SKILL.md` on those inputs and the plan procedure alone.
 >
 > **Never open `expected.grader.md`**: not this scenario's, and not any
 > `expected.grader.md` under `tests/scenarios/`. It is the grader's answer key, it sits
@@ -115,7 +116,7 @@ throwaway sandbox repo. They are labeled, not silently skipped.
 tests/
   README.md                      # this file (design + how to run + how to read RESULTS)
   scenarios/
-    # runner input set = { brief.md, project/, feeder-env.md };
+    # runner input set = { brief.md, project/, feeder-env.md }, plus src/ when the scenario has one;
     # expected.grader.md is grader-only: it exists in each dir but is outside the input set.
     01-clean-happy-path/          { brief.md, project/, feeder-env.md }  + expected.grader.md
     02-product-gap-parks/         { ... }
@@ -127,9 +128,9 @@ tests/
     12-implied-surfaces/          { brief.md, project/, feeder-env.md }  + expected.grader.md
     12b-implied-surfaces-control/ { brief.md, project/, feeder-env.md }  + expected.grader.md
     13-layer-aware-breakdown/     { brief.md, project/, feeder-env.md }  + expected.grader.md
-    14-config-pointers/           { brief.md, project/, feeder-env.md }  + expected.grader.md
-    15-prose-style/               { brief.md, project/, feeder-env.md }  + expected.grader.md
-    17-shared-file-ordering/      { brief.md, project/, feeder-env.md }  + expected.grader.md
+    14-config-pointers/           { brief.md, project/, feeder-env.md, src/ }  + expected.grader.md
+    15-prose-style/               { brief.md, project/, feeder-env.md, src/ }  + expected.grader.md
+    17-shared-file-ordering/      { brief.md, project/, feeder-env.md, src/ }  + expected.grader.md
     18-convention-sweep-prompt/   { brief.md, project/, feeder-env.md }  + expected.grader.md
     19-system-control-removed/    { brief.md, project/, feeder-env.md }  + expected.grader.md
     20-measured-layout/           { brief.md, project/, feeder-env.md }  + expected.grader.md
@@ -139,6 +140,7 @@ tests/
 Per scenario:
 - `brief.md`: the input brief (the runner's only task input besides the procedure).
 - `project/`: the `.project/`-style project docs the run grounds on (optional per scenario).
+- `src/`: the source tree the keys cite and `sourceGlobs` matches, present only in a scenario whose keys cite source files (14, 15, 17).
 - `feeder-env.md`: the test config the run assumes, namely the `feeder.json` keys and the
   driver shared keys (`sourceGlobs`, `uiSurfaceGlobs`, `integrationBranch`) the run reads.
 - `expected.grader.md`: the behavioral contract (grader-only, outside the runner input
