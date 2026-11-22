@@ -636,12 +636,11 @@ strip_edit_punct() {
 # Returns 0 when a token of the text after "Edits:" names a path, 1 otherwise.
 # Tokens split on space and tab only, so a "*" token is never glob-expanded.
 edits_names_path() {
-  local rest=${1//$'\t'/ } tok h t
-  while [ -n "$rest" ]; do
-    rest=${rest#"${rest%%[!' ']*}"}
-    [ -n "$rest" ] || break
-    tok=${rest%%' '*}
-    case "$rest" in *' '*) rest=${rest#*' '} ;; *) rest="" ;; esac
+  local -a toks
+  local tok h t
+  IFS=$' \t' read -r -a toks <<<"$1"
+  [ ${#toks[@]} -eq 0 ] && return 1
+  for tok in "${toks[@]}"; do
     TOK=$tok; strip_edit_punct
     TOK=${TOK%.}; strip_edit_punct
     tok=$TOK

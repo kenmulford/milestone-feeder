@@ -36,10 +36,9 @@ writes. CI runs both legs on every pull request (`hook regression tests`).
 ## The one rule that makes the metric honest
 
 The scenario **runner never sees `expected.grader.md`**: it is **not part of the runner
-input set**. The runner input set is exactly `{ brief.md, project/, feeder-env.md }`,
-plus `src/` when the scenario has one; the runner runs the brief blind on those inputs and
-the plan procedure alone. A separate
-**grader** compares observed output against `expected.grader.md`. No teaching to the test.
+input set**. The runner input set (see Per scenario) is all the runner sees. It runs the
+brief blind on those inputs and the plan procedure alone. A separate **grader** compares
+observed output against `expected.grader.md`. No teaching to the test.
 
 A key may assert byte equality only over script output, never over agent-authored text. A clause over agent text names the lines or blocks it requires present or absent.
 
@@ -75,7 +74,7 @@ scenario `<id>`, holding `input/` (the runner input set copied from
 > - Do not read any other scenario's files, any `observed-*` file under `tests/scenarios/`, or `tests/RESULTS.md`. Prior verdicts must not anchor yours.
 >
 > Rules:
-> - Score against the answer key exactly as written: each `MUST`, each `FAIL if`, and any PASS or PARTIAL rule it states. Where it has a CONTROL or alternate case the run did not exercise, record that case as not exercised. Do not count it as passed. A run that omits a committed alternate's runner leaves that scenario's CONTROL or absent-config clause not exercised. A clause the run did not exercise caps the verdict at ⚠️ PARTIAL.
+> - Score against the answer key exactly as written: each `MUST`, each `FAIL if`, and any PASS or PARTIAL rule it states. Record any clause the run did not exercise, including a CONTROL or alternate case or a clause whose committed alternate's runner was omitted, as not exercised, never as passed. A clause not exercised caps the verdict at ⚠️ PARTIAL.
 > - A verdict is ✅ PASS, ⚠️ PARTIAL or ❌ FAIL. When a reading of a clause is contested, record the worse verdict and name the clause.
 > - Quote observed text for every clause you score. Never paraphrase a quote. Replace any U+2014 em dash in a quote with ` - `, and say so once.
 > - Read-only. Write nothing.
@@ -100,9 +99,8 @@ is executed by **following the prose directly**:
    `skills/plan/SKILL.md` Steps 0–5 + the preview emit (the preview is `plan`'s job; `create` is the write path).
 2. It dispatches the **architect** and **issue-author** stand-ins, briefed from
    `agents/architect.md` and `agents/issue-author.md` (their contracts). Each stand-in
-   dispatch passes the `model` its agent file's frontmatter declares (`agents/architect.md`
-   opus, `agents/issue-author.md` sonnet). The runner and the grader run on the session
-   model, because `plan` runs on the main thread in production.
+   dispatch passes the `model` its agent file's frontmatter declares. The runner and the
+   grader run on the session model, because `plan` runs on the main thread in production.
 3. **PREVIEW only**: zero GitHub writes. The run emits the plan file (and a
    needs-product-input report when applicable) as text artifacts under the scenario folder.
 4. A **grader** subagent scores observed-vs-`expected.grader.md` → ✅ pass / ⚠️ partial / ❌ fail,
@@ -120,7 +118,7 @@ throwaway sandbox repo. They are labeled, not silently skipped.
 tests/
   README.md                      # this file (design + how to run + how to read RESULTS)
   scenarios/
-    # runner input set = { brief.md, project/, feeder-env.md }, plus src/ when the scenario has one;
+    # the runner input set (see Per scenario).
     # expected.grader.md is grader-only: it exists in each dir but is outside the input set.
     01-clean-happy-path/          { brief.md, project/, feeder-env.md }  + expected.grader.md
     02-product-gap-parks/         { ... }
@@ -144,7 +142,7 @@ tests/
 Per scenario:
 - `brief.md`: the input brief (the runner's only task input besides the procedure).
 - `project/`: the `.project/`-style project docs the run grounds on (optional per scenario).
-- `src/`: the source tree the keys cite and `sourceGlobs` matches, present only in a scenario whose keys cite source files (14, 15, 17).
+- `src/`: the source tree the keys cite and `sourceGlobs` matches, present only in a scenario whose keys cite source files (14, 15, 17). The runner input set is exactly `{ brief.md, project/, feeder-env.md }`, plus `src/` when the scenario has one.
 - `feeder-env.md`: the test config the run assumes, namely the `feeder.json` keys and the
   driver shared keys (`sourceGlobs`, `uiSurfaceGlobs`, `integrationBranch`) the run reads.
 - `expected.grader.md`: the behavioral contract (grader-only, outside the runner input

@@ -61,7 +61,7 @@ What each fixture asserts (the `expected.grader.md` contract, not a fresh execut
 
 **Not re-run.** 01, 02, 03, 04, 06, 10, 11, 12, 12b and 15 grade rules no item of `docs/briefs/2026-11-21-gradable-scenarios-lower-cost.md` changes, and 18, 19 and 20 grade `docs/briefs/2026-11-21-file-a-verified-bug.md` item 2. Their last recorded verdicts are in the table.
 
-**Alternate runs.** 13 CONTROL (no layering convention) is not met on the Wave-order clause. 14 MUST (d) (no `tokens.json`, no `design-system.md`) is not met on the `src/ui/Button.tsx` clause. 17 CONTROL (disjoint `edits:`) is met: no `after` edge, Waves equal the concrete-edge `build-order` output, exit 0, and the purge job survived while the notifier parked. 17 root: 8 of 11 candidates sorted (#G parked, #I and #J dropped), six derived `after` edges including `#D after #E - edits: src/routes/index.ts`, Waves byte-equal to `build-order` stdout, and no `src/jobs/manifest.ts`.
+**Alternate runs.** 17 CONTROL (disjoint `edits:`) is met: no `after` edge, Waves equal the concrete-edge `build-order` output, exit 0, and the purge job survived while the notifier parked. 17 root: 8 of 11 candidates sorted (#G parked, #I and #J dropped), six derived `after` edges including `#D after #E - edits: src/routes/index.ts`, Waves byte-equal to `build-order` stdout, and no `src/jobs/manifest.ts`.
 
 **Dispatch counts.** Issue-author dispatches for 13, 14 and 17 rose from 17 to 41 (root 24, alternates 17), plus 6 architect dispatches. 13's root drafted all 14 candidates with no park, against 6 survivors in #584.
 
