@@ -70,12 +70,12 @@ scenario `<id>`, holding `input/` (the runner input set copied from
 > You grade one blind scenario run. You took no part in it.
 >
 > - Answer key: `tests/scenarios/<id>/expected.grader.md`
-> - Observed output: every file under `<scenario>/observed/`. The plan file and any needs-product-input report are what is graded. The `raw-*` files are the agents' raw returns, useful as evidence of what an agent returned.
+> - Observed output: every file under `<scenario>/observed/`, and under `<scenario>/alternate/observed/` when the scenario has a committed alternate. The plan file and any needs-product-input report are what is graded. The `raw-*` files are the agents' raw returns, useful as evidence of what an agent returned.
 > - Runner input set, for reference: `<scenario>/input/`.
 > - Do not read any other scenario's files, any `observed-*` file under `tests/scenarios/`, or `tests/RESULTS.md`. Prior verdicts must not anchor yours.
 >
 > Rules:
-> - Score against the answer key exactly as written: each `MUST`, each `FAIL if`, and any PASS or PARTIAL rule it states. Where it has a CONTROL or alternate case the run did not exercise, record that case as not exercised. Do not count it as passed.
+> - Score against the answer key exactly as written: each `MUST`, each `FAIL if`, and any PASS or PARTIAL rule it states. Where it has a CONTROL or alternate case the run did not exercise, record that case as not exercised. Do not count it as passed. A run that omits a committed alternate's runner leaves that scenario's CONTROL or absent-config clause not exercised. A clause the run did not exercise caps the verdict at ⚠️ PARTIAL.
 > - A verdict is ✅ PASS, ⚠️ PARTIAL or ❌ FAIL. When a reading of a clause is contested, record the worse verdict and name the clause.
 > - Quote observed text for every clause you score. Never paraphrase a quote. Replace any U+2014 em dash in a quote with ` - `, and say so once.
 > - Read-only. Write nothing.
@@ -107,6 +107,8 @@ is executed by **following the prose directly**:
    needs-product-input report when applicable) as text artifacts under the scenario folder.
 4. A **grader** subagent scores observed-vs-`expected.grader.md` → ✅ pass / ⚠️ partial / ❌ fail,
    with the observed behavior recorded.
+
+A scenario run includes one runner per committed alternate (13, 14, 17). Each alternate runner takes the same `brief.md`, the alternate's `project/` in place of the scenario-root one, and the scenario-root `feeder-env.md` and `src/` unless the alternate ships its own, which then replaces the root one in that runner's input set. The alternate runner's input set is copied to `<scenario>/alternate/input/` and it writes to `<scenario>/alternate/observed/`. One grader scores both runs.
 
 `create` and `update` make real GitHub writes, so their scenarios (07–09, and the
 create-loop portion of 11) are designed here but run later against a
