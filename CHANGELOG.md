@@ -3,6 +3,34 @@
 Release notes for milestone-feeder. Each tagged release is also published on the
 [GitHub Releases page](https://github.com/kenmulford/milestone-feeder/releases).
 
+## v1.2.2: gradable scenarios at a lower acceptance cost
+
+**Theme:** Acceptance stand-ins run on the model their agent file declares, scenario keys assert structure instead of byte equality over agent text, and every asserted alternate ships a committed input, so a re-run costs less and a verdict grades the feeder rather than the fixture.
+
+### ✨ Gradable scenarios
+
+| Issue | PR | What |
+|---|---|---|
+| #587 Run acceptance stand-ins on their declared model and commit the grader brief template | #593 | Each stand-in dispatch passes the `model` its agent file's frontmatter declares, and `tests/README.md` carries `## Grader brief (neutral template)`, which every grader follows. |
+| #588 Fail an issue body whose Edits line names no file in check-issue-body | #593 | Both `check-issue-body` twins report `Edits: expected a path on the "Edits:" line ..., found none on line N` for an `Edits:` line in the Design section holding only placeholders such as `none`, `n/a`, `TBD/none` or `e.g.`. |
+| #589 Make scenario fixture inputs match the paths and conventions their keys cite | #593 | 14 and 15 move `src/` to the scenario root so `sourceGlobs src/**` matches, 17 ships the `src/` stubs its key cites, and 13 states its request identity. |
+| #590 Replace byte-for-byte clauses over agent text with structural assertions in scenario keys 12, 12b, 13 and 14 | #593 | Each clause names the lines or blocks it requires present or absent. Byte equality stays only over script output, such as 17's `build-order` Waves. |
+| #591 Commit an input for every asserted alternate in scenarios 13, 14 and 17 and run each one | #593 | Each alternate has `alternate/project/` (and 17 its own `src/`), and the README runs one runner per committed alternate. An omitted alternate caps the verdict at PARTIAL. |
+| #592 Re-run scenarios 13, 14 and 17 with their alternates and record the run with per-turn token use | #593 | `tests/RESULTS.md` records 17 PASS, 13 PARTIAL and 14 FAIL, with token sums per group. The acceptance rule failed on two key defects, not agent regressions. |
+| none (simplify pass and milestone-end review) | #593 | `tests/README.md` states the runner input set once, and the `Edits:` check rejects version numbers, single-letter abbreviations and slash placeholders. |
+
+### Consumer notes (upgrading from v1.2.1)
+
+- **No schema changes** to `.milestone-config/feeder.json` or `.milestone-config/driver.json`.
+- An issue body whose `Edits:` line names no file now fails `plan` Step 4 and takes the one author retry.
+
+### ⚖️ Post-run audit trail
+
+Judgment-call PRs: none.
+
+- The acceptance rule failed with no regression. 13's CONTROL names per-layer tags that a no-layering cut never produces, and 14's MUST (d) asks for `src/ui/Button.tsx` where `agents/issue-author.md` permits a `conventions.md` section reference.
+- The `Edits:` check judges paths by shape, so it still rejects `Makefile` and `**README.md**`. Checking that the path exists under the repo root is the fix.
+
 ## v1.2.1: scenario and gate repair
 
 **Theme:** Scenario keys grade only clauses their inputs make satisfiable, and `check-issue-body` now checks where each invariant sits and what `## Dependencies` lists, so a FAIL names a feeder failure and an issue body cannot carry another issue's edges.
