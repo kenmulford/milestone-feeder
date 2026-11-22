@@ -14,7 +14,8 @@
 # runs; one stderr line).
 #
 # Stages, in run order: check_sections, check_invariants, check_citations,
-# check_sites_searched, check_vocabulary, check_platform_source, check_edges.
+# check_sites_searched, check_vocabulary, check_platform_source, check_edges,
+# check_edits.
 #
 # LC_ALL=C makes every comparison bytewise, so "ASCII case-insensitive" means
 # A-Z only and matches the PowerShell twin's folding. `set -e` is not set: a
@@ -614,6 +615,65 @@ check_edges() {
   done
 }
 
+# Trims backtick, comma, semicolon, bracket and parenthesis characters from
+# both ends of TOK. A bracket expression cannot hold "]" mid-class, so case
+# globs peel one character at a time.
+strip_edit_punct() {
+  local c
+  while :; do
+    c=${TOK%"${TOK#?}"}
+    case "$c" in
+      '`'|','|';'|'['|']'|'('|')') TOK=${TOK#?}; continue ;;
+    esac
+    c=${TOK#"${TOK%?}"}
+    case "$c" in
+      '`'|','|';'|'['|']'|'('|')') TOK=${TOK%?}; continue ;;
+    esac
+    return 0
+  done
+}
+
+# Returns 0 when a token of the text after "Edits:" names a path, 1 otherwise.
+# Tokens split on space and tab only, so a "*" token is never glob-expanded.
+edits_names_path() {
+  local rest=${1//$'\t'/ } tok h t
+  while [ -n "$rest" ]; do
+    rest=${rest#"${rest%%[!' ']*}"}
+    [ -n "$rest" ] || break
+    tok=${rest%%' '*}
+    case "$rest" in *' '*) rest=${rest#*' '} ;; *) rest="" ;; esac
+    TOK=$tok; strip_edit_punct
+    TOK=${TOK%.}; strip_edit_punct
+    tok=$TOK
+    case "$tok" in */*) return 0 ;; esac
+    case "$tok" in *.*) ;; *) continue ;; esac
+    t=${tok##*.}
+    h=${tok%.*}
+    [ -n "$t" ] && [ -n "$h" ] || continue
+    case "$t" in *[!A-Za-z0-9]*) continue ;; esac
+    case "$h" in *[!A-Za-z0-9_.-]*) continue ;; esac
+    return 0
+  done
+  return 1
+}
+
+check_edits() {
+  local i
+  section_bounds '## Design (recorded, consistent)'
+  i=$((SEC_START + 1))
+  while [ "$i" -lt "$SEC_END" ]; do
+    if [ "${IN_FENCE[$i]}" = 0 ]; then
+      line_label "${LINES[$i]}"
+      case "$LABEL" in
+        'Edits:'*)
+          edits_names_path "${LABEL#Edits:}" || add_finding 'Edits: line names no file: omit the line when the candidate edits no existing file'
+          ;;
+      esac
+    fi
+    i=$((i + 1))
+  done
+}
+
 main() {
   local i
   parse_args "$@" || { say_err "$USAGE"; return 2; }
@@ -626,6 +686,7 @@ main() {
   check_vocabulary
   check_platform_source
   check_edges
+  check_edits
   i=0
   while [ "$i" -lt "${#FINDINGS[@]}" ]; do
     printf '%s\n' "${FINDINGS[$i]}"
