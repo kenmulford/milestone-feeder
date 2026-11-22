@@ -57,6 +57,37 @@ deliberately neutral so the inputs never bias the architect:
 > underspecified, weigh it neutrally against the project's stated conventions: do not
 > assume a verdict, and treat no example as a cue for how to decide.
 
+## Grader brief (neutral template)
+
+A grader is dispatched with this brief, which is reusable across scenarios and
+deliberately neutral, with `<scenario>` standing for the per-run scratch folder for
+scenario `<id>`, holding `input/` (the runner input set copied from
+`tests/scenarios/<id>/`) and `observed/` (every file the runner wrote):
+
+> You grade one blind scenario run. You took no part in it.
+>
+> - Answer key: `tests/scenarios/<id>/expected.grader.md`
+> - Observed output: every file under `<scenario>/observed/`. The plan file and any needs-product-input report are what is graded. The `raw-*` files are the agents' raw returns, useful as evidence of what an agent returned.
+> - Runner input set, for reference: `<scenario>/input/`.
+> - Do not read any other scenario's files, any `observed-*` file under `tests/scenarios/`, or `tests/RESULTS.md`. Prior verdicts must not anchor yours.
+>
+> Rules:
+> - Score against the answer key exactly as written: each `MUST`, each `FAIL if`, and any PASS or PARTIAL rule it states. Where it has a CONTROL or alternate case the run did not exercise, record that case as not exercised. Do not count it as passed.
+> - A verdict is ✅ PASS, ⚠️ PARTIAL or ❌ FAIL. When a reading of a clause is contested, record the worse verdict and name the clause.
+> - Quote observed text for every clause you score. Never paraphrase a quote. Replace any U+2014 em dash in a quote with ` - `, and say so once.
+> - Read-only. Write nothing.
+>
+> Return:
+>
+> ```
+> SCENARIO: <id>
+> VERDICT: ✅ PASS | ⚠️ PARTIAL | ❌ FAIL
+> OBSERVED: <one paragraph, at most 5 sentences: what the run produced and the cause of the verdict, in the shape of a tests/RESULTS.md "Observed" cell>
+> CLAUSES:
+>   - <clause, quoted or named> : met | not met | not exercised : <evidence quote>
+>   - ...
+> ```
+
 ## Execution model (preview-only, prose-direct)
 
 The feeder plugin is not installed as slash commands in the harness session, so a scenario
@@ -64,8 +95,11 @@ is executed by **following the prose directly**:
 
 1. A **runner** subagent acts as the `plan` orchestrator, following
    `skills/plan/SKILL.md` Steps 0–5 + the preview emit (the preview is `plan`'s job; `create` is the write path).
-2. It dispatches subagents for the **architect** and **issue-author** roles, briefed from
-   `agents/architect.md` and `agents/issue-author.md` (their contracts).
+2. It dispatches the **architect** and **issue-author** stand-ins, briefed from
+   `agents/architect.md` and `agents/issue-author.md` (their contracts). Each stand-in
+   dispatch passes the `model` its agent file's frontmatter declares (`agents/architect.md`
+   opus, `agents/issue-author.md` sonnet). The runner and the grader run on the session
+   model, because `plan` runs on the main thread in production.
 3. **PREVIEW only**: zero GitHub writes. The run emits the plan file (and a
    needs-product-input report when applicable) as text artifacts under the scenario folder.
 4. A **grader** subagent scores observed-vs-`expected.grader.md` → ✅ pass / ⚠️ partial / ❌ fail,
