@@ -11,7 +11,8 @@
 #   take the SAME argv, `--flag` spelling included.
 #
 # Stages, in run order: Test-Sections, Test-Invariants, Test-Citations,
-# Test-SitesSearched, Test-Vocabulary, Test-PlatformSource, Test-Edges.
+# Test-SitesSearched, Test-Vocabulary, Test-PlatformSource, Test-Edges,
+# Test-Edits.
 #
 # Output: one finding per line on stdout, in check order, then input order.
 # Exit: 0 pass (no output), 1 findings, 2 usage or unreadable input (no check
@@ -531,6 +532,44 @@ function Test-Edges {
     }
 }
 
+function Test-EditsNamesPath {
+    param([string]$Rest)
+    $opts = [System.Text.RegularExpressions.RegexOptions]::CultureInvariant
+    $strip = [char[]]@('`', ',', ';', '[', ']', '(', ')')
+    foreach ($raw in $Rest.Split([char[]]@(' ', "`t"))) {
+        if ($raw.Length -eq 0) { continue }
+        $tok = $raw.Trim($strip)
+        if ($tok.EndsWith('.', [StringComparison]::Ordinal)) { $tok = $tok.Substring(0, $tok.Length - 1) }
+        $tok = $tok.Trim($strip)
+        if ($tok.Contains('/')) {
+            foreach ($seg in $tok.Split('/')) {
+                if ($seg.Length -eq 0) { continue }
+                $word = [regex]::Replace($seg, '["'':*_]', '')
+                if (-not [regex]::IsMatch($word, '^(?i:n|a|o|na|none|tbd|w|and|or)$', $opts)) { return $true }
+            }
+            continue
+        }
+        if ([regex]::IsMatch($tok, '^[A-Za-z0-9_.-]*\.[A-Za-z0-9]+$', $opts)) {
+            if ([regex]::IsMatch($tok, '^[vV]?[0-9]+(\.[0-9]+)+$', $opts)) { continue }
+            if ([regex]::IsMatch($tok, '^(?i:e\.g|i\.e)$', $opts)) { continue }
+            return $true
+        }
+    }
+    return $false
+}
+
+function Test-Edits {
+    $start, $end = Get-SectionBounds '## Design (recorded, consistent)'
+    for ($i = $start + 1; $i -lt $end; $i++) {
+        if ($script:InFence[$i]) { continue }
+        $label = Get-LineLabel $script:Lines[$i]
+        if (-not $label.StartsWith('Edits:', [StringComparison]::Ordinal)) { continue }
+        if (-not (Test-EditsNamesPath $label.Substring(6))) {
+            $script:Findings.Add("Edits: expected a path on the `"Edits:`" line (omit the line when the candidate edits no existing file), found none on line $($i + 1)")
+        }
+    }
+}
+
 function Invoke-Main {
     if ((Read-Arguments $argv) -ne 0) { Write-Err $script:Usage; return 2 }
     Resolve-Arguments
@@ -544,6 +583,7 @@ function Invoke-Main {
     Test-Vocabulary
     Test-PlatformSource
     Test-Edges
+    Test-Edits
     foreach ($f in $script:Findings) { Write-Row $f }
     if ($script:Findings.Count -eq 0) { return 0 }
     return 1

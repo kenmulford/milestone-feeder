@@ -28,6 +28,51 @@ What each fixture asserts (the `expected.grader.md` contract, not a fresh execut
 
 `05-reviewer-backends` was **removed in v0.9.0**: its subject (the retired `reviewer` config key + reviewer backends) no longer exists.
 
+## Run record: 2026-11-21 (#592)
+
+**Tree and method.** The procedure under test is the milestone #37 branch at `40b4c98`, after #587 to #591 landed. The installed agents (milestone-feeder `1.2.0`) predate the milestone, so each runner dispatched `general-purpose` stand-ins briefed from the tree's `agents/architect.md` (passed `model: opus`) and `agents/issue-author.md` (passed `model: sonnet`). The transcripts confirm it: architects ran `claude-opus-5-5`, issue-authors `claude-sonnet-5-5`, and runners and graders `claude-opus-5-5` (the session model). Six runners ran: one per scenario and one per committed alternate at `tests/scenarios/<id>/alternate/project/`. Each received only `{ brief.md, project/, feeder-env.md }`, plus `src/` when the scenario has one, and never `expected.grader.md`. Three graders, one per scenario, each scored the root and alternate runs with `tests/README.md` `## Grader brief (neutral template)`, recording the worse verdict on a contested clause.
+
+| # | Scenario | Baseline (#584) | This run | Change | Issue-author dispatches (#584 → this run) |
+|---|----------|----------|----------|--------|--------|
+| 01 | clean-happy-path | ✅ PASS (#564) | not re-run | n/a | 2 → n/a |
+| 02 | product-gap-parks | ✅ PASS (#564) | not re-run | n/a | 0 → n/a |
+| 03 | design-resolvable-no-park | ✅ PASS | not re-run | n/a | 3 → n/a |
+| 04 | no-code-refusal | ✅ PASS (#564) | not re-run | n/a | 2 → n/a |
+| 06 | cross-cutting-consistency (flagship) | ✅ PASS | not re-run | n/a | 16 → n/a |
+| 10 | nested-layout | ✅ PASS | not re-run | n/a | 4 → n/a |
+| 11 | roadmap-fan-out (plan side only) | ⚠️ PARTIAL (#564) | not re-run | n/a | 38 → n/a |
+| 12 | implied-surfaces | ✅ PASS (#564) | not re-run | n/a | 8 → n/a |
+| 12b | implied-surfaces-control | ✅ PASS (#564) | not re-run | n/a | 1 → n/a |
+| 13 | layer-aware-breakdown | ⚠️ PARTIAL | ⚠️ PARTIAL | same | 6 → 20 (15 + 5 alternate) |
+| 14 | config-pointers | ⚠️ PARTIAL | ❌ FAIL | **worse** | 2 → 2 (1 + 1 alternate) |
+| 15 | prose-style | ✅ PASS | not re-run | n/a | 1 → n/a |
+| 17 | shared-file-ordering | ⚠️ PARTIAL | ✅ PASS | better | 9 → 19 (8 + 11 alternate) |
+| 18 | convention-sweep-prompt | ❌ FAIL (expected) (`829ca08`) | not re-run | n/a | 1 → n/a |
+| 19 | system-control-removed | ❌ FAIL (expected) (`829ca08`) | not re-run | n/a | 1 → n/a |
+| 20 | measured-layout | ❌ FAIL (expected) (`829ca08`) | not re-run | n/a | 1 → n/a |
+
+**Tally.** Of the three run: 1 ✅ PASS (#584: 0), 1 better, 1 the same, 1 worse.
+
+**Acceptance rule: failed.** The rule is all three ✅ PASS. 17 grades ✅ PASS, 13 ⚠️ PARTIAL and 14 ❌ FAIL, and 14 grades worse than #584. Each is named below with the clause not met and the rule text that governs it.
+
+**Required PASS not met: 13.** The root run cut 14 single-layer candidates (9 brief, 5 implied), each with a convention-named layer. The edge is "#B depends_on #A - layer: services depends on data". The Waves are util/data, services, controllers, routes. All 14 issues carry a cited `- Layer:` line. The alternate (no layering convention) wrote no `layer` field, no `Layer:` line, no layer edge and no error, but cut 4 vertical-slice candidates. Clause not met: `tests/scenarios/13-layer-aware-breakdown/expected.grader.md` CONTROL, "a Wave order with #C after #B, #D after #C and #E after #D". Observed "- Wave 1 (parallel): #A, #B" and "- Wave 2 (parallel): #C (depends on #A, #B), #D (depends on #B)". The governing rule is the `agents/architect.md` line "A layer you cannot ground in a stated layering convention is not assigned: the candidate carries no `layer` field, and ordering falls back to clause 3 and clause 11 edges". The per-layer tags the clause names therefore do not exist in the alternate's cut. The clause is contested and recorded at the worse verdict. Every other CONTROL clause is met.
+
+**Required PASS not met: 14.** Both runs drafted one issue, #A "Add a danger variant to the Button component" [ui, risk:light], in Wave 1. Neither has a hex literal or a parsed token value, both `check-issue-body` runs exit 0, and neither parked. The root puts its pointer in `## Design (recorded, consistent)` and its `Convention followed:` names `src/ui/Button.tsx`. The alternate leaves the pointer out but writes "- Convention followed: `project/conventions.md (## Styling)` and `project/conventions.md (## Canonical exemplars (mirror these))`". Clause not met: `tests/scenarios/14-config-pointers/expected.grader.md` MUST (d), "a `Convention followed:` line citing `src/ui/Button.tsx`", and the FAIL-if "grounded design dropped" under the contested reading. The governing rule is the `agents/issue-author.md` line "Convention followed: <conventions.md ref, or the path (anchor) / file:line of the sibling pattern>", which permits a section reference, so the key is stricter than the author contract. MUST (a), (b), (c) and every other MUST (d) clause are met.
+
+**Not re-run.** 01, 02, 03, 04, 06, 10, 11, 12, 12b and 15 grade rules no item of `docs/briefs/2026-11-21-gradable-scenarios-lower-cost.md` changes, and 18, 19 and 20 grade `docs/briefs/2026-11-21-file-a-verified-bug.md` item 2. Their last recorded verdicts are in the table.
+
+**Alternate runs.** 17 CONTROL (disjoint `edits:`) is met: no `after` edge, Waves equal the concrete-edge `build-order` output, exit 0, and the purge job survived while the notifier parked. 17 root: 8 of 11 candidates sorted (#G parked, #I and #J dropped), six derived `after` edges including `#D after #E - edits: src/routes/index.ts`, Waves byte-equal to `build-order` stdout, and no `src/jobs/manifest.ts`.
+
+**Dispatch counts.** Issue-author dispatches for 13, 14 and 17 rose from 17 to 41 (root 24, alternates 17), plus 6 architect dispatches. 13's root drafted all 14 candidates with no park, against 6 survivors in #584.
+
+**Token use.** Totals are summed per turn from the run's `subagents/agent-*.jsonl` transcripts, each message id counted once, as four unweighted sums per group.
+
+| Group | Dispatches | input_tokens | cache_read_input_tokens | cache_creation_input_tokens | output_tokens |
+|---|---|---|---|---|---|
+| Runners | 6 | 336 | 17,991,369 | 948,887 | 282,675 |
+| Stand-ins | 6 architect (opus) + 41 issue-author (sonnet) | 316 | 7,201,108 | 2,028,900 | 135,528 |
+| Graders | 3 | 60 | 1,811,097 | 195,851 | 26,126 |
+
 ## Run record: 2026-11-21 (#584)
 
 **Tree and method.** The procedure under test is the milestone #36 branch at `c078618`, after every key, fixture, rule and script change (#573 to #583) landed. The installed agents (milestone-feeder `1.2.0`) predate the milestone, so each runner dispatched `general-purpose` proxies told to act as the tree's `agents/architect.md` and `agents/issue-author.md`, as the #564 record did. Each runner received only `{ brief.md, project/, feeder-env.md }`, never `expected.grader.md`, and a separate grader scored its output. On a contested clause the grader recorded the worse verdict. The seven scenarios `docs/briefs/2026-11-21-scenario-and-gate-repair.md` names were run once each.

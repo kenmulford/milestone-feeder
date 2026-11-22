@@ -58,7 +58,7 @@
 **Evidence:** 17 MUST (e) failed because #A's body carries "Edits: none; this issue modifies no existing file.", against `agents/issue-author.md` "A candidate with no `edits` gets no `Edits:` line". The rule is prose, and nothing checks it.
 
 **Work:**
-- `scripts/check-issue-body.{sh,ps1}`: an `Edits:` line in `## Design (recorded, consistent)` that names no path fails with `Edits: line names no file: omit the line when the candidate edits no existing file`.
+- `scripts/check-issue-body.{sh,ps1}`: an `Edits:` line in `## Design (recorded, consistent)` that names no path fails with `Edits: expected a path on the "Edits:" line (omit the line when the candidate edits no existing file), found none on line N`.
 - A fixture under `tests/fixtures/check-issue-body/` for the failing case, and the existing passing fixtures still pass.
 
 ## Acceptance run, scoped to the rule

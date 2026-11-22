@@ -14,7 +14,8 @@
 # runs; one stderr line).
 #
 # Stages, in run order: check_sections, check_invariants, check_citations,
-# check_sites_searched, check_vocabulary, check_platform_source, check_edges.
+# check_sites_searched, check_vocabulary, check_platform_source, check_edges,
+# check_edits.
 #
 # LC_ALL=C makes every comparison bytewise, so "ASCII case-insensitive" means
 # A-Z only and matches the PowerShell twin's folding. `set -e` is not set: a
@@ -614,6 +615,97 @@ check_edges() {
   done
 }
 
+# Trims backtick, comma, semicolon, bracket and parenthesis characters from
+# both ends of TOK. A bracket expression cannot hold "]" mid-class, so case
+# globs peel one character at a time.
+strip_edit_punct() {
+  local c
+  while :; do
+    c=${TOK%"${TOK#?}"}
+    case "$c" in
+      '`'|','|';'|'['|']'|'('|')') TOK=${TOK#?}; continue ;;
+    esac
+    c=${TOK#"${TOK%?}"}
+    case "$c" in
+      '`'|','|';'|'['|']'|'('|')') TOK=${TOK%?}; continue ;;
+    esac
+    return 0
+  done
+}
+
+# Returns 0 when $1 is a placeholder word, ASCII case-insensitive.
+edit_placeholder_word() {
+  case "$1" in
+    [Nn]|[Aa]|[Oo]|[Nn][Aa]|[Nn][Oo][Nn][Ee]|[Tt][Bb][Dd]|[Ww]|[Aa][Nn][Dd]|[Oo][Rr]) return 0 ;;
+  esac
+  return 1
+}
+
+# Returns 0 when TOK is version-like (v1.2, 1.2.3) or e.g or i.e, which are
+# dotted but name no file.
+edit_not_file_shape() {
+  local v=${TOK#[vV]}
+  case "$TOK" in [Ee].[Gg]|[Ii].[Ee]) return 0 ;; esac
+  case "$v" in
+    ''|*[!0-9.]*|.*|*.|*..*) return 1 ;;
+    *.*) return 0 ;;
+  esac
+  return 1
+}
+
+# Returns 0 when a token of the text after "Edits:" names a path, 1 otherwise.
+# Tokens split on space and tab only, so a "*" token is never glob-expanded.
+edits_names_path() {
+  local -a toks
+  local tok h t rest seg
+  IFS=$' \t' read -r -a toks <<<"$1"
+  [ ${#toks[@]} -eq 0 ] && return 1
+  for tok in "${toks[@]}"; do
+    TOK=$tok; strip_edit_punct
+    TOK=${TOK%.}; strip_edit_punct
+    tok=$TOK
+    case "$tok" in
+      */*)
+        rest=$tok
+        while :; do
+          seg=${rest%%/*}
+          if [ -n "$seg" ]; then
+            seg=${seg//[\"\':*_]/}
+            edit_placeholder_word "$seg" || return 0
+          fi
+          case "$rest" in */*) rest=${rest#*/} ;; *) break ;; esac
+        done
+        continue
+        ;;
+    esac
+    case "$tok" in *.*) ;; *) continue ;; esac
+    t=${tok##*.}
+    h=${tok%.*}
+    [ -n "$t" ] || continue
+    case "$t" in *[!A-Za-z0-9]*) continue ;; esac
+    case "$h" in *[!A-Za-z0-9_.-]*) continue ;; esac
+    edit_not_file_shape || return 0
+  done
+  return 1
+}
+
+check_edits() {
+  local i
+  section_bounds '## Design (recorded, consistent)'
+  i=$((SEC_START + 1))
+  while [ "$i" -lt "$SEC_END" ]; do
+    if [ "${IN_FENCE[$i]}" = 0 ]; then
+      line_label "${LINES[$i]}"
+      case "$LABEL" in
+        'Edits:'*)
+          edits_names_path "${LABEL#Edits:}" || add_finding "Edits: expected a path on the \"Edits:\" line (omit the line when the candidate edits no existing file), found none on line $((i + 1))"
+          ;;
+      esac
+    fi
+    i=$((i + 1))
+  done
+}
+
 main() {
   local i
   parse_args "$@" || { say_err "$USAGE"; return 2; }
@@ -626,6 +718,7 @@ main() {
   check_vocabulary
   check_platform_source
   check_edges
+  check_edits
   i=0
   while [ "$i" -lt "${#FINDINGS[@]}" ]; do
     printf '%s\n' "${FINDINGS[$i]}"

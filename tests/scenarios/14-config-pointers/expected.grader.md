@@ -12,8 +12,9 @@ design-system docs BY PATH in its `## Design (recorded, consistent)` block (a re
 never a pre-solved design), so the resolved color values (the hex in `tokens.json`) are
 NOT copied or parsed into the issue body; a grounded design decision with a conventional
 default (mirror `src/ui/Button.tsx`) is still recorded via `Convention followed:`; and a
-project missing the token / design-system docs simply omits that pointer, byte-for-byte,
-with no error and no fabricated reference.**
+project missing the token / design-system docs yields no `Config pointers:` line, no
+inlined hex or token value, a `Convention followed:` line citing `src/ui/Button.tsx`,
+and no error.**
 
 This is a **plan-side, preview-only** scenario (zero GitHub writes), mirroring the
 plan-side portion of scenarios 11, 12, and 13.
@@ -64,8 +65,7 @@ named BY PATH, not that its values are copied in.
 
 - **Asserted alternate.** The **same brief** authored against a project whose `.project`
   is **missing the token + design-system docs** (`tokens.json` and `design-system.md`
-  absent, `conventions.md` still present) produces the **same issue MINUS the token /
-  design-system pointer**, byte-for-byte:
+  absent, `conventions.md` still present) produces an issue body carrying:
   - **No** `Config pointers:` line naming `tokens.json` / `design-system.md`: the docs
     do not exist, so the author omits the pointer.
   - Still **no** inlined hex or token value (there is nothing to inline, and nothing is

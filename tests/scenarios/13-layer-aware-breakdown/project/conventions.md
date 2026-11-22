@@ -29,3 +29,7 @@ The reference implementations to copy when building something similar. Point at 
 | A service (business logic) | `src/services/UserService.ts` | Receives its repository via the constructor (`constructor(private repo: UserRepository)`); never imports the concrete repository class. |
 | A controller (HTTP + validation) | `src/controllers/UserController.ts` | Validates the request body, calls the service, maps the result to a response. |
 | A route (wiring) | `src/routes/user.ts` | Binds `GET`/`POST` paths to the controller; no logic. |
+
+## Request identity
+
+Every request carries `req.userId`, set upstream by the auth gateway. Controllers read it and never parse a token.

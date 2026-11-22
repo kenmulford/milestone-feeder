@@ -10,8 +10,9 @@ The claim under test: **the architect reads the project's stack + layering conve
 assigns each candidate its architectural layer, and derives the issue order + edges
 from the layer dependency (not only from ad-hoc type references), grounding every
 layer assignment in the stated architecture, threading the layer through to each issue
-body; and a project stating no layering convention degrades to today's dependency-only
-breakdown, byte-for-byte.**
+body; and a project stating no layering convention degrades to a dependency-only
+breakdown: no `layer` field, no `Layer:` line, no layer-keyed edge (`#C depends_on #A`
+absent), and a Wave order with #C after #B, #D after #C and #E after #D.**
 
 This is a **plan-side, preview-only** scenario (zero GitHub writes), mirroring the
 plan-side portion of scenarios 11 and 12.
@@ -89,8 +90,7 @@ The expected candidate set (local tags; exact titles may vary):
 
 - **Asserted alternate.** The **same brief** run against a project whose `.project`
   states **no** layering convention (the `Layering & boundaries` section absent or
-  `[TBD]`, or an unlayered stack) produces the **dependency-only** breakdown it does
-  today, byte-for-byte:
+  `[TBD]`, or an unlayered stack) produces a **dependency-only** breakdown:
   - **No** candidate carries a `layer` field; **no** issue body carries a `Layer:`
     line.
   - **No** layer-keyed edge is emitted. In particular the edge **#C depends_on #A is
