@@ -82,10 +82,10 @@ plan-side portion of scenario 11.
 - **Asserted alternate.** A brief slice that names **no capability and introduces no
   new entity** (e.g. "reword the copy on the existing admin settings page" or
   "rename a label") triggers **NO** implied fan-out: the architect's clause-8
-  consult is a **no-op**, **no** candidate carries `disposition: implied`, no
-  `[implied - review / trim / augment]` marker is rendered, and `plan` surfaces **NO**
-  anti-fixation prompt. Plan behaves **byte-for-byte as today**. This is an asserted
-  success outcome, not an error and not a park.
+  consult is a **no-op**: zero candidates carry `disposition: implied`, zero
+  occurrences of `[implied - review / trim / augment]` appear in the plan file's
+  `## Issues`, and the plan file does not contain `this is a starting set for YOUR app - what's missing?`.
+  This is an asserted success outcome, not an error and not a park.
 
 ## METRIC for this scenario
 
